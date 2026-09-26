@@ -10,6 +10,8 @@ export const API_TOKEN: string = (env.VITE_API_TOKEN ?? '').trim() || 'Bookeav1.
 export const DEFAULT_WHATSAPP: string = (env.VITE_WHATSAPP ?? '').replace(/\D/g, '') || '584122516390'
 /** Solo respaldo: la hoja de cada negocio manda en su clave `marca`. */
 export const BRAND: string = (env.VITE_BRAND ?? '').trim() || 'Mi Negocio'
+/** Negocio al que entra quien abre la raíz del sitio, sin /u/<slug> en la URL. */
+export const DEFAULT_SHOP: string = (env.VITE_DEFAULT_SHOP ?? '').trim() || 'samuel-herrera'
 
 /** Sin URL de Apps Script la app usa datos de ejemplo (demo local). */
 export const DEMO_MODE = API_URL === ''

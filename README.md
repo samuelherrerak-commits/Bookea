@@ -103,15 +103,22 @@ El monto en Bs se calcula en el servidor y se guarda en `Total_Bs` junto con la 
 
 ## Publicar en Render
 
-**Opción A: Blueprint.** En Render, entra en **New → Blueprint**, elige este repositorio y Render leerá `render.yaml`, que ya trae la URL `/exec` del Apps Script en `VITE_API_URL`. Si vuelves a crear la implementación y la URL cambia, actualízala en `render.yaml` o en el panel de Render.
+**Opción A: Blueprint (recomendada).** En Render, entra en **New → Blueprint**, elige este repositorio y Render leerá `render.yaml`, que ya trae el nombre del sitio, la URL `/exec` del Apps Script y el rewrite que necesita la app. Cada push a `main` redespliega solo.
 
 **Opción B: manual.** Entra en **New → Static Site** con esta configuración:
 
 - Build command: `npm ci && npm run build`
 - Publish directory: `dist`
-- Environment: `VITE_API_URL=<URL /exec>`. Opcionalmente, `VITE_API_TOKEN` y `VITE_WHATSAPP`.
+- Environment: `VITE_API_URL=<URL /exec>`, `VITE_DEFAULT_SHOP=<slug>`. Opcionalmente, `VITE_API_TOKEN` y `VITE_WHATSAPP`.
+- En **Routes** agrega `/*` → `/index.html` (rewrite), o la raíz y cada `/u/<slug>` dan 404.
 
 Las variables `VITE_*` se incrustan al compilar. Si cambias alguna, haz **Manual Deploy → Clear build cache & deploy**.
+
+### Por qué el rewrite y el `VITE_DEFAULT_SHOP`
+
+El negocio se lee de la ruta: `slugFromLocation()` saca el slug de `/u/<slug>`, y a veces de `?shop=`. Como el build no genera un archivo por negocio, `/u/samuel-herrera` no existe en `dist/` y Render respondería 404. El rewrite `/* → /index.html` resuelve eso: Render sirve el archivo real si existe y solo aplica la regla cuando no, así que `/assets/*` y `/favicon.svg` no se ven afectados.
+
+La raíz `/` sí sirve `index.html`, pero no trae slug, y sin slug el catálogo se pide sin negocio y sale vacío. Por eso `main.tsx` manda a `/u/<VITE_DEFAULT_SHOP>` antes del primer render. Cada negocio tiene su propio enlace `/u/su-negocio`; esto solo decide qué pasa al abrir el dominio pelado.
 
 ## Estructura
 

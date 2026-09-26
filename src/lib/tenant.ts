@@ -26,3 +26,19 @@ export function slugToNombre(slug: string): string {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ')
 }
+
+/**
+ * Ruta pública de un negocio, o null si el slug no sirve.
+ * Render reescribe cualquier ruta sin archivo a index.html, así que quien abre
+ * la raíz del dominio sí descarga la app: solo falta mandarlo a /u/<slug>, que
+ * es lo que lee slugFromLocation. Sin esto se pediría el catálogo sin negocio.
+ */
+export function shopPath(slug: string): string | null {
+  const s = normalizeSlug(slug)
+  // normalizeSlug devuelve tal cual lo que tiene hasta 40 caracteres de [a-z0-9-],
+  // guiones incluidos, y su rama de respaldo no vuelve a mirar el largo. Como acá
+  // lo que importa es no redirigir a una ruta que el backend va a rechazar, se
+  // valida el destino final: un VITE_DEFAULT_SHOP mal puesto da null.
+  if (!s || !SLUG_RE.test(s) || s.startsWith('-') || s.endsWith('-')) return null
+  return `/u/${s}`
+}

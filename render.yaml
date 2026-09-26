@@ -1,17 +1,30 @@
 # Blueprint de Render: https://render.com/docs/blueprint-spec
 services:
   - type: web
-    name: mariana-nails
+    name: bookea
     runtime: static
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
+      # Vite incrusta esto en el bundle durante el build, asi que cambiar la URL
+      # del script despues exige redesplegar. Si publicas una implementacion
+      # nueva en Apps Script y la URL cambia, actualiza aqui.
       - key: VITE_API_URL
         value: https://script.google.com/macros/s/AKfycbzX8PIP_j_UNfQHb-nGwcEdQMGeZ7lYH4wWxLnP5G-bJwrSHQNwWBHed8XwINOMXFjG4g/exec
       - key: VITE_API_TOKEN
         value: Bookeav1.1.1
       - key: VITE_WHATSAPP
         value: "584122516390"
+      # Negocio al que entra quien abre la raiz del dominio, sin /u/<slug>.
+      - key: VITE_DEFAULT_SHOP
+        value: samuel-herrera
+    routes:
+      # El negocio se saca de la ruta (/u/<slug>), asi que /u/samuel-herrera tiene
+      # que servir la app aunque no exista ese archivo. Sin esto, 404. Los archivos
+      # que si existen ganan sobre la regla, asi que /assets/* sigue sirviendo.
+      - type: rewrite
+        source: /*
+        destination: /index.html
     headers:
       - path: /assets/*
         name: Cache-Control
@@ -19,3 +32,9 @@ services:
       - path: /index.html
         name: Cache-Control
         value: no-cache
+      # Con el rewrite, /u/* tambien devuelve index.html pero bajo otra ruta, asi
+      # que la regla de arriba no le alcanza y el HTML podria quedar cacheado.
+      - path: /u/*
+        name: Cache-Control
+        value: no-cache
+
