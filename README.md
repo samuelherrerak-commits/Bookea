@@ -22,7 +22,7 @@ Si no defines `VITE_API_URL`, la app corre en **modo demo**: usa datos de ejempl
 | Variable | Descripción |
 | --- | --- |
 | `VITE_API_URL` | URL de la aplicación web de Apps Script (termina en `/exec`). |
-| `VITE_API_TOKEN` | Token que exige el script. Por defecto: `MARIANAILS`. |
+| `VITE_API_TOKEN` | Token que exige el script. Debe coincidir con `const TOKEN` en `Code.gs`. |
 | `VITE_WHATSAPP` | Número de respaldo, solo dígitos. Por defecto: `584122516390`. La clave `whatsapp` de la hoja tiene prioridad. |
 
 ## Instalar el backend (Google Apps Script)
@@ -46,6 +46,7 @@ Si no defines `VITE_API_URL`, la app corre en **modo demo**: usa datos de ejempl
 | `Horarios` | `Dia, Hora_Inicio, Hora_Fin` | Tu horario semanal. Una fila por tramo; puedes repetir el día para una pausa (Lunes 09:00–12:00 y Lunes 14:00–18:00). Deja las horas vacías para cerrar ese día. |
 | `Bloqueos` | `Fecha, Hora_Inicio, Hora_Fin, Motivo` | Cierra fechas u horas puntuales (vacaciones, citas por fuera). Sin horas, bloquea el día completo. El motivo no se muestra a las clientas. |
 | `Cupones` | `Codigo, Descuento_Porcentaje, Descuento_Monto, Usos_Restantes` | Se usa el porcentaje si es mayor que 0; si no, el monto en €. Si `Usos_Restantes` está vacío, el cupón es ilimitado. |
+| `Holds` | `Token, Sesion, Fecha, Hora_Inicio, Hora_Fin, Expira, Creado` | La usa el script: al tocar una hora, queda apartada mientras la clienta paga. **No hay que editarla a mano**; se crea sola la primera vez que alguien aparta una hora. Las filas vencidas se borran solas en la siguiente visita. |
 | `Reservaciones` | `ID, Fecha_Solicitud, Cliente, Telefono, Servicios, Total, Fecha_Cita, Hora_Cita, Metodo_Pago, Referencia, Cupon, Estado, Tasa_BCV, Total_Bs, Modalidad, Direccion, Recargo, Comprobante` | La llena el script. Las reservas con Pago Móvil entran con estado `Pago por verificar` y con el enlace al capture en Drive. `Referencia` ya no se usa (queda "N/A"). |
 | `Configuracion` | `Clave, Valor` | Ver la tabla siguiente. |
 
@@ -59,6 +60,7 @@ Si no defines `VITE_API_URL`, la app corre en **modo demo**: usa datos de ejempl
 | `intervalo_min` | `30` | Minutos entre un cupo y el siguiente. |
 | `dias_anticipacion` | `21` | Cuántos días hacia adelante se muestran. |
 | `anticipacion_min_horas` | `2` | Horas mínimas de aviso para reservar hoy. |
+| `hold_segundos` | `90` | Segundos que una hora queda apartada mientras la clienta paga (de 30 a 600). |
 | `pm_banco`, `pm_telefono`, `pm_cedula` | `Banesco (0134)`, `0412-2516390`, `V-12.345.678` | Datos de Pago Móvil que ve la clienta. |
 | `tasa_eur_manual` | `412,35` | Solo se usa si no se puede obtener la tasa BCV. |
 | `recargo_domicilio_pct` | `20` | % que se suma a domicilio, sobre el precio de los servicios (antes del cupón). |
@@ -69,6 +71,10 @@ Si no defines `VITE_API_URL`, la app corre en **modo demo**: usa datos de ejempl
 **Calendario:** se sigue llamando "Citas Mariana" a propósito. Si se renombrara, el script crearía un calendario nuevo y vacío y dejaría de ver las citas ya guardadas.
 
 **Bloquear días u horas:** agrega una fila en la pestaña **Bloqueos**, o crea un evento en el calendario "Citas Mariana" (un evento de todo el día bloquea el día completo).
+
+**Apartar la hora:** al tocar un horario en la agenda, la hora queda bloqueada para los demás durante `hold_segundos` (90 s por defecto) mientras la clienta llena sus datos y paga. Vence sola, no hace falta hacer nada. Si la clienta se arrepiente, la suelta al instante. En la pestaña `Holds` se puede ver quién tiene una hora apartada; para soltarla antes de tiempo, borra su fila.
+
+**Cambiar el token:** edita `const TOKEN` en `Code.gs` y `VITE_API_TOKEN` en `.env.local` y `render.yaml`, y vuelve a implementar. Si no coinciden, todo responde `no_autorizado`.
 
 **Después de cambiar el código del script** entra en **Implementar → Gestionar implementaciones → ✏️ → Versión: Nueva versión → Implementar**. Si en cambio creas una implementación nueva, la URL cambia y hay que actualizarla en `render.yaml`. Los cambios en la hoja (servicios, horarios, bloqueos) se ven al instante, sin volver a implementar.
 
@@ -89,11 +95,11 @@ El monto en Bs se calcula en el servidor y se guarda en `Total_Bs` junto con la 
 - Se quitó `.setHeaders()`: ese método no existe en `ContentService` y hacía fallar toda petición autorizada. Apps Script ya envía CORS por su cuenta, y el front manda el POST como `text/plain` para evitar el preflight.
 - La lista de **cupones ya no se envía al navegador**. Se validan con `?action=cupon&codigo=…` y otra vez en el POST.
 - El **total se recalcula en el servidor** a partir de los IDs de la orden.
-- Se agregó un **`LockService`** y se revisa el calendario antes de guardar, para evitar la doble reserva de un mismo cupo.
+- Cada negocio comprueba la disponibilidad y revisa el calendario antes de guardar, para evitar la doble reserva de un mismo cupo. **No hay lock**: se probó un `LockService` por negocio y se descartó porque `LockService` no tiene lock con clave (solo global, de usuario y del "documento actual", que en un script web no existe), y el global con 100 negocios hacía que el salón de Caracas frenara a los otros 99. En su lugar, tras escribir un hold se relee la hoja `Holds` una vez: si para la misma hora hay una fila escrita antes que la recién creada, esa ganó, la nueva se borra y se le avisa a la clienta que llegó primero. Cuesta ~200 ms en vez de ~1,5 s, y nadie hace cola.
 - El método de pago es obligatorio también en el servidor. Pago Móvil exige referencia.
 - `Configuracion` se envía como texto (`getDisplayValues`) y las fechas se interpretan en `America/Caracas`.
 
-> El token `MARIANAILS` viaja dentro del JavaScript público, así que funciona como filtro básico, no como secreto. Por eso las reglas importantes (precios, cupones, cupos) se validan en el servidor.
+> El token viaja dentro del JavaScript público, así que funciona como filtro básico, no como secreto. Por eso las reglas importantes (precios, cupones, cupos) se validan en el servidor.
 
 ## Publicar en Render
 

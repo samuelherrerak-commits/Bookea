@@ -79,14 +79,16 @@ export function ModalidadSelector({ value, onChange, config }: ModalidadSelector
           </motion.p>
         )}
       </AnimatePresence>
-      <a
-        href={config.spa.mapsUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-2 inline-flex h-11 items-center gap-1.5 text-[13px] font-medium text-rose-deep"
-      >
-        <IconMapPin size={16} /> Ver ubicación del spa
-      </a>
+      {config.spa.mapsUrl && (
+        <a
+          href={config.spa.mapsUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 inline-flex h-11 items-center gap-1.5 text-[13px] font-medium text-rose-deep"
+        >
+          <IconMapPin size={16} /> Ver ubicación del spa
+        </a>
+      )}
     </div>
   )
 }

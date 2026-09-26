@@ -1,10 +1,13 @@
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { toast } from 'sonner'
 import { CartBar } from './components/CartBar'
 import { CartSheet } from './components/CartSheet'
 import { useCatalog } from './hooks/useCatalog'
+import { useHold } from './hooks/useHold'
 import { spring } from './lib/motion'
 import { summarize } from './lib/pricing'
+import { applyBranding } from './lib/theme'
 import { useOrder } from './state/order'
 import type { Modalidad } from './types'
 import { AgendaView } from './views/AgendaView'
@@ -39,6 +42,20 @@ export default function App() {
     })
   }, [])
 
+  /**
+   * Se acabaron los 90 s con la hora apartada: se suelta y el cliente vuelve al
+   * catálogo. Vaciar el carrito no: puede querer probar otra hora, no otra vez.
+   */
+  const volverAlCatalogo = useCallback(() => {
+    dispatch({ type: 'setSchedule', schedule: null })
+    window.history.replaceState({ view: 'catalogo' }, '')
+    show('catalogo')
+    void refresh({ fresh: true })
+    toast('Se te acabó el tiempo de la hora', { description: 'La volvimos a liberar para que otros puedan agendarse.' })
+  }, [dispatch, refresh, show])
+
+  const hold = useHold(volverAlCatalogo)
+
   // Cada pantalla es una entrada del historial: el botón "atrás" del teléfono funciona.
   const navigate = useCallback(
     (next: View) => {
@@ -60,6 +77,21 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop)
   }, [show])
 
+  // Colores, título, descripción y favicon los decide la hoja del negocio.
+  useEffect(() => {
+    if (catalog) applyBranding(catalog.config)
+  }, [catalog])
+
+  // Al entrar a la agenda la ocupación tiene que ser real: el catálogo se cachea
+  // 5 min para que el arranque sea instantáneo, así que acá se salta esa caché
+  // (fresh=1) y se le vuelve a preguntar al calendario. Una vez por entrada.
+  const agendaRefrescada = useRef(false)
+  useEffect(() => {
+    if (view !== 'agenda' || status !== 'ready' || agendaRefrescada.current) return
+    agendaRefrescada.current = true
+    void refresh({ fresh: true })
+  }, [view, status, refresh])
+
   // Protecciones: no se llega a agenda/pago sin catálogo, servicio base o cupo.
   useEffect(() => {
     if (view === 'catalogo' || view === 'listo') return
@@ -72,7 +104,39 @@ export default function App() {
     navigate('agenda')
   }
 
+  /** El cliente tocó un horario: se aparta en el servidor antes de seguir. */
+  const onSelectSlot = async (fechaCita: string, horaCita: string) => {
+    let ok = false
+    try {
+      ok = await hold.apartar({
+        fechaCita,
+        horaCita,
+        items: { ...state.cart },
+        modalidad: state.modalidad ?? 'spa',
+      })
+    } catch (err) {
+      // Sin esto el error se perdía en un promise sin capturar y el toque no
+      // hacía nada visible: la clienta solo veía que "no la deja".
+      toast.error(err instanceof Error ? err.message : 'No pudimos apartar ese horario.')
+    }
+    if (!ok) {
+      // Alguien la agarró antes, o el servidor no pudo apartarla: no es un error
+      // de la app, solo hay que repintar la agenda con lo que sí está libre.
+      void refresh({ fresh: true })
+      return false
+    }
+    dispatch({ type: 'setSchedule', schedule: { fecha: fechaCita, hora: horaCita } })
+    return true
+  }
+
+  /** El cliente se arrepintió de la hora: se suelta para que otro la tome. */
+  const onReleaseSlot = () => {
+    hold.soltar()
+    dispatch({ type: 'setSchedule', schedule: null })
+  }
+
   const onSuccess = (result: { whatsappUrl: string; calendarUrl: string; modalidad: Modalidad }) => {
+    hold.confirmar() // la hora ya es del cliente: no se suelta
     setDone(result)
     dispatch({ type: 'reset' })
     window.history.replaceState({ view: 'listo' }, '')
@@ -87,22 +151,39 @@ export default function App() {
     void refresh()
   }
 
-  const onSlotTaken = () => {
+  /** La hora ya no está: o venció el hold o alguien la confirmó primero. */
+  const onSlotTaken = useCallback(() => {
+    hold.soltar() // el hold ya no sirve; soltarlo también limpia el contador
     dispatch({ type: 'setSchedule', schedule: null })
-    void refresh()
+    void refresh({ fresh: true })
     goBack()
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hold.soltar, dispatch, refresh, goBack])
 
   let page: ReactNode = null
   if (view === 'catalogo') {
     page = <CatalogView catalog={catalog} status={status} error={error} onRetry={retry} summary={summary} />
   } else if (view === 'agenda' && catalog) {
-    page = <AgendaView catalog={catalog} summary={summary} onBack={goBack} onContinue={() => navigate('pago')} />
+    page = (
+      <AgendaView
+        catalog={catalog}
+        summary={summary}
+        onBack={goBack}
+        onSelectSlot={onSelectSlot}
+        onReleaseSlot={onReleaseSlot}
+        apartando={hold.apartando}
+        tieneHold={hold.restantes !== null}
+        onRefresh={() => refresh({ fresh: true })}
+        onContinue={() => navigate('pago')}
+      />
+    )
   } else if (view === 'pago' && catalog) {
     page = (
       <PaymentView
         catalog={catalog}
         summary={summary}
+        restantes={hold.restantes}
+        totalHold={hold.total}
         onBack={goBack}
         onSlotTaken={onSlotTaken}
         onSuccess={onSuccess}

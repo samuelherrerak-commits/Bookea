@@ -47,7 +47,9 @@ export function buildWhatsAppMessage(input: WhatsAppInput): string {
       '📍 Te envío mi ubicación por aquí 👇',
     )
   } else {
-    lines.push('🏡 Lugar: En el spa', `📍 Ubicación: ${spa.direccion ? `${spa.direccion} · ` : ''}${spa.mapsUrl}`)
+    lines.push('🏡 Lugar: En el spa')
+    const lugar = [spa.direccion, spa.mapsUrl].filter(Boolean).join(' · ')
+    if (lugar) lines.push(`📍 Ubicación: ${lugar}`)
   }
   lines.push('')
 

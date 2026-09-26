@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DateStrip } from '../components/checkout/DateStrip'
 import { StepHeader } from '../components/checkout/StepHeader'
 import { SlotLegend, TimeGrid } from '../components/checkout/TimeGrid'
@@ -13,14 +13,33 @@ import { buildAgenda } from '../lib/slots'
 import { useOrder } from '../state/order'
 import type { Catalog } from '../types'
 
+/** Cada cuánto se repinta la agenda para que los holds ajenos se vean. */
+const SONDA_MS = 15_000
+
 interface AgendaViewProps {
   catalog: Catalog
   summary: OrderSummary
   onBack: () => void
+  onSelectSlot: (fechaCita: string, horaCita: string) => Promise<boolean>
+  onReleaseSlot: () => void
+  apartando: boolean
+  /** Hay una hora apartada por este cliente: es seguro conservar el cupo. */
+  tieneHold: boolean
+  onRefresh: () => void
   onContinue: () => void
 }
 
-export function AgendaView({ catalog, summary, onBack, onContinue }: AgendaViewProps) {
+export function AgendaView({
+  catalog,
+  summary,
+  onBack,
+  onSelectSlot,
+  onReleaseSlot,
+  apartando,
+  tieneHold,
+  onRefresh,
+  onContinue,
+}: AgendaViewProps) {
   const { state, dispatch } = useOrder()
   const days = useMemo(
     () => buildAgenda(catalog.config, catalog.citas, summary.duracionMin),
@@ -32,18 +51,44 @@ export function AgendaView({ catalog, summary, onBack, onContinue }: AgendaViewP
   const day = days.find((d) => d.fecha === fecha) ?? null
   const hora = state.schedule?.fecha === fecha ? state.schedule.hora : null
 
-  // Si la ocupación cambió y el cupo guardado ya no está libre, se descarta.
+  // Los holds de otros ocupan la hora: la sonda la refresca sin sacar la pantalla.
+  // Va en un ref porque si no, cada render reiniciaba el intervalo y nunca llegaba
+  // a dispararse.
+  const refrescar = useRef(onRefresh)
+  refrescar.current = onRefresh
   useEffect(() => {
-    if (!state.schedule) return
+    const id = setInterval(() => refrescar.current(), SONDA_MS)
+    return () => clearInterval(id)
+  }, [])
+
+  // Si la ocupación cambió y el cupo guardado ya no está libre, se descarta.
+  // Salvo que tengamos un hold vivo: entonces ese "ocupado" es el nuestro.
+  useEffect(() => {
+    if (!state.schedule || tieneHold) return
     const d = days.find((x) => x.fecha === state.schedule!.fecha)
     const slot = d?.slots.find((s) => s.hora === state.schedule!.hora)
-    if (!slot || slot.estado !== 'libre') dispatch({ type: 'setSchedule', schedule: null })
-  }, [days, state.schedule, dispatch])
+    if (!slot || slot.estado !== 'libre') {
+      onReleaseSlot()
+      dispatch({ type: 'setSchedule', schedule: null })
+    }
+  }, [days, state.schedule, tieneHold, dispatch, onReleaseSlot])
 
   useEffect(() => {
     if (fecha && days.some((d) => d.fecha === fecha && d.libres > 0)) return
     setFecha(firstOpen)
   }, [days, fecha, firstOpen])
+
+  /** Toca una hora: primero se aparta en el servidor, después se elige. */
+  const elegir = useCallback(
+    async (h: string) => {
+      if (!day || apartando) return
+      // Cambiar de hora suelta la anterior, para no dejar dos apartadas.
+      if (hora && hora !== h) onReleaseSlot()
+      const ok = await onSelectSlot(day.fecha, h)
+      if (!ok && hora === h) dispatch({ type: 'setSchedule', schedule: null })
+    },
+    [day, apartando, hora, onSelectSlot, onReleaseSlot, dispatch],
+  )
 
   return (
     <div className="min-h-dvh pb-40">
@@ -86,7 +131,8 @@ export function AgendaView({ catalog, summary, onBack, onContinue }: AgendaViewP
                 <TimeGrid
                   slots={day.slots}
                   selected={hora}
-                  onSelect={(h) => dispatch({ type: 'setSchedule', schedule: { fecha: day.fecha, hora: h } })}
+                  disabled={apartando}
+                  onSelect={elegir}
                 />
               </motion.div>
             ) : (
@@ -108,7 +154,8 @@ export function AgendaView({ catalog, summary, onBack, onContinue }: AgendaViewP
               transition={spring.gentle}
               className="overflow-hidden pb-2 text-center text-[14px]"
             >
-              {capitalize(formatLongDate(state.schedule.fecha))} · <b className="font-semibold">{formatTime12(state.schedule.hora)}</b>
+              {capitalize(formatLongDate(state.schedule.fecha))} ·{' '}
+              <b className="font-semibold">{formatTime12(state.schedule.hora)}</b>
             </motion.p>
           )}
         </AnimatePresence>

@@ -43,7 +43,7 @@ export function CatalogView({ catalog, status, error, onRetry, summary }: Catalo
 
   return (
     <div className="pb-36">
-      <Hero config={catalog?.config ?? null} />
+      <Hero config={catalog?.config ?? null} loading={status === 'loading'} />
 
       {status === 'loading' && (
         <div className="px-5">
@@ -123,7 +123,7 @@ export function CatalogView({ catalog, status, error, onRetry, summary }: Catalo
             >
               <IconWhatsApp size={18} className="text-[#25D366]" /> ¿Dudas? Escríbenos
             </a>
-            <p className="mt-6">© {new Date().getFullYear()} ByMariaNails</p>
+            <p className="mt-6">          © {new Date().getFullYear()} {catalog.config.marca}</p>
           </footer>
         </motion.div>
       )}

@@ -4,6 +4,8 @@ import { buildAgenda, busyByDay, slotsForDay, zonedParts } from './slots'
 
 const config: BusinessConfig = {
   nombreNegocio: 'Mariana',
+  marca: 'Mariana',
+  logoUrl: '',
   whatsapp: '584122516390',
   horario: [[], [[540, 780]], [[540, 780]], [[540, 780]], [[540, 780]], [[540, 780]], [[540, 780]]],
   intervaloMin: 60,
@@ -11,8 +13,14 @@ const config: BusinessConfig = {
   anticipacionMinHoras: 2,
   zonaHoraria: 'America/Caracas',
   pagoMovil: { banco: '', telefono: '', cedula: '' },
+  permiteDomicilio: true,
   domicilio: { recargoPct: 20, minutosExtra: 15 },
   spa: { direccion: '', mapsUrl: '' },
+  tema: { base: '#C08497', soft: '#FBF3F4', deep: '#6B3A48', estilo: 'elegante' },
+  moneda: 'EUR',
+  metodosPago: [],
+  heroTitulo: '',
+  heroSubtitulo: '',
 }
 
 describe('zonedParts', () => {
@@ -85,5 +93,24 @@ describe('buildAgenda', () => {
     expect(days.map((d) => d.fecha)).toEqual(['2026-09-24', '2026-09-25', '2026-09-26', '2026-09-28', '2026-09-29', '2026-09-30'])
     expect(days.find((d) => d.fecha === '2026-09-25')?.libres).toBe(0)
     expect(days.find((d) => d.fecha === '2026-09-26')?.libres).toBe(4)
+  })
+
+  it('trata la hora apartada por otro como ocupada', () => {
+    // El servidor manda los holds en el mismo arreglo que las citas, así que la
+    // hora que alguien está apartando ya no se le ofrece a los demás.
+    const now = new Date('2026-09-24T10:00:00Z')
+    const hold = [{ inicio: new Date('2026-09-25T13:00:00Z'), fin: new Date('2026-09-25T14:30:00Z') }] // 9–10:30
+    const libre = buildAgenda(config, [], 60, now)
+    const conHold = buildAgenda(config, hold, 60, now)
+    const d = (dias: ReturnType<typeof buildAgenda>) =>
+      dias.find((x) => x.fecha === '2026-09-25')!.slots.map((s) => `${s.hora}:${s.estado}`).join(' ')
+    expect(d(conHold)).not.toBe(d(libre))
+    // 9:00 y 10:00 chocan con un hold de 90 min (9:00–10:30); 11:00 y 12:00 ya no.
+    expect(conHold.find((x) => x.fecha === '2026-09-25')!.slots.map((s) => s.estado)).toEqual([
+      'reservado',
+      'reservado',
+      'libre',
+      'libre',
+    ])
   })
 })

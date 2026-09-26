@@ -1,18 +1,23 @@
 const env = import.meta.env
 
+/**
+ * URL del Apps Script maestro que atiende a TODOS los negocios.
+ * Igual para todos los tenant: el slug se elige en la URL (/u/mariana).
+ */
 export const API_URL: string = (env.VITE_API_URL ?? '').trim()
-export const API_TOKEN: string = (env.VITE_API_TOKEN ?? '').trim() || 'MARIANAILS'
-export const DEFAULT_WHATSAPP: string = ((env.VITE_WHATSAPP ?? '').trim() || '584122516390').replace(/\D/g, '')
+export const API_TOKEN: string = (env.VITE_API_TOKEN ?? '').trim() || 'Bookeav1.1.1'
+/** Solo respaldo: la hoja de cada negocio manda en su clave `whatsapp`. */
+export const DEFAULT_WHATSAPP: string = (env.VITE_WHATSAPP ?? '').replace(/\D/g, '') || '584122516390'
+/** Solo respaldo: la hoja de cada negocio manda en su clave `marca`. */
+export const BRAND: string = (env.VITE_BRAND ?? '').trim() || 'Mi Negocio'
 
-/** Sin URL de Apps Script la app usa datos de ejemplo. */
+/** Sin URL de Apps Script la app usa datos de ejemplo (demo local). */
 export const DEMO_MODE = API_URL === ''
 
 export const METODO_LABEL = {
   lugar: 'Pago en la cita',
   pago_movil: 'Bolívares (Pago Móvil)',
 } as const
-
-export const BRAND = 'ByMariaNails'
 
 export const MODALIDAD_LABEL = {
   spa: 'En el spa',

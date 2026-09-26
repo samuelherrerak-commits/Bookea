@@ -1,78 +1,126 @@
 import { API_TOKEN, API_URL, DEMO_MODE } from '../config'
 import type { Catalog, Coupon, ReservationPayload, ReservationResult } from '../types'
-import { mockFetchData, mockSubmitReservation, mockValidateCoupon } from './mock'
+import { writeCatalogCache } from './catalogCache'
 import { ApiError } from './errors'
-import { normalizeCatalog, str, toNumber, type Row } from './normalize'
+import type { ApiErrorCode } from './errors'
+import { mockFetchData, mockSubmitReservation, mockValidateCoupon } from './mock'
+import { normalizeCatalog, str, toNumber } from './normalize'
+import type { Row } from './normalize'
+import { normalizeSlug, slugFromLocation } from './tenant'
 
-export { ApiError }
+export { ApiError, API_TOKEN, DEMO_MODE }
 
 const TIMEOUT_MS = 20_000
 
-// ---------- Transporte ----------
+/** undefined = todavía no se ha resuelto; null = esta app no tiene tenant. */
+let shopSlug: string | null | undefined
 
-async function request(input: string, init?: RequestInit): Promise<Row> {
+/** Negocio activo: el que se fijó a mano o, si no, el de la URL (/u/mariana o ?shop=). */
+function currentSlug(): string | null {
+  if (shopSlug === undefined) {
+    shopSlug = typeof window === 'undefined' ? null : slugFromLocation()
+  }
+  return shopSlug
+}
+
+/** Fija el negocio a mano (landing embebida, pruebas). `null` vuelve a leer la URL. */
+export function setShopSlug(slug: string | null): void {
+  shopSlug = slug === null ? undefined : normalizeSlug(slug)
+}
+
+export function getShopSlug(): string | null {
+  return currentSlug()
+}
+
+function apiUrl(params: Record<string, string> = {}): URL {
+  const url = new URL(API_URL)
+  url.searchParams.set('token', API_TOKEN)
+  const slug = currentSlug()
+  if (slug) url.searchParams.set('shop', slug)
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value)
+  return url
+}
+
+function toErrorCode(error: unknown): ApiErrorCode {
+  const code = str(error)
+  if (code === 'no_autorizado' || code === 'cupo_ocupado' || code === 'cupon_invalido' || code === 'datos_invalidos') {
+    return code
+  }
+  return 'desconocido'
+}
+
+async function request(input: URL, init?: RequestInit): Promise<Row> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
-  let res: Response
+
+  let response: Response
   try {
-    res = await fetch(input, { ...init, signal: controller.signal, redirect: 'follow' })
+    response = await fetch(input.toString(), { ...init, signal: controller.signal, redirect: 'follow' })
   } catch {
     throw new ApiError('red', 'No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.')
   } finally {
     clearTimeout(timer)
   }
-  let data: Row
-  try {
-    data = (await res.json()) as Row
-  } catch {
-    throw new ApiError('desconocido', 'Respuesta inesperada del servidor.')
-  }
-  if (data && typeof data.error === 'string') {
-    const code = (['no_autorizado', 'cupo_ocupado', 'cupon_invalido', 'datos_invalidos'] as const).find(
-      (c) => c === data.error,
-    )
-    throw new ApiError(code ?? (/autoriz/i.test(data.error) ? 'no_autorizado' : 'desconocido'), str(data.mensaje) || data.error)
-  }
-  return data
-}
 
-function url(params: Record<string, string>): string {
-  const u = new URL(API_URL)
-  u.searchParams.set('token', API_TOKEN)
-  for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v)
-  return u.toString()
+  let data: unknown
+  try {
+    data = await response.json()
+  } catch {
+    throw new ApiError('desconocido', 'El servidor devolvió una respuesta inesperada.')
+  }
+
+  const row: Row = data && typeof data === 'object' ? (data as Row) : {}
+  if (str(row.error)) {
+    throw new ApiError(toErrorCode(row.error), str(row.mensaje) || 'No se pudo completar la operación.')
+  }
+  return row
 }
 
 // ---------- API pública ----------
 
-/** Catálogo, promociones, configuración, tasa BCV y ocupación del calendario. */
-export async function fetchData(): Promise<Catalog> {
+/**
+ * Catálogo, promociones, configuración, tasa BCV y ocupación del calendario.
+ *
+ * `fresh: true` salta la caché de 5 min del servidor y le vuelve a preguntar al
+ * calendario. Es lo que usa la pantalla de agenda para no mostrar cupos viejos.
+ */
+export async function fetchData(options: { fresh?: boolean } = {}): Promise<Catalog> {
   if (DEMO_MODE) return mockFetchData()
-  return normalizeCatalog(await request(url({})))
+  const raw = await request(apiUrl(options.fresh ? { fresh: '1' } : {}))
+  writeCatalogCache(getShopSlug(), raw)
+  return normalizeCatalog(raw)
 }
 
 /** Valida un cupón en el servidor (la lista de cupones nunca llega al navegador). */
 export async function validateCoupon(codigo: string): Promise<Coupon> {
   const code = codigo.trim().toUpperCase()
-  if (!code) throw new ApiError('cupon_invalido', 'Escribe un código.')
+  if (!code) throw new ApiError('cupon_invalido', 'Escribe el código del cupón.')
   if (DEMO_MODE) return mockValidateCoupon(code)
-  const data = await request(url({ action: 'cupon', codigo: code }))
-  if (!data.valido) throw new ApiError('cupon_invalido', str(data.mensaje) || 'Este cupón no es válido.')
-  return { codigo: str(data.codigo) || code, porcentaje: toNumber(data.porcentaje), monto: toNumber(data.monto) }
+
+  const data = await request(apiUrl({ action: 'cupon', codigo: code }))
+  if (!data.valido) {
+    throw new ApiError('cupon_invalido', str(data.mensaje) || 'Este cupón no existe o ya se agotó.')
+  }
+  return {
+    codigo: str(data.codigo) || code,
+    porcentaje: toNumber(data.porcentaje),
+    monto: toNumber(data.monto),
+  }
 }
 
-/**
- * Envía la reservación. Se usa `text/plain` para que el navegador no haga
- * preflight CORS (Apps Script no responde a OPTIONS).
- */
+/** Envía la reserva. Se usa `text/plain` para que el navegador no haga preflight CORS. */
 export async function submitReservation(payload: ReservationPayload): Promise<ReservationResult> {
   if (DEMO_MODE) return mockSubmitReservation(payload)
-  const data = await request(API_URL, {
+
+  const data = await request(apiUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ token: API_TOKEN, ...payload }),
+    body: JSON.stringify({ token: API_TOKEN, shop: currentSlug(), ...payload, holdId: getHoldId() }),
   })
-  if (!data.success) throw new ApiError('desconocido', 'No se pudo guardar la reserva.')
+
+  if (!data.success) {
+    throw new ApiError('desconocido', str(data.mensaje) || 'No se pudo guardar la reserva.')
+  }
   return {
     id: str(data.id),
     total: toNumber(data.total, payload.total),
@@ -80,4 +128,102 @@ export async function submitReservation(payload: ReservationPayload): Promise<Re
     tasa: data.tasa === null || data.tasa === undefined ? null : toNumber(data.tasa),
     comprobanteUrl: str(data.comprobanteUrl) || null,
   }
+}
+
+// ---------- Reserva temporal de la hora ----------
+
+/**
+ * Id de sesión: identifica al navegador para poder limitar cuántas horas puede
+ * apartar a la vez y para que nadie pueda soltar la hora de otro. No es una
+ * credencial, se regenera al cerrar la pestaña.
+ */
+let sesionId: string | null = null
+
+function getSesionId(): string {
+  if (sesionId) return sesionId
+  const key = 'sesion:v1'
+  try {
+    const guardado = window.localStorage.getItem(key)
+    if (guardado) return (sesionId = guardado)
+    sesionId = crypto.randomUUID()
+    window.localStorage.setItem(key, sesionId)
+  } catch {
+    sesionId = crypto.randomUUID() // almacenamiento bloqueado: solo en memoria
+  }
+  return sesionId
+}
+
+/** Id del hold vigente, para mandarlo al confirmar la reserva. */
+let holdId: string | null = null
+
+function getHoldId(): string | null {
+  return holdId
+}
+
+export interface HoldResult {
+  holdId: string
+  expira: number
+  segundos: number
+}
+
+/**
+ * Aparta una hora. A partir de acá la hora no le aparece a nadie más, y hay
+ * `segundos` (90 por defecto) para reportar el pago. Si el servidor dice que ya
+ * está, tira ApiError 'cupo_ocupado' y el caller refresca la agenda.
+ */
+export async function holdSlot(input: {
+  fechaCita: string
+  horaCita: string
+  items: ReservationPayload['items']
+  modalidad: string
+}): Promise<HoldResult> {
+  if (DEMO_MODE) {
+    const segundos = 90
+    const expira = Date.now() + segundos * 1000
+    holdId = 'demo-hold'
+    return { holdId, expira, segundos }
+  }
+
+  const data = await request(apiUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      token: API_TOKEN,
+      shop: currentSlug(),
+      action: 'hold',
+      fechaCita: input.fechaCita,
+      horaCita: input.horaCita,
+      items: input.items,
+      modalidad: input.modalidad,
+      sesionId: getSesionId(),
+    }),
+  })
+
+  const r: HoldResult = {
+    holdId: str(data.holdId),
+    expira: toNumber(data.expira, Date.now() + 90_000),
+    segundos: toNumber(data.segundos, 90),
+  }
+  holdId = r.holdId
+  return r
+}
+
+/** Suelta la hora. Best-effort: si falla, el servidor la purga sola a los 90 s. */
+export async function releaseHold(hold: string): Promise<void> {
+  if (holdId === hold) holdId = null
+  if (DEMO_MODE) return
+  try {
+    await request(apiUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ token: API_TOKEN, shop: currentSlug(), action: 'release', holdId: hold, sesionId: getSesionId() }),
+    })
+  } catch {
+    /* si no se pudo soltar, la limpieza del servidor la saca */
+  }
+}
+
+/** Olvida el hold local. Para cuando la reserva se confirmó. */
+export function clearHold(): void {
+  holdId = null
 }

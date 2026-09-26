@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CustomerForm, validateCustomer } from '../components/checkout/CustomerForm'
 import { PagoMovilDetails } from '../components/checkout/PagoMovilDetails'
@@ -11,6 +12,7 @@ import { IconCalendar, IconHome, IconMapPin, IconWhatsApp } from '../components/
 import { METODO_LABEL, MODALIDAD_LABEL } from '../config'
 import { ApiError, submitReservation } from '../lib/api'
 import { capitalize, formatEUR, formatLongDate, formatTime12 } from '../lib/format'
+import { mmss, pctRestante, urgente } from '../lib/hold'
 import { servicesText, type OrderSummary as Summary } from '../lib/pricing'
 import { buildGoogleCalendarUrl } from '../lib/calendar'
 import { splitDataUrl } from '../lib/image'
@@ -21,6 +23,10 @@ import type { Catalog, Modalidad, ReservationPayload } from '../types'
 interface PaymentViewProps {
   catalog: Catalog
   summary: Summary
+  /** Segundos que quedan de la hora apartada; null si ya no hay hold. */
+  restantes: number | null
+  /** Segundos totales del hold, para dibujar la barra. */
+  totalHold: number | null
   onBack: () => void
   /** El cupo se ocupó mientras la clienta llenaba el formulario. */
   onSlotTaken: () => void
@@ -29,7 +35,15 @@ interface PaymentViewProps {
 
 const UBICACION_WHATSAPP = 'Ubicación por WhatsApp'
 
-export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }: PaymentViewProps) {
+export function PaymentView({
+  catalog,
+  summary,
+  restantes,
+  totalHold,
+  onBack,
+  onSlotTaken,
+  onSuccess,
+}: PaymentViewProps) {
   const { state, dispatch } = useOrder()
   const [attempted, setAttempted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -47,6 +61,12 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
         ? 'Sube el capture de tu pago para continuar.'
         : 'Haz el Pago Móvil, toca "Ya pagué" y sube el capture.'
       : null
+
+  // Si se recarga la página en este paso, el hold se perdió (vive en memoria):
+  // no se puede confirmar una hora que ya no está apartada.
+  useEffect(() => {
+    if (restantes === null) onSlotTaken()
+  }, [restantes, onSlotTaken])
 
   const confirm = async () => {
     if (submitting) return
@@ -93,7 +113,7 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
       const tasa = result.tasa ? { valor: result.tasa, fecha: catalog.tasa?.fecha ?? null, fuente: 'BCV' } : catalog.tasa
       // Enlace corto: el lugar va en "location" y los detalles son mínimos.
       const calendarUrl = buildGoogleCalendarUrl({
-        titulo: `Cita ${catalog.config.nombreNegocio} · ${servicesText(summary.lines)}`,
+        titulo: `Cita ${catalog.config.marca || catalog.config.nombreNegocio} · ${servicesText(summary.lines)}`,
         fecha: schedule.fecha,
         hora: schedule.hora,
         duracionMin: summary.duracionMin,
@@ -102,7 +122,7 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
         zonaHoraria: catalog.config.zonaHoraria,
       })
       const message = buildWhatsAppMessage({
-        negocio: catalog.config.nombreNegocio,
+        negocio: catalog.config.marca || catalog.config.nombreNegocio,
         customer,
         schedule,
         summary: finalSummary,
@@ -135,6 +155,7 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
       <StepHeader step={2} total={2} title="Confirma y paga" onBack={onBack} />
 
       <div className="space-y-8 px-5 pt-2">
+        {restantes !== null && <HoldTimer restantes={restantes} total={totalHold ?? 90} />}
         {/* Resumen de la cita */}
         <section aria-labelledby="resumen-title" className="rounded-3xl bg-surface p-4 shadow-card ring-1 ring-line">
           <h2 id="resumen-title" className="sr-only">
@@ -166,14 +187,20 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-medium">{MODALIDAD_LABEL[modalidad]}</p>
                 {modalidad === 'spa' ? (
-                  <a
-                    href={catalog.config.spa.mapsUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block truncate text-[13px] font-medium text-rose-deep underline-offset-2 hover:underline"
-                  >
-                    {catalog.config.spa.direccion || 'Ver ubicación en Google Maps'}
-                  </a>
+                  catalog.config.spa.mapsUrl ? (
+                    <a
+                      href={catalog.config.spa.mapsUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block truncate text-[13px] font-medium text-rose-deep underline-offset-2 hover:underline"
+                    >
+                      {catalog.config.spa.direccion || 'Ver ubicación en Google Maps'}
+                    </a>
+                  ) : (
+                    <p className="truncate text-[13px] text-muted">
+                      {catalog.config.spa.direccion || 'Te esperamos en el spa'}
+                    </p>
+                  )
                 ) : (
                   <p className="text-[13px] text-muted">
                     +{summary.recargoPct} % por traslado · al terminar, envíanos tu ubicación 📍 por WhatsApp
@@ -248,6 +275,43 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
           Guardamos tu cita y te llevamos a WhatsApp con el resumen.
         </p>
       </BottomBar>
+    </div>
+  )
+}
+
+/**
+ * Cuenta regresiva de la hora apartada.
+ *
+ * No decora: dice cuánto tiempo queda y se pone de advertencia cerca del final.
+ * Un número bajando es la única forma de que la clienta sepa que hay que
+ * apurarse; sin esto, esperar 90 s en silencio parece que la página se colgó.
+ */
+function HoldTimer({ restantes, total }: { restantes: number; total: number }) {
+  const reloj = mmss(restantes)
+  const pct = pctRestante(restantes, total)
+  const rojo = urgente(restantes)
+
+  return (
+    <div
+      role="timer"
+      aria-live="off"
+      aria-label={`Tiempo restante para confirmar la hora: ${reloj.replace(':', ' minutos ')} segundos`}
+      className={`rounded-2xl px-4 py-3 ring-1 transition-colors duration-500 ${rojo ? 'bg-surface ring-danger/30' : 'bg-sand/70 ring-line'}`}
+    >
+      <div className="flex items-center justify-between gap-3 text-[13px]">
+        <span className={rojo ? 'text-danger' : 'text-muted'}>
+          {rojo ? 'Rápido, tu hora se suelta en' : 'Tienes tu hora apartada'}
+        </span>
+        <span className={`font-medium tabular-nums ${rojo ? 'text-danger' : 'text-ink'}`}>{reloj}</span>
+      </div>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-sand">
+        <motion.div
+          className={`h-full rounded-full ${rojo ? 'bg-danger' : 'bg-ink'}`}
+          initial={false}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.9, ease: 'linear' }}
+        />
+      </div>
     </div>
   )
 }

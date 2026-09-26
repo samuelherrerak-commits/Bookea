@@ -5,9 +5,12 @@
   --color-surface: #ffffff;
   --color-sand: #f4eee4;
   --color-line: #ede6dc;
-  --color-rose: #e5b8c1;
-  --color-rose-soft: #f6e6e9;
-  --color-rose-deep: #b97a88;
+  /* Grises a propósito: son el color de acento ANTES de que llegue la config del
+     negocio. applyBranding() los pisa con la marca, así que nada rosado se ve
+     mientras carga. rose-deep replica a --muted para que se lea como texto normal. */
+  --color-rose: #c9c3bd;
+  --color-rose-soft: #efece8;
+  --color-rose-deep: #8a837a;
   --color-ink: #2d2a26;
   --color-muted: #8a837a;
   --color-danger: #b4533f;

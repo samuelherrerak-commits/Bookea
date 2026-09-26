@@ -6,10 +6,12 @@ import type { Slot } from '../../lib/slots'
 interface TimeGridProps {
   slots: Slot[]
   selected: string | null
-  onSelect: (hora: string) => void
+  /** Bloquea todo mientras el servidor aparta la hora. */
+  disabled?: boolean
+  onSelect: (hora: string) => void | Promise<void>
 }
 
-export function TimeGrid({ slots, selected, onSelect }: TimeGridProps) {
+export function TimeGrid({ slots, selected, disabled = false, onSelect }: TimeGridProps) {
   // Los horarios que ya pasaron no se muestran; los reservados sí, bloqueados.
   const visible = slots.filter((s) => s.estado !== 'pasado')
   const groups = [
@@ -26,14 +28,16 @@ export function TimeGrid({ slots, selected, onSelect }: TimeGridProps) {
   }
 
   return (
-    <div className="space-y-5" role="radiogroup" aria-label="Hora de la cita">
+    <div className="space-y-5" role="radiogroup" aria-label="Hora de la cita" aria-busy={disabled}>
       {groups.map((group) => (
         <div key={group.label}>
           <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-muted">{group.label}</p>
           <div className="grid grid-cols-3 gap-2">
             {group.items.map((slot) => {
-              const reserved = slot.estado === 'reservado'
+              // La hora propia sale como ocupada en la respuesta, porque ya está
+              // apartada: se muestra elegida y no tachada.
               const isSelected = slot.hora === selected
+              const reserved = slot.estado === 'reservado' && !isSelected
               return (
                 <motion.button
                   key={slot.hora}
@@ -41,7 +45,7 @@ export function TimeGrid({ slots, selected, onSelect }: TimeGridProps) {
                   role="radio"
                   aria-checked={isSelected}
                   aria-label={`${formatTime12(slot.hora)}${reserved ? ', reservado' : ''}`}
-                  disabled={reserved}
+                  disabled={reserved || (disabled && !isSelected)}
                   onClick={() => onSelect(slot.hora)}
                   whileTap={reserved ? undefined : tap}
                   transition={spring.snappy}

@@ -8,7 +8,20 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Toaster } from 'sonner'
 import App from './App'
+import { readCatalogCache } from './lib/catalogCache'
+import { applyBranding } from './lib/theme'
+import { slugFromLocation } from './lib/tenant'
 import { OrderProvider } from './state/order'
+
+// Pinta el color y el nombre del negocio ANTES del primer render. Sin esto hay
+// un frame con los grises de index.css mientras useEffect corre tras el montaje.
+// Es seguro aunque no haya caché: readCatalogCache devuelve null y no hace nada.
+try {
+  const cached = readCatalogCache(slugFromLocation())
+  if (cached) applyBranding(cached.config)
+} catch {
+  /* el branding llega igual por useEffect en App */
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

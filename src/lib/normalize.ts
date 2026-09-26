@@ -1,6 +1,7 @@
 import { DEFAULT_WHATSAPP } from '../config'
-import type { BusinessConfig, BusyRange, Catalog, Promo, Service, Tasa } from '../types'
+import type { BusinessConfig, BusyRange, Catalog, Money, Promo, Service, Tasa, ThemeEstilo } from '../types'
 import { parseHHMM } from './format'
+import { ESTILOS, paletaPorNombre } from './theme'
 
 // ---------- Normalización: la hoja la llena una persona, así que se tolera de todo ----------
 
@@ -147,10 +148,10 @@ export function normalizeHorarios(rows: unknown): Array<Array<[number, number]>>
   return any ? week : null
 }
 
-export const DEFAULT_SPA_MAPS = 'https://maps.app.goo.gl/MBfSuyGHQrRRcDp17'
-
 export const DEFAULT_CONFIG: BusinessConfig = {
-  nombreNegocio: 'ByMariaNails',
+  nombreNegocio: 'Mi Negocio',
+  marca: 'Mi Negocio',
+  logoUrl: '',
   whatsapp: DEFAULT_WHATSAPP,
   horario: [[], [[540, 1140]], [[540, 1140]], [[540, 1140]], [[540, 1140]], [[540, 1140]], [[540, 1140]]],
   intervaloMin: 30,
@@ -158,8 +159,15 @@ export const DEFAULT_CONFIG: BusinessConfig = {
   anticipacionMinHoras: 2,
   zonaHoraria: 'America/Caracas',
   pagoMovil: { banco: '', telefono: '', cedula: '' },
+  permiteDomicilio: true,
   domicilio: { recargoPct: 20, minutosExtra: 15 },
-  spa: { direccion: '', mapsUrl: DEFAULT_SPA_MAPS },
+  // Sin dirección por defecto: cada negocio pone la suya. Antes caía la de otro tenant.
+  spa: { direccion: '', mapsUrl: '' },
+  tema: { base: '#C08497', soft: '#FBF3F4', deep: '#6B3A48', estilo: 'elegante' },
+  moneda: 'EUR',
+  metodosPago: [],
+  heroTitulo: 'Reserva tu cita en minutos',
+  heroSubtitulo: 'Elige tus servicios, aparta el horario que prefieras y confirma por WhatsApp.',
 }
 
 export function normalizeConfig(raw: unknown, horariosRaw?: unknown): BusinessConfig {
@@ -192,9 +200,26 @@ export function normalizeConfig(raw: unknown, horariosRaw?: unknown): BusinessCo
     }
   }
 
+  const bool = (key: string, fallback: boolean) => {
+    const v = (map[key] ?? '').trim().toLowerCase()
+    if (!v) return fallback
+    return v === 'si' || v === 'true' || v === '1' || v === 'yes'
+  }
+  const hex = (key: string, fallback: string) => {
+    const v = (map[key] ?? '').trim()
+    return /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ? v : fallback
+  }
+  // Precedencia: hex escrito a mano > paleta elegida del dropdown > default de la app.
+  const paleta = paletaPorNombre(map.paleta ?? '')
+  const estiloRaw = (map.tema_estilo ?? '').trim().toLowerCase()
+  const MONEDAS: readonly Money[] = ['EUR', 'USD', 'BS']
+  const monedaRaw = (map.moneda ?? '').trim().toUpperCase()
+
   const whatsapp = (map.whatsapp ?? '').replace(/\D/g, '')
   return {
     nombreNegocio: map.nombre_negocio || d.nombreNegocio,
+    marca: map.marca || d.marca,
+    logoUrl: /^https?:\/\//i.test((map.logo_url ?? '').trim()) ? map.logo_url.trim() : d.logoUrl,
     whatsapp: whatsapp || d.whatsapp,
     horario,
     intervaloMin: int('intervalo_min', d.intervaloMin) || d.intervaloMin,
@@ -206,6 +231,7 @@ export function normalizeConfig(raw: unknown, horariosRaw?: unknown): BusinessCo
       telefono: map.pm_telefono ?? '',
       cedula: map.pm_cedula ?? '',
     },
+    permiteDomicilio: bool('permite_domicilio', d.permiteDomicilio),
     domicilio: {
       recargoPct: map.recargo_domicilio_pct ? toNumber(map.recargo_domicilio_pct, d.domicilio.recargoPct) : d.domicilio.recargoPct,
       minutosExtra: int('minutos_extra_domicilio', d.domicilio.minutosExtra),
@@ -214,6 +240,19 @@ export function normalizeConfig(raw: unknown, horariosRaw?: unknown): BusinessCo
       direccion: map.direccion_spa ?? '',
       mapsUrl: /^https?:\/\//.test(map.direccion_spa_url ?? '') ? map.direccion_spa_url : d.spa.mapsUrl,
     },
+    tema: {
+      base: hex('tema_base', paleta?.base ?? d.tema.base),
+      soft: hex('tema_soft', paleta?.soft ?? d.tema.soft),
+      deep: hex('tema_deep', paleta?.deep ?? d.tema.deep),
+      estilo: ESTILOS.includes(estiloRaw as ThemeEstilo) ? (estiloRaw as ThemeEstilo) : d.tema.estilo,
+    },
+    moneda: MONEDAS.includes(monedaRaw as Money) ? (monedaRaw as Money) : d.moneda,
+    metodosPago: (map.metodos_pago ?? '')
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean),
+    heroTitulo: map.hero_titulo || d.heroTitulo,
+    heroSubtitulo: map.hero_subtitulo || d.heroSubtitulo,
   }
 }
 

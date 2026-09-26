@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeCatalog, normalizeConfig, normalizeHorarios, normalizeServices, slug, toNumber } from './normalize'
+import { DEFAULT_CONFIG, normalizeCatalog, normalizeConfig, normalizeHorarios, normalizeServices, slug, toNumber } from './normalize'
 
 describe('toNumber', () => {
   it('entiende formatos es-VE y en-US', () => {
@@ -106,5 +106,36 @@ describe('normalizeHorarios', () => {
     expect(cfg.whatsapp).toBe('584122516390')
     expect(cfg.horario[1]).toEqual([[540, 1140]])
     expect(cfg.zonaHoraria).toBe('America/Caracas')
+  })
+})
+
+describe('paleta y textos del negocio', () => {
+  it('la paleta elegida del dropdown define los tres colores', () => {
+    const cfg = normalizeConfig({ paleta: 'Azul Noche' })
+    expect(cfg.tema).toMatchObject({ base: '#8FA8C8', soft: '#E6EDF6', deep: '#3E5A80' })
+  })
+
+  it('un hex escrito a mano gana sobre la paleta', () => {
+    const cfg = normalizeConfig({ paleta: 'Azul Noche', tema_deep: '#ABCDEF' })
+    expect(cfg.tema.deep).toBe('#ABCDEF')
+    expect(cfg.tema.base).toBe('#8FA8C8')
+  })
+
+  it('ignora una paleta desconocida, un hex inválido y un estilo inexistente', () => {
+    const cfg = normalizeConfig({ paleta: 'fucsia', tema_base: 'no soy un color', tema_estilo: 'fugaz' })
+    expect(cfg.tema.base).toBe(DEFAULT_CONFIG.tema.base)
+    expect(cfg.tema.estilo).toBe(DEFAULT_CONFIG.tema.estilo)
+  })
+
+  it('los textos del hero nunca llegan vacíos a la pantalla', () => {
+    const cfg = normalizeConfig([])
+    expect(cfg.heroTitulo).not.toBe('')
+    expect(cfg.heroSubtitulo).not.toBe('')
+  })
+
+  it('no hereda la dirección de otro negocio', () => {
+    const cfg = normalizeConfig([])
+    expect(cfg.spa.direccion).toBe('')
+    expect(cfg.spa.mapsUrl).toBe('')
   })
 })

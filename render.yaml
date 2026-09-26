@@ -7,9 +7,9 @@ services:
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
-        value: https://script.google.com/macros/s/AKfycbx70XC3Lb0fhRVf_MMRN0598U-iuyCCGy_jrkeBvwhqXrjD7-qhjBUHBHVEyiNWsAWxeQ/exec
+        value: https://script.google.com/macros/s/AKfycbzX8PIP_j_UNfQHb-nGwcEdQMGeZ7lYH4wWxLnP5G-bJwrSHQNwWBHed8XwINOMXFjG4g/exec
       - key: VITE_API_TOKEN
-        value: MARIANAILS
+        value: Bookeav1.1.1
       - key: VITE_WHATSAPP
         value: "584122516390"
     headers:

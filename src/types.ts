@@ -23,8 +23,26 @@ export interface PagoMovilData {
   cedula: string
 }
 
+export type Money = 'EUR' | 'USD' | 'BS'
+
+export type ThemeEstilo = 'elegante' | 'moderno' | 'editorial' | 'amable'
+
+export interface Tema {
+  /** Color de acento principal (hex). */
+  base: string
+  /** Tono suave para fondos (hex). */
+  soft: string
+  /** Tono intenso para textos/acentos (hex). */
+  deep: string
+  /** Tipografía por preset. */
+  estilo: ThemeEstilo
+}
+
 export interface BusinessConfig {
   nombreNegocio: string
+  /** Nombre visible en toda la app ("marca" en la hoja; si vacío usa nombreNegocio). */
+  marca: string
+  logoUrl: string
   whatsapp: string
   /**
    * Tramos de atención por día de la semana (0 = domingo … 6 = sábado),
@@ -36,8 +54,17 @@ export interface BusinessConfig {
   anticipacionMinHoras: number
   zonaHoraria: string
   pagoMovil: PagoMovilData
+  /** true = el negocio atiende a domicilio. */
+  permiteDomicilio: boolean
   domicilio: { recargoPct: number; minutosExtra: number }
   spa: { direccion: string; mapsUrl: string }
+  tema: Tema
+  /** EUR | USD | Bs. */
+  moneda: Money
+  /** Etiquetas de métodos de pago habilitados (vacío = todos). */
+  metodosPago: string[]
+  heroTitulo: string
+  heroSubtitulo: string
 }
 
 export type Modalidad = 'spa' | 'domicilio'
