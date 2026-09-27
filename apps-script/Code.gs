@@ -657,25 +657,35 @@ function doPost(e) {
   const tenant = getTenantPorParametro_(data);
   if (!tenant) return json_({ error: 'no_tenant', mensaje: 'Este negocio no existe o está desactivado.' });
 
-  // Se arman dentro del bloque y se usan después.
-  let ss, config, orden, calendar, evento, inicio, fin, serviciosTexto, comprobanteUrl = '';
-  let cliente, telefono, fechaCita, horaCita, metodoPago, esPagoMovil, modalidad, direccion, comprobante;
-  let moneda, id, tasa = null, totalBs = null;
+  // Un solo POST a la vez. Sin esto, dos peticiones pueden pasar la comprobación de
+  // disponibilidad al mismo tiempo y las dos creerse dueñas de la misma hora, o la
+  // segunda ver "ocupado" por el evento que la primera aún no ha escrito. El lock
+  // abarca desde la comprobación hasta la escritura: eso es lo que compite.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(25000)) {
+    return json_({ error: 'servidor', mensaje: 'Hay mucha demanda en este momento. Intenta de nuevo.' });
+  }
 
   try {
-    ss = openTenant_(tenant);
-    config = getConfig_(ss);
+    const ss = openTenant_(tenant);
+    const config = getConfig_(ss);
     const zona = config.zona_horaria || ZONA;
-    moneda = normalizarMoneda_(config.moneda);
+    const moneda = normalizarMoneda_(config.moneda);
 
     // --- Validación de datos ---
-    cliente = String(data.cliente || '').trim();
-    telefono = String(data.telefono || '').trim();
-    fechaCita = String(data.fechaCita || '');
-    horaCita = String(data.horaCita || '');
-    metodoPago = String(data.metodoPago || '');
-    esPagoMovil = metodoPago === PAGO_MOVIL;
-    modalidad = String(data.modalidad || '');
+    // Cada nombre se declara aquí y una sola vez. Antes el mismo nombre estaba
+    // declarado dos veces: una fuera del try y otra dentro con const, que la tapaba.
+    // Adentro mandaba la const, pero al salir a armar la respuesta volvía la de
+    // afuera, sin asignar, y `orden.total` reventaba con un TypeError fuera de
+    // todo try/catch: la reserva quedaba guardada y el cliente recibía un error 500
+    // sin poder ni ver la fila ni el resumen de WhatsApp.
+    const cliente = String(data.cliente || '').trim();
+    const telefono = String(data.telefono || '').trim();
+    const fechaCita = String(data.fechaCita || '');
+    const horaCita = String(data.horaCita || '');
+    const metodoPago = String(data.metodoPago || '');
+    const esPagoMovil = metodoPago === PAGO_MOVIL;
+    const modalidad = String(data.modalidad || '');
     // A domicilio la clienta envía su ubicación por WhatsApp; el campo es opcional.
     const direccion = String(data.direccion || '').trim() || (data.modalidad === 'domicilio' ? 'Ubicación por WhatsApp' : '');
     const comprobante = data.comprobante && data.comprobante.base64 ? data.comprobante : null;
@@ -719,8 +729,8 @@ function doPost(e) {
     }
 
     // --- Disponibilidad ---
-    inicio = Utilities.parseDate(fechaCita + ' ' + horaCita, zona, 'yyyy-MM-dd HH:mm');
-    fin = new Date(inicio.getTime() + orden.duracion * 60000);
+    const inicio = Utilities.parseDate(fechaCita + ' ' + horaCita, zona, 'yyyy-MM-dd HH:mm');
+    const fin = new Date(inicio.getTime() + orden.duracion * 60000);
     if (inicio.getTime() < Date.now()) {
       return json_({ error: 'cupo_ocupado', mensaje: 'Ese horario ya pasó.' });
     }
@@ -739,7 +749,7 @@ function doPost(e) {
       return json_({ error: 'cupo_ocupado', mensaje: 'Ese horario no está disponible.' });
     }
 
-    calendar = getCalendarioTenant_(tenant);
+    const calendar = getCalendarioTenant_(tenant);
     if (calendar) {
       const choques = calendar.getEvents(new Date(inicio.getTime() - 86400000), new Date(fin.getTime() + 86400000))
         .filter(function (ev) { return ev.getStartTime() < fin && ev.getEndTime() > inicio; });
@@ -752,28 +762,38 @@ function doPost(e) {
     // bcv.org.ve no tiene timeout configurable y puede tardar más que el límite de
     // ejecución. Acá solo se lee la caché o el último valor bueno: la tasa sirve
     // para mostrar el equivalente en bolívares, no para decidir nada. La versión
-    // fresca se busca DESPUÉS de escribir la fila, y si sale se parchea la celda.
-    tasa = moneda === 'BS' ? null : tasaCache_(moneda, ss);
-    totalBs = moneda === 'BS' ? orden.total : tasa ? round2_(orden.total * tasa.valor) : null;
+    // fresca se busca DESPUÉS de agendar la cita, y si sale se parchea la celda.
+    let tasa = moneda === 'BS' ? null : tasaCache_(moneda, ss);
+    let totalBs = moneda === 'BS' ? orden.total : tasa ? round2_(orden.total * tasa.valor) : null;
 
-    id = String(data.reservaId || '') || Utilities.getUuid();
-    serviciosTexto = orden.lineas.map(function (l) { return l.nombre; }).join(', ');
+    const id = String(data.reservaId || '') || Utilities.getUuid();
+    const serviciosTexto = orden.lineas.map(function (l) { return l.nombre; }).join(', ');
 
-    // === Fin de la sección crítica ===
-    // Hasta acá solo hay lecturas y validaciones. El cupón se descuenta porque
-    // quedarse sin usos es pérdida directa, el evento se crea porque es lo que
-    // ocupa el cupo, y la fila se escribe inmediatamente después, sin ninguna
-    // llamada externa de por medio. La reserva es el registro que no se puede
-    // perder: hasta que su fila no está escrita, el evento se puede deshacer.
-    if (orden.cupon) descontarCupon_(ss, orden.cupon);
-    evento = calendar
-      ? calendar.createEvent(
-        (modalidad === 'domicilio' ? '🏠 Domicilio · ' : '') + 'Cita: ' + cliente + ' - ' + serviciosTexto,
-        inicio, fin, { location: ubicacionDe_(config, modalidad, direccion) }
-      )
-      : null;
+    // === A partir de acá se escribe: capture, fila, evento ===
+    // El orden es el del NAILS original y es deliberado. Lo que falle antes de la
+    // fila no deja nada escrito, así que la clienta reintenta limpio. Lo que falle
+    // después de la fila, con el evento sin crear, se deshace borrando la fila. El
+    // evento va de último a propósito: es lo único que ocupa la hora, y si el
+    // script se agota antes de crearlo el horario queda libre, en vez de quedar
+    // ocupado por una cita que nadie registró.
 
-    appendByHeaders_(ss.getSheetByName('Reservaciones'), {
+    // El capture no puede tumbar la reserva: si Drive falla, se avisa y la fila
+    // sigue adelante con el comprobante marcado como no subido.
+    let comprobanteUrl = '';
+    if (comprobante) {
+      try {
+        comprobanteUrl = guardarComprobante_(
+          comprobante,
+          fechaCita + '_' + horaCita.replace(':', '') + '_' + slug_(cliente) + '_' + id.slice(0, 8),
+          tenant.carpetaId
+        ) || '';
+      } catch (err) {
+        console.warn('No se pudo subir el capture: ' + err);
+      }
+    }
+
+    const hoja = ss.getSheetByName('Reservaciones');
+    appendByHeaders_(hoja, {
       ID: id,
       Fecha_Solicitud: new Date(),
       Cliente: cliente,
@@ -791,98 +811,82 @@ function doPost(e) {
       Modalidad: modalidad === 'domicilio' ? 'A domicilio' : 'En el spa',
       Direccion: modalidad === 'domicilio' ? direccion : 'Spa',
       Recargo: orden.recargo,
-      // El capture se sube después; mientras tanto la fila dice que falta.
-      Comprobante: comprobante ? 'pendiente' : 'N/A',
+      Comprobante: comprobanteUrl || (comprobante ? 'no se pudo subir' : 'N/A'),
     });
+    const fila = hoja.getLastRow();
+
+    if (calendar) {
+      try {
+        calendar.createEvent(
+          (modalidad === 'domicilio' ? '🏠 Domicilio · ' : '') + 'Cita: ' + cliente + ' - ' + serviciosTexto,
+          inicio, fin, {
+            location: ubicacionDe_(config, modalidad, direccion),
+            // El detalle va desde el arranque, como en el original: ya se sabe el
+            // capture y el total, no hace falta completar el evento después.
+            description: [
+              'Teléfono: ' + telefono,
+              modalidad === 'domicilio'
+                ? 'A domicilio: ' + direccion + ' (incluye ' + config_min_extra_(config) + ' min de traslado)'
+                : 'En el spa',
+              'Total: ' + orden.total.toFixed(2) + ' ' + moneda + (totalBs !== null ? ' (Bs. ' + totalBs.toFixed(2) + ')' : '') +
+                (orden.recargo > 0 ? ' · recargo domicilio ' + orden.recargo.toFixed(2) + ' ' + moneda : ''),
+              'Pago: ' + metodoPago,
+              'Capture: ' + (comprobanteUrl || 'N/A'),
+              'Cupón: ' + (orden.cupon ? orden.cupon.codigo : 'N/A'),
+              'ID: ' + id,
+            ].join('\n'),
+          }
+        );
+      } catch (err) {
+        // La fila quedó prometiendo una cita que no se agendó. Se borra: es peor un
+        // registro que miente que una hora libre que alguien más puede tomar.
+        borrarFilaReserva_(hoja, fila);
+        throw err;
+      }
+    }
+
+    // El cupón se consume cuando la cita ya quedó agendada de verdad, y su fallo
+    // no puede reportarse como error: la reserva sí existe.
+    if (orden.cupon) {
+      try {
+        descontarCupon_(ss, orden.cupon);
+      } catch (err) {
+        console.warn('No se pudo descontar el cupón: ' + err);
+      }
+    }
 
     limpiarCacheCatalogo_(tenant.slug); // la ocupación cambió: la próxima carga recalcula
+
+    // === La reserva ya está a salvo: lo que sigue es extra ===
+    // La tasa fresca se pide con calma, cuando la cita ya no depende de esto. Ni
+    // esto ni nada posterior puede hacer que la reserva se pierda.
+    if (moneda !== 'BS') {
+      try {
+        const fresca = getTasa(moneda, ss);
+        if (fresca && (!tasa || fresca.valor !== tasa.valor)) {
+          tasa = fresca;
+          totalBs = round2_(orden.total * tasa.valor);
+          actualizarReserva_(ss, id, { Tasa_BCV: fresca.valor, Total_Bs: totalBs });
+        }
+      } catch (err) {
+        console.warn('No se pudo actualizar la tasa: ' + err);
+      }
+    }
+
+    return json_({
+      success: true,
+      id: id,
+      total: orden.total,
+      totalBs: totalBs,
+      tasa: tasa ? tasa.valor : null,
+      comprobanteUrl: comprobanteUrl || null,
+    });
   } catch (err) {
     console.error(err);
-    // Quedó un evento sin fila detrás. Es peor que no tener evento: la hora
-    // aparecería ocupada con nadie registrado. Se borra para que la clienta
-    // pueda reintentar sin nada a medias.
-    if (evento) {
-      try {
-        evento.deleteEvent();
-      } catch (e2) {
-        console.warn('No se pudo borrar el evento huérfano: ' + e2);
-      }
-      limpiarCacheCatalogo_(tenant.slug);
-    }
     return json_({ error: 'servidor', mensaje: 'No se pudo guardar la reserva. Intenta de nuevo.' });
+  } finally {
+    lock.releaseLock();
   }
-
-  // ============ La reserva ya está guardada: esto es extra ============
-  // A partir de acá nada puede hacer que la reserva se pierda. Cada paso lleva su
-  // propio try/catch: si falla, se avisa con console.warn y se sigue respondiendo
-  // éxito, porque la clienta tiene que poder mandarle el resumen por WhatsApp
-  // aunque el capture no se haya podido subir.
-  const respuesta = {
-    success: true,
-    id: id,
-    total: orden.total,
-    totalBs: totalBs,
-    tasa: tasa ? tasa.valor : null,
-    comprobanteUrl: null,
-  };
-
-  if (comprobante) {
-    try {
-      comprobanteUrl = guardarComprobante_(
-        comprobante,
-        fechaCita + '_' + horaCita.replace(':', '') + '_' + slug_(cliente) + '_' + id.slice(0, 8),
-        tenant.carpetaId
-      ) || '';
-      actualizarReserva_(ss, id, { Comprobante: comprobanteUrl || 'no se pudo subir' });
-      respuesta.comprobanteUrl = comprobanteUrl || null;
-    } catch (err) {
-      console.warn('No se pudo subir el capture: ' + err);
-      try { actualizarReserva_(ss, id, { Comprobante: 'no se pudo subir' }); } catch (e2) { /* nada */ }
-    }
-  }
-
-  // Tasa fresca: ahora que la reserva está a salvo se puede pedir sin apuro.
-  if (moneda !== 'BS') {
-    try {
-      const fresca = getTasa(moneda, ss);
-      if (fresca && (!tasa || fresca.valor !== tasa.valor)) {
-        tasa = fresca;
-        totalBs = round2_(orden.total * tasa.valor);
-        actualizarReserva_(ss, id, { Tasa_BCV: fresca.valor, Total_Bs: totalBs });
-        respuesta.totalBs = totalBs;
-        respuesta.tasa = fresca.valor;
-      }
-    } catch (err) {
-      console.warn('No se pudo actualizar la tasa: ' + err);
-    }
-  }
-
-  // El evento nació sin detalle para ocupar el cupo rápido; ahora se completa.
-  if (evento) {
-    try {
-      evento.setLocation(ubicacionDe_(config, modalidad, direccion));
-      evento.setDescription([
-        'Teléfono: ' + telefono,
-        modalidad === 'domicilio'
-          ? 'A domicilio: ' + direccion + ' (incluye ' + config_min_extra_(config) + ' min de traslado)'
-          : 'En el spa',
-        'Total: ' + orden.total.toFixed(2) + ' ' + moneda + (totalBs !== null ? ' (Bs. ' + totalBs.toFixed(2) + ')' : '') +
-          (orden.recargo > 0 ? ' · recargo domicilio ' + orden.recargo.toFixed(2) + ' ' + moneda : ''),
-        'Pago: ' + metodoPago,
-        'Capture: ' + (comprobanteUrl || 'N/A'),
-        'Cupón: ' + (orden.cupon ? orden.cupon.codigo : 'N/A'),
-        'ID: ' + id,
-      ].join('\n'));
-    } catch (err) {
-      console.warn('No se pudo completar el evento: ' + err);
-    }
-  }
-
-  // Cada paso de arriba tiene su propio try/catch, así que llegar acá significa que
-  // ninguno falló. Si alguno se escapara, la fila ya está escrita y se responde
-  // éxito igual: perder la respuesta dejaría a la clienta creyendo que falló algo
-  // que sí quedó guardado.
-  return json_(respuesta);
 }
 
 /** Dirección que se pone en el evento del calendario. */
@@ -1192,14 +1196,42 @@ function config_min_extra_(config) {
  * Si el negocio no tiene carpeta configurada devuelve '' sin error: la captura es
  * un extra de la reserva, no una condición para guardarla.
  */
-function guardarComprobante_(comprobante, nombreBase, carpetaId) {
-  if (!carpetaId) return '';
-  const carpeta = DriveApp.getFolderById(carpetaId);
-  const mime = /^image\/(jpeg|png|webp|heic|heif)$/.test(comprobante.mime) ? comprobante.mime : 'image/jpeg';
-  const ext = mime === 'image/png' ? '.png' : mime === 'image/webp' ? '.webp' : '.jpg';
-  const blob = Utilities.newBlob(Utilities.base64Decode(comprobante.base64), mime, nombreBase + ext);
-  return carpeta.createFile(blob).getUrl();
-}
+  function guardarComprobante_(comprobante, nombreBase, carpetaId) {
+    if (!comprobante) return '';
+    const mime = /^image\/(jpeg|png|webp|heic|heif)$/.test(comprobante.mime) ? comprobante.mime : 'image/jpeg';
+    const ext = mime === 'image/png' ? '.png' : mime === 'image/webp' ? '.webp' : '.jpg';
+    const blob = Utilities.newBlob(Utilities.base64Decode(comprobante.base64), mime, nombreBase + ext);
+
+    // El id de la carpeta es lo que hay, pero no puede ser la única vía: si el
+    // negocio la borró, cambió o nunca se configuró, getFolderById revienta y se
+    // lleva la reserva entera. Se cae a buscarla por nombre y, si tampoco está, a
+    // crearla, que es lo que hacía el NAILS original.
+    const carpeta = carpetaDe_(carpetaId);
+    return carpeta ? carpeta.createFile(blob).getUrl() : '';
+  }
+
+  /**
+   * Carpeta de comprobantes del negocio, o null si no hay forma de obtener una.
+   * Devuelve null cuando el tenant no tiene Carpeta_Id configurada, que es el caso
+   * normal de quien no usa Pago Móvil.
+   */
+  function carpetaDe_(carpetaId) {
+    if (carpetaId) {
+      try {
+        return DriveApp.getFolderById(carpetaId);
+      } catch (err) {
+        console.warn('Carpeta_Id ' + carpetaId + ' no sirve, se busca por nombre: ' + err);
+      }
+    }
+    try {
+      const carpetas = DriveApp.getFoldersByName(CARPETA_COMPROBANTES);
+      return carpetas.hasNext() ? carpetas.next() : DriveApp.createFolder(CARPETA_COMPROBANTES);
+    } catch (err) {
+      console.error('No hay carpeta donde guardar el capture: ' + err);
+      return null;
+    }
+  }
+
 
 // ---------- Catálogo tolerante (misma lógica que src/lib/normalize.ts) ----------
 
@@ -1426,8 +1458,27 @@ function columna_(headers, nombre) {
   return headers.map(String).indexOf(nombre);
 }
 
-/**
- * Escribe campos en la fila de la reserva cuya ID coincide. Se usa para completar
+  /**
+   * Borra la fila de una reserva que se acaba de escribir y que no llegó a
+   * agendarse. Se usa cuando el evento del calendario falla después de que la fila
+   * ya está: mejor que no quede registro que a que quede una reserva que promete
+   * una cita que no existe. La fila se pasa por número porque es la que se acaba
+   * de escribir, y borrar hacia arriba no mueve las de abajo.
+   */
+  function borrarFilaReserva_(hoja, fila) {
+    if (!hoja || !fila || fila < 2) return false;
+    try {
+      hoja.deleteRow(fila);
+      return true;
+    } catch (err) {
+      console.error('No se pudo borrar la fila ' + fila + ' de la reserva: ' + err);
+      return false;
+    }
+  }
+
+  /**
+   * Escribe campos en la fila de la reserva cuya ID coincide. Se usa para completar
+
  * la fila después de crearla (el enlace del capture, la tasa fresca) sin tener que
  * volver a escribirla entera. Busca por ID y no por número de fila, porque entre
  * la escritura y el parcheo otra persona pudo insertar filas.

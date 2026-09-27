@@ -71,7 +71,18 @@ async function request(input: URL, init?: RequestInit): Promise<Row> {
   try {
     data = await response.json()
   } catch {
-    throw new ApiError('desconocido', 'El servidor devolvió una respuesta inesperada.')
+    // Un 5xx o un cuerpo que no es JSON casi siempre significa que el servidor sí
+    // guardó la reserva pero se le perdió la respuesta al volver. Antes esto se
+    // reportaba como 'desconocido', que no es un error de red, así que el reintento
+    // no se disparaba y la clienta se quedaba sin poder confirmar una reserva que
+    // ya estaba guardada. Se trata como red para que el reintento con el mismo
+    // reservaId la recupere.
+    throw new ApiError(
+      'red',
+      response.ok
+        ? 'El servidor devolvió una respuesta inesperada.'
+        : 'El servidor no respondió bien. Intenta de nuevo.',
+    )
   }
 
   const row: Row = data && typeof data === 'object' ? (data as Row) : {}
