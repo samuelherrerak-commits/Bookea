@@ -95,18 +95,18 @@ describe('buildAgenda', () => {
     expect(days.find((d) => d.fecha === '2026-09-26')?.libres).toBe(4)
   })
 
-  it('trata la hora apartada por otro como ocupada', () => {
-    // El servidor manda los holds en el mismo arreglo que las citas, así que la
-    // hora que alguien está apartando ya no se le ofrece a los demás.
+  it('trata un rango ocupado del calendario como ocupado', () => {
+    // El servidor manda las citas y los bloqueos en el mismo arreglo, así que una
+    // hora ya reservada no se le ofrece a nadie más.
     const now = new Date('2026-09-24T10:00:00Z')
-    const hold = [{ inicio: new Date('2026-09-25T13:00:00Z'), fin: new Date('2026-09-25T14:30:00Z') }] // 9–10:30
+    const ocupada = [{ inicio: new Date('2026-09-25T13:00:00Z'), fin: new Date('2026-09-25T14:30:00Z') }] // 9–10:30
     const libre = buildAgenda(config, [], 60, now)
-    const conHold = buildAgenda(config, hold, 60, now)
+    const conOcupada = buildAgenda(config, ocupada, 60, now)
     const d = (dias: ReturnType<typeof buildAgenda>) =>
       dias.find((x) => x.fecha === '2026-09-25')!.slots.map((s) => `${s.hora}:${s.estado}`).join(' ')
-    expect(d(conHold)).not.toBe(d(libre))
-    // 9:00 y 10:00 chocan con un hold de 90 min (9:00–10:30); 11:00 y 12:00 ya no.
-    expect(conHold.find((x) => x.fecha === '2026-09-25')!.slots.map((s) => s.estado)).toEqual([
+    expect(d(conOcupada)).not.toBe(d(libre))
+    // 9:00 y 10:00 chocan con el rango 9:00–10:30; 11:00 y 12:00 ya no.
+    expect(conOcupada.find((x) => x.fecha === '2026-09-25')!.slots.map((s) => s.estado)).toEqual([
       'reservado',
       'reservado',
       'libre',

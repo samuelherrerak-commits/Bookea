@@ -41,7 +41,6 @@ const SHEETS = [
   { name: 'Configuracion', headers: ['Clave', 'Valor'] },
   { name: 'Horarios', headers: ['Dia', 'Hora_Inicio', 'Hora_Fin'] },
   { name: 'Bloqueos', headers: ['Fecha', 'Hora_Inicio', 'Hora_Fin', 'Motivo'] },
-  { name: 'Holds', headers: ['Token', 'Sesion', 'Fecha', 'Hora_Inicio', 'Hora_Fin', 'Expira', 'Creado'] },
 ];
 
 const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado'];
@@ -60,7 +59,6 @@ const CONFIG_DEFAULTS = [
   ['dias_laborales', '1,2,3,4,5,6'], // 0 = domingo … 6 = sábado
   ['dias_anticipacion', '21'],
   ['anticipacion_min_horas', '2'],
-  ['hold_segundos', '90'], // segundos que la hora queda apartada mientras se paga (30-600)
   ['zona_horaria', ZONA],
   ['paleta', 'Rosa Clásico'], // dropdown: aplica base/soft/deep a la vez
   ['tema_base', ''], // hex manual; si está vacío manda la paleta
@@ -347,12 +345,6 @@ function prepararHoja_(ss, nombrePorDefecto) {
     horarios.getRange(2, 1, rows.length, 3).setValues(rows);
   }
   ss.getSheetByName('Bloqueos').getRange('B:C').setNumberFormat('@');
-  // Fecha y horas van como texto: "2026-09-26" y "14:30" se comparan igual en
-  // cualquier hoja, sin que Sheets los convierta a número de serie.
-  ss.getSheetByName('Holds').getRange('A:B').setNumberFormat('@');
-  ss.getSheetByName('Holds').getRange('C:E').setNumberFormat('@');
-  ss.getSheetByName('Holds').getRange('G:G').setNumberFormat('@');
-  ss.getSheetByName('Holds').getRange('F:F').setNumberFormat('yyyy-mm-dd hh:mm:ss');
 }
 
 /**
@@ -620,14 +612,6 @@ function doGet(e) {
     const servicios = getServicios_(ss);
     const moneda = normalizarMoneda_(config.moneda);
 
-    // Purgar vencidos antes de leer: si no, un hold caducado seguiría ocupando la
-    // hora en pantalla. Y avisar el cambio para que la caché no lo esconda.
-    if (limpiarHoldsVencidos_(ss)) limpiarCacheCatalogo_(tenant.slug);
-
-    const zona = config.zona_horaria || ZONA;
-    // Los holds van en el mismo arreglo que el calendario y los bloqueos, así que
-    // el navegador los muestra como ocupados sin cambiar ni una línea.
-    const holds = getHoldsActivos_(ss, zona);
     const texto = jsonTexto_({
       negocio: tenant.nombre,
       servicios: servicios,
@@ -636,21 +620,14 @@ function doGet(e) {
       horarios: getHorarios_(ss, config),
       tasa: getTasa(moneda, ss),
       moneda: moneda,
-      // Citas del calendario + bloqueos de la hoja + horas apartadas, solo como
-      // rangos (sin nombres, motivos ni tokens).
+      // Citas del calendario + bloqueos de la hoja, solo como rangos (sin nombres
+      // ni motivos). Es la única fuente de ocupacion: si no esta aqui, esta libre.
       citasAgendadas: getOcupacionCalendario_(dias, tenant)
         .concat(getBloqueos_(ss, dias).map(function (b) {
           return { inicio: b.inicio.toISOString(), fin: b.fin.toISOString() };
-        }))
-        .concat(holds.map(function (h) {
-          return { inicio: h.inicio.toISOString(), fin: h.fin.toISOString() };
         })),
     });
-    // Si hay holds vigentes, la caché no puede durar más que el próximo: si no, una
-    // hora liberada seguiría oculta hasta 5 minutos. Con 90 s de hold, 90 s de caché.
-    const hastaVence = proximoVencimientoHold_(ss, zona);
-    const ttl = isFinite(hastaVence) ? Math.max(5, Math.ceil(hastaVence / 1000)) : CACHE_CATALOGO_SEG;
-    guardarCacheCatalogo_(tenant.slug, texto, ttl);
+    guardarCacheCatalogo_(tenant.slug, texto, CACHE_CATALOGO_SEG);
     return jsonDeTexto_(texto);
   } catch (err) {
     console.error(err);
@@ -665,7 +642,7 @@ function directorio_() {
 }
 
 // ============================================================================
-// 3. POST: apartar la hora, soltarla, y registrar la reservación
+// 3. POST: registrar la reservación
 // ============================================================================
 
 function doPost(e) {
@@ -679,9 +656,6 @@ function doPost(e) {
 
   const tenant = getTenantPorParametro_(data);
   if (!tenant) return json_({ error: 'no_tenant', mensaje: 'Este negocio no existe o está desactivado.' });
-
-  if (data.action === 'hold') return accionHold_(tenant, data);
-  if (data.action === 'release') return accionRelease_(tenant, data);
 
   // Se arman dentro del bloque y se usan después.
   let ss, config, orden, calendar, evento, inicio, fin, tasa, totalBs, serviciosTexto, comprobanteUrl = '';
@@ -752,21 +726,6 @@ function doPost(e) {
     if (!dentro) {
       return json_({ error: 'cupo_ocupado', mensaje: 'Ese horario está fuera de nuestro horario de atención.' });
     }
-    limpiarHoldsVencidos_(ss);
-    // Si viene con hold, tiene que ser suyo y estar vigente. Un hold vencido
-    // significa que la hora volvió al catálogo y otro la pudo tomar.
-    if (data.holdId && !esHoldVigente_(ss, data.holdId, fechaCita, horaCita)) {
-      return json_({ error: 'cupo_ocupado', mensaje: 'Se te acabó el tiempo de esa hora. Elige otra, por favor.' });
-    }
-    // El hold propio no bloquea su propia confirmación: solo se miran los ajenos.
-    // El horizonte es el mismo que usa la agenda, no 400 días: leer 400 días de
-    // filas en cada reserva gastaba cuota a cambio de nada.
-    const ocupadoPorHolds = getHoldsActivos_(ss, zona).some(function (h) {
-      return h.token !== data.holdId && h.inicio < fin && h.fin > inicio;
-    });
-    if (ocupadoPorHolds) {
-      return json_({ error: 'cupo_ocupado', mensaje: 'Ese horario está siendo reservado por otra persona.' });
-    }
     const bloqueado = getBloqueos_(ss, diasDeReserva_(config)).some(function (b) { return b.inicio < fin && b.fin > inicio; });
     if (bloqueado) {
       return json_({ error: 'cupo_ocupado', mensaje: 'Ese horario no está disponible.' });
@@ -791,11 +750,10 @@ function doPost(e) {
     // === Fin de la sección crítica ===
     // Hasta acá solo hay lecturas y validaciones. El cupón se descuenta acá porque
     // quedarse sin usos es pérdida directa, y el evento se crea acá porque es lo
-    // que ocupa el cupo. Todo lo de abajo (Drive, hoja, avisos) NO evita que dos
-    // personas pelen el mismo horario, así que va fuera del lock: es la parte lenta
-    // y con 100 negocios frenaba a todos mientras un Drive respondía.
+    // que ocupa el cupo. Todo lo de abajo (Drive, hoja, avisos) no evita que dos
+    // personas pelen el mismo horario, así que va fuera: es la parte lenta y con
+    // 100 negocios un Drive lento frenaba a todos.
     if (orden.cupon) descontarCupon_(ss, orden.cupon);
-    consumirHold_(ss, data.holdId, fechaCita, horaCita);
     evento = calendar
       ? calendar.createEvent(
         (modalidad === 'domicilio' ? '🏠 Domicilio · ' : '') + 'Cita: ' + cliente + ' - ' + serviciosTexto,
@@ -809,7 +767,7 @@ function doPost(e) {
     return json_({ error: 'servidor', mensaje: 'No se pudo guardar la reserva. Intenta de nuevo.' });
   }
 
-  // ============ Fuera del lock: lento, pero el cupo ya está asegurado ============
+  // ============ Ya está asegurado: esto es lento y no bloquea a nadie ============
   try {
     if (comprobante && tenant.carpetaId) {
       comprobanteUrl = guardarComprobante_(
@@ -876,405 +834,6 @@ function doPost(e) {
 function ubicacionDe_(config, modalidad, direccion) {
   if (modalidad === 'domicilio') return direccion;
   return (config.direccion_spa ? config.direccion_spa + ' · ' : '') + (config.direccion_spa_url || '');
-}
-
-// ============================================================================
-// Reservas temporales ("holds"): la hora se aparta al tocarla y queda 90 s
-// ============================================================================
-
-// ============================================================================
-// Reservas temporales ("holds"): la hora se aparta al tocarla y queda 90 s
-// ============================================================================
-
-/**
- * Aparta una hora. El cliente la toca en la agenda y queda bloqueada para los
- * demás mientras tiene 90 s para pagar. Se valida con las mismas reglas que la
- * reserva, así que lo que pasa acá es lo que va a pasar al confirmar.
- */
-function accionHold_(tenant, data) {
-  const fechaCita = String(data.fechaCita || '');
-  const horaCita = String(data.horaCita || '');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaCita) || !/^\d{2}:\d{2}$/.test(horaCita)) {
-    return json_({ error: 'datos_invalidos', mensaje: 'Elige un horario válido.' });
-  }
-
-  try {
-    const ss = openTenant_(tenant);
-    const config = getConfig_(ss);
-    const zona = config.zona_horaria || ZONA;
-
-    // La duración sale de los servicios elegidos: sin esto no se puede saber
-    // hasta dónde bloquea la hora.
-    const orden = calcularOrden_(ss, data.items, null, data.modalidad || 'spa', config);
-    if (!orden.lineas.length || !orden.hasBase) {
-      return json_({ error: 'datos_invalidos', mensaje: 'Elige al menos un servicio base.' });
-    }
-
-    const inicio = Utilities.parseDate(fechaCita + ' ' + horaCita, zona, 'yyyy-MM-dd HH:mm');
-    if (inicio.getTime() < Date.now()) {
-      return json_({ error: 'cupo_ocupado', mensaje: 'Ese horario ya pasó.' });
-    }
-
-    const r = crearHold_(tenant, config, ss, fechaCita, horaCita, orden.duracion, zona, String(data.sesionId || ''));
-    return json_(r);
-  } catch (err) {
-    console.error(err);
-    return json_({ error: 'servidor', mensaje: 'No se pudo apartar ese horario.' });
-  }
-}
-
-/** Suelta la hora. Best-effort: si el cliente ya cerró, la purga la saca igual. */
-function accionRelease_(tenant, data) {
-  try {
-    const ss = openTenant_(tenant);
-    const ok = soltarHold_(tenant, ss, String(data.holdId || ''), String(data.sesionId || ''));
-    return json_({ success: ok });
-  } catch (err) {
-    console.error(err);
-    return json_({ error: 'servidor', mensaje: 'No se pudo liberar el horario.' });
-  }
-}
-
-/** Segundos por defecto que un negocio mantiene la hora apartada. */
-const HOLD_SEGUNDOS_DEFAULT = 90;
-/** Nadie puede tener más de esto en paralelo, para no acaparar la agenda. */
-const HOLD_MAX_POR_SESION = 2;
-
-/** Segundos que dura un hold según la config del negocio (30 a 600). */
-function holdSegundos_(config) {
-  const n = Number(config.hold_segundos);
-  if (!isFinite(n) || n <= 0) return HOLD_SEGUNDOS_DEFAULT;
-  return Math.max(30, Math.min(600, Math.round(n)));
-}
-
-function hojaHolds_(ss) {
-  return ss.getSheetByName('Holds');
-}
-
-/**
- * Devuelve la hoja de holds, creándola si este negocio aún no la tiene.
- *
- * Se llama solo al escribir, no al leer: así los negocios que ya existían
- * empiezan a apartar horas en cuanto se publica el código, sin que haya que
- * pasar negocio por negocio con "Actualizar un negocio".
- */
-function asegurarHojaHolds_(ss) {
-  const existente = ss.getSheetByName('Holds');
-  if (existente) return existente;
-
-  const headers = SHEETS.filter(function (h) { return h.name === 'Holds'; })[0].headers;
-  const sheet = ss.insertSheet('Holds');
-  sheet.appendRow(headers);
-  // Token, Sesion, Fecha, Hora_Inicio y Hora_Fin como texto; Expira como
-  // fecha-hora real para poder compararla; Creado como texto.
-  sheet.getRange('A:E').setNumberFormat('@');
-  sheet.getRange('F:F').setNumberFormat('yyyy-mm-dd hh:mm:ss');
-  sheet.getRange('G:G').setNumberFormat('@');
-  return sheet;
-}
-
-/**
- * Borra los holds vencidos. Se llama en cada lectura de disponibilidad, así que
- * un cliente que cierra el navegador a los 40 s libera la hora sola en la
- * siguiente consulta. Devuelve cuántos borró.
- *
- * Formato: Token | Sesion | Fecha | Hora_Inicio | Hora_Fin | Expira | Creado
- */
-function limpiarHoldsVencidos_(ss) {
-  const sheet = hojaHolds_(ss);
-  if (!sheet || sheet.getLastRow() < 2) return 0;
-  const n = sheet.getLastRow() - 1;
-  const expiras = sheet.getRange(2, 6, n, 1).getValues(); // columna F
-  const caducados = [];
-  for (let i = 0; i < n; i++) {
-    const v = expiras[i][0];
-    // Sin fecha interpretable se considera vencido: una fila corrupta no puede
-    // dejar una hora bloqueada para siempre.
-    const t = v instanceof Date ? v.getTime() : 0;
-    if (t <= Date.now()) caducados.push(i);
-  }
-  return borrarFilasHolds_(sheet, caducados);
-}
-
-/**
- * Borra filas concretas de Holds, una por una y de abajo hacia arriba.
- *
- * No se puede usar deleteRows(desde, cuantas) porque borra un rango y se comería
- * filas vivas que quedaran en medio. Eso pasaba con los vencidos: si entre dos
- * holds caducados había uno de 90 s todavía vivo, deleteRows lo borraba también
- * y la clienta perdía la hora apartada sin que su hold hubiera expirado.
- */
-function borrarFilasHolds_(sheet, aBorrar) {
-  if (!sheet || !aBorrar || !aBorrar.length) return 0;
-  const orden = aBorrar.slice().sort(function (a, b) { return b - a; });
-  let borradas = 0;
-  for (const i of orden) {
-    try { sheet.deleteRow(i + 2); borradas++; } catch (_) { /* best-effort */ }
-  }
-  return borradas;
-}
-
-/**
- * Lee Holds una sola vez y saca todo lo que necesita una reserva: qué filas
- * vencidas purgar, los holds vigentes y sus rangos [inicio, fin).
- *
- * Antes cada dato se leía con su propio getValues, y eran cuatro idas a la misma
- * hoja dentro de la misma petición. Los rangos se arman igual que en
- * getHoldsActivos_, así que la disponibilidad no cambia.
- */
-function leerHolds_(ss, zona) {
-  const z = zona || ZONA;
-  const sheet = hojaHolds_(ss);
-  if (!sheet || sheet.getLastRow() < 2) {
-    return { sheet: sheet, aBorrar: [], vivos: [], activos: [] };
-  }
-  const n = sheet.getLastRow() - 1;
-  const filas = sheet.getRange(2, 1, n, 6).getValues();
-  const ahora = Date.now();
-  const aBorrar = [];
-  const vivos = [];
-  const activos = [];
-  for (let i = 0; i < n; i++) {
-    const f = filas[i];
-    const expira = f[5] instanceof Date ? f[5].getTime() : 0;
-    if (expira <= ahora) { aBorrar.push(i); continue; }
-    vivos.push({
-      indice: i,
-      token: String(f[0]),
-      sesion: String(f[1]),
-      fecha: String(f[2]),
-      hora: String(f[3]),
-      expira: expira,
-    });
-    const fecha = ymd_(f[2]);
-    if (!fecha) continue;
-    const a = toMinutes_(String(f[3]));
-    const b = toMinutes_(String(f[4]));
-    if (isNaN(a) || isNaN(b) || b <= a) continue;
-    activos.push({
-      token: String(f[0]),
-      inicio: Utilities.parseDate(fecha + ' ' + hhmm_(a), z, 'yyyy-MM-dd HH:mm'),
-      fin: Utilities.parseDate(fecha + ' ' + hhmm_(b), z, 'yyyy-MM-dd HH:mm'),
-      expira: expira,
-    });
-  }
-  return { sheet: sheet, aBorrar: aBorrar, vivos: vivos, activos: activos };
-}
-
-/**
- * Segunda mirada después de escribir el hold, y el sustituto del lock.
- *
- * El orden de las filas es el orden en que se escribieron, así que si para el
- * mismo horario hay otra fila por encima de la mía, esa se escribió primero y
- * me ganó: borro la mía y le aviso a la clienta que llegó antes. Cuesta una
- * lectura (~200 ms) en vez de los ~1,5 s del lock, y no hace esperar a nadie.
- */
-function verificarHoldGanador_(ss, token, fechaCita, horaCita) {
-  const sheet = hojaHolds_(ss);
-  if (!sheet || sheet.getLastRow() < 2) return true; // no hay nada que comprobar
-  const n = sheet.getLastRow() - 1;
-  const filas = sheet.getRange(2, 1, n, 6).getValues();
-  const ahora = Date.now();
-  let propio = -1;
-  for (let i = 0; i < n; i++) {
-    if (String(filas[i][0]) === token) propio = i;
-  }
-  // Mi fila ya no está: algo la borró, así que no voy a pelear por esa hora.
-  if (propio < 0) return false;
-  for (let i = 0; i < propio; i++) {
-    const expira = filas[i][5] instanceof Date ? filas[i][5].getTime() : 0;
-    if (expira <= ahora) continue; // un resto viejo no compite por la hora
-    if (String(filas[i][2]) === fechaCita && String(filas[i][3]) === horaCita) return false;
-  }
-  return true;
-}
-
-/** Holds vigentes como rangos [inicio, fin) para leer junto a los bloqueos. */
-function getHoldsActivos_(ss, zona) {
-  const sheet = hojaHolds_(ss);
-  if (!sheet || sheet.getLastRow() < 2) return [];
-  const z = zona || ZONA;
-  const n = sheet.getLastRow() - 1;
-  const filas = sheet.getRange(2, 1, n, 6).getValues();
-  const ahora = Date.now();
-  const out = [];
-  for (const f of filas) {
-    const expira = f[5] instanceof Date ? f[5].getTime() : 0;
-    if (!expira || expira <= ahora) continue;
-    const fecha = ymd_(f[2]);
-    if (!fecha) continue;
-    const a = toMinutes_(String(f[3]));
-    const b = toMinutes_(String(f[4]));
-    if (isNaN(a) || isNaN(b) || b <= a) continue;
-    out.push({
-      token: String(f[0]),
-      inicio: Utilities.parseDate(fecha + ' ' + hhmm_(a), z, 'yyyy-MM-dd HH:mm'),
-      fin: Utilities.parseDate(fecha + ' ' + hhmm_(b), z, 'yyyy-MM-dd HH:mm'),
-      expira: expira,
-    });
-  }
-  return out;
-}
-
-/** Segundos hasta que vence el hold más próximo; Infinity si no hay ninguno. */
-function proximoVencimientoHold_(ss, zona) {
-  const activos = getHoldsActivos_(ss, zona);
-  if (!activos.length) return Infinity;
-  return Math.max(0, Math.min.apply(null, activos.map(function (h) { return h.expira; })) - Date.now());
-}
-
-/**
- * Aparta la hora. Valida exactamente lo mismo que una reserva, así que si acá
- * pasa es porque al confirmar va a pasar. Devuelve el token y el vencimiento.
- */
-function crearHold_(tenant, config, ss, fechaCita, horaCita, duracionMin, zona, sesionId) {
-  // Una sola lectura de Holds sale de acá: qué filas vencidas purgar, los holds
-  // vigentes de cada sesión y los rangos que compiten por la hora.
-  const h = leerHolds_(ss, zona);
-  borrarFilasHolds_(h.sheet, h.aBorrar);
-
-  const esMia = function (v) { return !!sesionId && String(v.sesion) === String(sesionId); };
-
-  // Doble toque o reintento del navegador: si esa misma sesión ya tiene esa
-  // misma hora apartada, se devuelve el hold que ya tiene en vez de rechazarla
-  // como ocupada. Sin esto, tocar dos veces seguido se lee como "alguien te la
-  // quitó" y el cliente pierde la hora que era suya.
-  const yaAparte = h.vivos.filter(function (v) {
-    return esMia(v) && v.fecha === fechaCita && v.hora === horaCita;
-  })[0];
-  if (yaAparte) {
-    const segundos = holdSegundos_(config);
-    // Quedan menos de 20 s: se renueva con el tiempo completo. Si no, la clienta
-    // vuelve a la agenda y le toca una cuenta regresiva de 3 segundos.
-    if (yaAparte.expira - Date.now() > 20000) {
-      return { holdId: yaAparte.token, expira: yaAparte.expira, segundos: segundos };
-    }
-    soltarHold_(tenant, ss, yaAparte.token, sesionId);
-    // Hay que sacarlo de la lectura que ya se hizo. La versión anterior volvía a
-    // leer Holds después de borrar, y por eso no lo veía; ahora que se lee una
-    // sola vez al principio, si se deja aquí el hold de abajo lo encontraría y
-    // la renovación se rechazaría como "ocupado" contra sí misma.
-    h.vivos = h.vivos.filter(function (v) { return v.token !== yaAparte.token; });
-    h.activos = h.activos.filter(function (a) { return a.token !== yaAparte.token; });
-  }
-
-  const own = h.vivos.filter(esMia).length;
-  if (own >= HOLD_MAX_POR_SESION) {
-    return { error: 'datos_invalidos', mensaje: 'Ya tienes ' + HOLD_MAX_POR_SESION + ' horarios apartados. Suelta uno para elegir otro.' };
-  }
-
-  const inicio = Utilities.parseDate(fechaCita + ' ' + horaCita, zona, 'yyyy-MM-dd HH:mm');
-  if (inicio.getTime() < Date.now()) {
-    return { error: 'cupo_ocupado', mensaje: 'Ese horario ya pasó.' };
-  }
-  const fin = new Date(inicio.getTime() + duracionMin * 60000);
-
-  // Mismas reglas que al confirmar: si la hora no cae en un tramo de atención,
-  // no se puede apartar una hora que después nadie va a poder reservar.
-  const minInicio = toMinutes_(horaCita);
-  const diaSemana = Number(Utilities.formatDate(inicio, zona, 'u')) % 7; // 1 = lunes … 7 = domingo
-  const dentro = getHorarios_(ss, config)
-    .filter(function (t) { return t.dia === diaSemana; })
-    .some(function (t) { return minInicio >= toMinutes_(t.inicio) && minInicio + duracionMin <= toMinutes_(t.fin); });
-  if (!dentro) {
-    return { error: 'cupo_ocupado', mensaje: 'Ese horario está fuera de nuestro horario de atención.' };
-  }
-
-  const solapa = function (r) { return r.inicio < fin && r.fin > inicio; };
-
-  if (h.activos.some(solapa)) {
-    return { error: 'cupo_ocupado', mensaje: 'Ese horario está siendo reservado por otra persona.' };
-  }
-  if (getBloqueos_(ss, diasDeReserva_(config)).some(solapa)) {
-    return { error: 'cupo_ocupado', mensaje: 'Ese horario no está disponible.' };
-  }
-  const calendar = getCalendarioTenant_(tenant);
-  if (calendar) {
-    const choca = calendar
-      .getEvents(new Date(inicio.getTime() - 86400000), new Date(fin.getTime() + 86400000))
-      .some(function (ev) { return ev.getStartTime() < fin && ev.getEndTime() > inicio; });
-    if (choca) return { error: 'cupo_ocupado', mensaje: 'Ese horario acaba de ocuparse.' };
-  }
-
-  const token = Utilities.getUuid();
-  const segundos = holdSegundos_(config);
-  asegurarHojaHolds_(ss).appendRow([
-    token,
-    sesionId,
-    fechaCita,
-    horaCita,
-    hhmm_(toMinutes_(horaCita) + duracionMin),
-    new Date(Date.now() + segundos * 1000),
-    fechaCita + ' ' + horaCita,
-  ]);
-
-  // Re-verificación en vez de lock: si para la misma hora hay una fila escrita
-  // antes que la mía, esa ganó y yo me retiro. Sin esto, dos personas tocando
-  // la misma hora en el mismo instante se quedarían las dos con hold.
-  if (!verificarHoldGanador_(ss, token, fechaCita, horaCita)) {
-    soltarHold_(tenant, ss, token, sesionId);
-    return { error: 'cupo_ocupado', mensaje: 'Ese horario acaba de ocuparse.' };
-  }
-
-  limpiarCacheCatalogo_(tenant.slug); // si no, los demás siguen viendo la hora libre
-  return { holdId: token, expira: Date.now() + segundos * 1000, segundos: segundos };
-}
-
-/**
- * ¿Este hold sigue vivo y es para esta fecha y hora?
- *
- * El token es la prueba: solo lo tiene el navegador que lo pidió, así que un
- * token inventado o el de otra persona no pasa. Se comprueba además que no haya
- * vencido y que sea la misma hora, porque si venció la hora ya volvió al catálogo.
- */
-function esHoldVigente_(ss, holdId, fechaCita, horaCita) {
-  if (!holdId) return false;
-  const sheet = hojaHolds_(ss);
-  if (!sheet || sheet.getLastRow() < 2) return false;
-  const n = sheet.getLastRow() - 1;
-  const filas = sheet.getRange(2, 1, n, 6).getValues();
-  const ahora = Date.now();
-  for (const f of filas) {
-    if (String(f[0]) !== String(holdId)) continue;
-    const expira = f[5] instanceof Date ? f[5].getTime() : 0;
-    return expira > ahora && String(f[2]) === String(fechaCita) && String(f[3]) === String(horaCita);
-  }
-  return false;
-}
-
-/** Consume el hold al confirmar la reserva. Un hold ajeno no se toca. */
-function consumirHold_(ss, holdId, fechaCita, horaCita) {
-  if (!holdId) return;
-  const sheet = hojaHolds_(ss);
-  if (!sheet || sheet.getLastRow() < 2) return;
-  const n = sheet.getLastRow() - 1;
-  const filas = sheet.getRange(2, 1, n, 6).getValues();
-  for (let i = 0; i < n; i++) {
-    if (String(filas[i][0]) !== String(holdId)) continue;
-    // Misma fecha y hora que la reserva: si no, es el hold de otra hora y se deja.
-    if (String(filas[i][2]) === String(fechaCita) && String(filas[i][3]) === String(horaCita)) {
-      sheet.deleteRow(i + 2);
-    }
-    return;
-  }
-}
-
-/** Suelta la hora. Best-effort: si el cliente se fue, la limpieza perezosa la saca. */
-function soltarHold_(tenant, ss, holdId, sesionId) {
-  if (!holdId) return false;
-  const sheet = hojaHolds_(ss);
-  if (!sheet || sheet.getLastRow() < 2) return false;
-  const n = sheet.getLastRow() - 1;
-  const filas = sheet.getRange(2, 1, n, 2).getValues();
-  for (let i = 0; i < n; i++) {
-    if (String(filas[i][0]) !== String(holdId)) continue;
-    // El token hace de prueba de que es suyo: nadie más puede soltar su hold.
-    if (sesionId && String(filas[i][1]) !== String(sesionId)) return false;
-    sheet.deleteRow(i + 2);
-    limpiarCacheCatalogo_(tenant.slug);
-    return true;
-  }
-  return false;
 }
 
 /** Cuántos días hacia adelante se mira la ocupación: el mismo que la agenda. */

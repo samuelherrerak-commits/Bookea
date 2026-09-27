@@ -115,7 +115,7 @@ export async function submitReservation(payload: ReservationPayload): Promise<Re
   const data = await request(apiUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ token: API_TOKEN, shop: currentSlug(), ...payload, holdId: getHoldId() }),
+    body: JSON.stringify({ token: API_TOKEN, shop: currentSlug(), ...payload }),
   })
 
   if (!data.success) {
@@ -128,102 +128,4 @@ export async function submitReservation(payload: ReservationPayload): Promise<Re
     tasa: data.tasa === null || data.tasa === undefined ? null : toNumber(data.tasa),
     comprobanteUrl: str(data.comprobanteUrl) || null,
   }
-}
-
-// ---------- Reserva temporal de la hora ----------
-
-/**
- * Id de sesión: identifica al navegador para poder limitar cuántas horas puede
- * apartar a la vez y para que nadie pueda soltar la hora de otro. No es una
- * credencial, se regenera al cerrar la pestaña.
- */
-let sesionId: string | null = null
-
-function getSesionId(): string {
-  if (sesionId) return sesionId
-  const key = 'sesion:v1'
-  try {
-    const guardado = window.localStorage.getItem(key)
-    if (guardado) return (sesionId = guardado)
-    sesionId = crypto.randomUUID()
-    window.localStorage.setItem(key, sesionId)
-  } catch {
-    sesionId = crypto.randomUUID() // almacenamiento bloqueado: solo en memoria
-  }
-  return sesionId
-}
-
-/** Id del hold vigente, para mandarlo al confirmar la reserva. */
-let holdId: string | null = null
-
-function getHoldId(): string | null {
-  return holdId
-}
-
-export interface HoldResult {
-  holdId: string
-  expira: number
-  segundos: number
-}
-
-/**
- * Aparta una hora. A partir de acá la hora no le aparece a nadie más, y hay
- * `segundos` (90 por defecto) para reportar el pago. Si el servidor dice que ya
- * está, tira ApiError 'cupo_ocupado' y el caller refresca la agenda.
- */
-export async function holdSlot(input: {
-  fechaCita: string
-  horaCita: string
-  items: ReservationPayload['items']
-  modalidad: string
-}): Promise<HoldResult> {
-  if (DEMO_MODE) {
-    const segundos = 90
-    const expira = Date.now() + segundos * 1000
-    holdId = 'demo-hold'
-    return { holdId, expira, segundos }
-  }
-
-  const data = await request(apiUrl(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      token: API_TOKEN,
-      shop: currentSlug(),
-      action: 'hold',
-      fechaCita: input.fechaCita,
-      horaCita: input.horaCita,
-      items: input.items,
-      modalidad: input.modalidad,
-      sesionId: getSesionId(),
-    }),
-  })
-
-  const r: HoldResult = {
-    holdId: str(data.holdId),
-    expira: toNumber(data.expira, Date.now() + 90_000),
-    segundos: toNumber(data.segundos, 90),
-  }
-  holdId = r.holdId
-  return r
-}
-
-/** Suelta la hora. Best-effort: si falla, el servidor la purga sola a los 90 s. */
-export async function releaseHold(hold: string): Promise<void> {
-  if (holdId === hold) holdId = null
-  if (DEMO_MODE) return
-  try {
-    await request(apiUrl(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ token: API_TOKEN, shop: currentSlug(), action: 'release', holdId: hold, sesionId: getSesionId() }),
-    })
-  } catch {
-    /* si no se pudo soltar, la limpieza del servidor la saca */
-  }
-}
-
-/** Olvida el hold local. Para cuando la reserva se confirmó. */
-export function clearHold(): void {
-  holdId = null
 }

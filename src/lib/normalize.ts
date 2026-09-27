@@ -167,7 +167,7 @@ export const DEFAULT_CONFIG: BusinessConfig = {
   moneda: 'EUR',
   metodosPago: [],
   heroTitulo: 'Reserva tu cita en minutos',
-  heroSubtitulo: 'Elige tus servicios, aparta el horario que prefieras y confirma por WhatsApp.',
+  heroSubtitulo: 'Elige tus servicios, escoge el horario que prefieras y confirma por WhatsApp.',
 }
 
 export function normalizeConfig(raw: unknown, horariosRaw?: unknown): BusinessConfig {
