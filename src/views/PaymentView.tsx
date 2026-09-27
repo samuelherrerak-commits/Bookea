@@ -29,6 +29,30 @@ interface PaymentViewProps {
 
 const UBICACION_WHATSAPP = 'Ubicación por WhatsApp'
 
+/** Intentos ante un corte de red, no ante un rechazo del servidor. */
+const INTENTOS_RED = 3
+
+/**
+ * Confirma la reserva reintentando los cortes de conexión.
+ *
+ * Un fallo de red no dice que la reserva falló: puede que el servidor la guardara
+ * y se perdiera solo la respuesta. Como el envío lleva un `reservaId` fijo, volver
+ * a intentarlo es seguro, así que se reintenta un par de veces con una pausa antes
+ * de darle el error a la clienta. Cualquier otro fallo (cupo ocupado, cupón
+ * inválido) se propaga de una: repeating no lo arregla.
+ */
+async function confirmarConReintento(payload: ReservationPayload) {
+  for (let intento = 1; ; intento++) {
+    try {
+      return await submitReservation(payload)
+    } catch (err) {
+      const esRed = err instanceof ApiError && err.code === 'red'
+      if (intento >= INTENTOS_RED || !esRed) throw err
+      await new Promise((r) => setTimeout(r, 1200 * intento))
+    }
+  }
+}
+
 export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }: PaymentViewProps) {
   const { state, dispatch } = useOrder()
   const [attempted, setAttempted] = useState(false)
@@ -83,7 +107,7 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
 
     setSubmitting(true)
     try {
-      const result = await submitReservation(payload)
+      const result = await confirmarConReintento(payload)
       // El servidor recalcula el total: el mensaje usa sus cifras si vienen.
       const finalSummary: Summary = {
         ...summary,
@@ -119,7 +143,10 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
     } catch (err) {
       setSubmitting(false)
       if (err instanceof ApiError && err.code === 'cupo_ocupado') {
-        toast.error('Ese horario acaba de ocuparse. Elige otro, por favor.')
+        // El mensaje del servidor dice qué comprobación falló ("ya pasó", "está
+        // fuera de horario" o "acaba de ocuparse"). Poner siempre el mismo
+        // escondía justo la causa que había que mirar.
+        toast.error(err.message)
         onSlotTaken()
       } else if (err instanceof ApiError && err.code === 'cupon_invalido') {
         dispatch({ type: 'setCoupon', coupon: null })

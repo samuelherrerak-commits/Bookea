@@ -6,11 +6,16 @@ import type { ApiErrorCode } from './errors'
 import { mockFetchData, mockSubmitReservation, mockValidateCoupon } from './mock'
 import { normalizeCatalog, str, toNumber } from './normalize'
 import type { Row } from './normalize'
+import { clearReservaId, getReservaId } from './reservaId'
 import { normalizeSlug, slugFromLocation } from './tenant'
 
 export { ApiError, API_TOKEN, DEMO_MODE }
 
-const TIMEOUT_MS = 20_000
+// Un POST a Apps Script puede tardar bastante: la tasa se pide a un sitio externo
+// que no tiene timeout y subir el capture a Drive pesa. Con 20 s se abortaba a
+// veces una reserva que el servidor sí había guardado, y la clienta terminaba
+// viendo un error por una cita que estaba hecha.
+const TIMEOUT_MS = 60_000
 
 /** undefined = todavía no se ha resuelto; null = esta app no tiene tenant. */
 let shopSlug: string | null | undefined
@@ -109,18 +114,22 @@ export async function validateCoupon(codigo: string): Promise<Coupon> {
 }
 
 /** Envía la reserva. Se usa `text/plain` para que el navegador no haga preflight CORS. */
+// ---------- Id del intento de reserva ----------
+
 export async function submitReservation(payload: ReservationPayload): Promise<ReservationResult> {
   if (DEMO_MODE) return mockSubmitReservation(payload)
 
+  const reservaId = getReservaId()
   const data = await request(apiUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ token: API_TOKEN, shop: currentSlug(), ...payload }),
+    body: JSON.stringify({ token: API_TOKEN, shop: currentSlug(), ...payload, reservaId }),
   })
 
   if (!data.success) {
     throw new ApiError('desconocido', str(data.mensaje) || 'No se pudo guardar la reserva.')
   }
+  clearReservaId()
   return {
     id: str(data.id),
     total: toNumber(data.total, payload.total),

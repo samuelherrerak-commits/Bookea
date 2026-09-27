@@ -658,9 +658,9 @@ function doPost(e) {
   if (!tenant) return json_({ error: 'no_tenant', mensaje: 'Este negocio no existe o está desactivado.' });
 
   // Se arman dentro del bloque y se usan después.
-  let ss, config, orden, calendar, evento, inicio, fin, tasa, totalBs, serviciosTexto, comprobanteUrl = '';
+  let ss, config, orden, calendar, evento, inicio, fin, serviciosTexto, comprobanteUrl = '';
   let cliente, telefono, fechaCita, horaCita, metodoPago, esPagoMovil, modalidad, direccion, comprobante;
-  let moneda, id;
+  let moneda, id, tasa = null, totalBs = null;
 
   try {
     ss = openTenant_(tenant);
@@ -701,6 +701,14 @@ function doPost(e) {
       return json_({ error: 'datos_invalidos', mensaje: 'La imagen del capture es demasiado grande.' });
     }
 
+    // --- Reintento de una reserva que ya se guardó ---
+    // Si esta misma reservaId ya tiene fila, el cliente se quedó sin respuesta la
+    // primera vez y está reintentando. Se devuelve el éxito tal cual: seguir a la
+    // comprobación de disponibilidad daría "ocupado" por el evento que él mismo
+    // acaba de crear, y la reserva se perdería sin dejar rastro en la hoja.
+    const previa = data.reservaId ? buscarReservaPorId_(ss, data.reservaId, fechaCita, horaCita) : null;
+    if (previa) return json_(previa);
+
     // --- El total se recalcula aquí; no se confía en el que manda el navegador ---
     const orden = calcularOrden_(ss, data.items, data.cupon, modalidad, config);
     if (orden.lineas.length === 0 || !orden.hasBase) {
@@ -740,19 +748,23 @@ function doPost(e) {
       }
     }
 
-    // --- Tasa y monto en bolívares (solo si la moneda no es Bs) ---
-    tasa = moneda === 'BS' ? null : getTasa(moneda, ss);
+    // --- Tasa sin salir a la red ---
+    // bcv.org.ve no tiene timeout configurable y puede tardar más que el límite de
+    // ejecución. Acá solo se lee la caché o el último valor bueno: la tasa sirve
+    // para mostrar el equivalente en bolívares, no para decidir nada. La versión
+    // fresca se busca DESPUÉS de escribir la fila, y si sale se parchea la celda.
+    tasa = moneda === 'BS' ? null : tasaCache_(moneda, ss);
     totalBs = moneda === 'BS' ? orden.total : tasa ? round2_(orden.total * tasa.valor) : null;
 
-    id = Utilities.getUuid();
+    id = String(data.reservaId || '') || Utilities.getUuid();
     serviciosTexto = orden.lineas.map(function (l) { return l.nombre; }).join(', ');
 
     // === Fin de la sección crítica ===
-    // Hasta acá solo hay lecturas y validaciones. El cupón se descuenta acá porque
-    // quedarse sin usos es pérdida directa, y el evento se crea acá porque es lo
-    // que ocupa el cupo. Todo lo de abajo (Drive, hoja, avisos) no evita que dos
-    // personas pelen el mismo horario, así que va fuera: es la parte lenta y con
-    // 100 negocios un Drive lento frenaba a todos.
+    // Hasta acá solo hay lecturas y validaciones. El cupón se descuenta porque
+    // quedarse sin usos es pérdida directa, el evento se crea porque es lo que
+    // ocupa el cupo, y la fila se escribe inmediatamente después, sin ninguna
+    // llamada externa de por medio. La reserva es el registro que no se puede
+    // perder: hasta que su fila no está escrita, el evento se puede deshacer.
     if (orden.cupon) descontarCupon_(ss, orden.cupon);
     evento = calendar
       ? calendar.createEvent(
@@ -761,23 +773,6 @@ function doPost(e) {
       )
       : null;
 
-    limpiarCacheCatalogo_(tenant.slug); // la ocupación cambió: la próxima carga recalcula
-  } catch (err) {
-    console.error(err);
-    return json_({ error: 'servidor', mensaje: 'No se pudo guardar la reserva. Intenta de nuevo.' });
-  }
-
-  // ============ Ya está asegurado: esto es lento y no bloquea a nadie ============
-  try {
-    if (comprobante && tenant.carpetaId) {
-      comprobanteUrl = guardarComprobante_(
-        comprobante,
-        fechaCita + '_' + horaCita.replace(':', '') + '_' + slug_(cliente) + '_' + id.slice(0, 8),
-        tenant.carpetaId
-      ) || '';
-    }
-
-    // --- Guardar en la hoja (por nombre de columna) ---
     appendByHeaders_(ss.getSheetByName('Reservaciones'), {
       ID: id,
       Fecha_Solicitud: new Date(),
@@ -796,11 +791,75 @@ function doPost(e) {
       Modalidad: modalidad === 'domicilio' ? 'A domicilio' : 'En el spa',
       Direccion: modalidad === 'domicilio' ? direccion : 'Spa',
       Recargo: orden.recargo,
-      Comprobante: comprobanteUrl || 'N/A',
+      // El capture se sube después; mientras tanto la fila dice que falta.
+      Comprobante: comprobante ? 'pendiente' : 'N/A',
     });
 
-    // El evento nació sin detalle para ocupar el cupo rápido; ahora se completa.
+    limpiarCacheCatalogo_(tenant.slug); // la ocupación cambió: la próxima carga recalcula
+  } catch (err) {
+    console.error(err);
+    // Quedó un evento sin fila detrás. Es peor que no tener evento: la hora
+    // aparecería ocupada con nadie registrado. Se borra para que la clienta
+    // pueda reintentar sin nada a medias.
     if (evento) {
+      try {
+        evento.deleteEvent();
+      } catch (e2) {
+        console.warn('No se pudo borrar el evento huérfano: ' + e2);
+      }
+      limpiarCacheCatalogo_(tenant.slug);
+    }
+    return json_({ error: 'servidor', mensaje: 'No se pudo guardar la reserva. Intenta de nuevo.' });
+  }
+
+  // ============ La reserva ya está guardada: esto es extra ============
+  // A partir de acá nada puede hacer que la reserva se pierda. Cada paso lleva su
+  // propio try/catch: si falla, se avisa con console.warn y se sigue respondiendo
+  // éxito, porque la clienta tiene que poder mandarle el resumen por WhatsApp
+  // aunque el capture no se haya podido subir.
+  const respuesta = {
+    success: true,
+    id: id,
+    total: orden.total,
+    totalBs: totalBs,
+    tasa: tasa ? tasa.valor : null,
+    comprobanteUrl: null,
+  };
+
+  if (comprobante) {
+    try {
+      comprobanteUrl = guardarComprobante_(
+        comprobante,
+        fechaCita + '_' + horaCita.replace(':', '') + '_' + slug_(cliente) + '_' + id.slice(0, 8),
+        tenant.carpetaId
+      ) || '';
+      actualizarReserva_(ss, id, { Comprobante: comprobanteUrl || 'no se pudo subir' });
+      respuesta.comprobanteUrl = comprobanteUrl || null;
+    } catch (err) {
+      console.warn('No se pudo subir el capture: ' + err);
+      try { actualizarReserva_(ss, id, { Comprobante: 'no se pudo subir' }); } catch (e2) { /* nada */ }
+    }
+  }
+
+  // Tasa fresca: ahora que la reserva está a salvo se puede pedir sin apuro.
+  if (moneda !== 'BS') {
+    try {
+      const fresca = getTasa(moneda, ss);
+      if (fresca && (!tasa || fresca.valor !== tasa.valor)) {
+        tasa = fresca;
+        totalBs = round2_(orden.total * tasa.valor);
+        actualizarReserva_(ss, id, { Tasa_BCV: fresca.valor, Total_Bs: totalBs });
+        respuesta.totalBs = totalBs;
+        respuesta.tasa = fresca.valor;
+      }
+    } catch (err) {
+      console.warn('No se pudo actualizar la tasa: ' + err);
+    }
+  }
+
+  // El evento nació sin detalle para ocupar el cupo rápido; ahora se completa.
+  if (evento) {
+    try {
       evento.setLocation(ubicacionDe_(config, modalidad, direccion));
       evento.setDescription([
         'Teléfono: ' + telefono,
@@ -814,20 +873,16 @@ function doPost(e) {
         'Cupón: ' + (orden.cupon ? orden.cupon.codigo : 'N/A'),
         'ID: ' + id,
       ].join('\n'));
+    } catch (err) {
+      console.warn('No se pudo completar el evento: ' + err);
     }
-
-    return json_({
-      success: true,
-      id: id,
-      total: orden.total,
-      totalBs: totalBs,
-      tasa: tasa ? tasa.valor : null,
-      comprobanteUrl: comprobanteUrl || null,
-    });
-  } catch (err) {
-    console.error(err);
-    return json_({ error: 'servidor', mensaje: 'No se pudo guardar la reserva. Intenta de nuevo.' });
   }
+
+  // Cada paso de arriba tiene su propio try/catch, así que llegar acá significa que
+  // ninguno falló. Si alguno se escapara, la fila ya está escrita y se responde
+  // éxito igual: perder la respuesta dejaría a la clienta creyendo que falló algo
+  // que sí quedó guardado.
+  return json_(respuesta);
 }
 
 /** Dirección que se pone en el evento del calendario. */
@@ -890,6 +945,31 @@ function getTasa(moneda, ss) {
     const t = JSON.parse(ultima);
     t.fuente += ' (último valor conocido)';
     cache.put(cacheKey, JSON.stringify(t), 15 * 60);
+    return t;
+  }
+
+  const manual = toNumber_(getConfig_(ss)['tasa_' + sufijo + '_manual']);
+  return manual > 0 ? { valor: round2_(manual), fecha: null, fuente: 'Manual' } : null;
+}
+
+/**
+ * Tasa desde caché, último valor conocido o valor manual, sin salir a la red.
+ * Es la que usa la reserva: el cupo depende de la fila, no del tipo de cambio, y
+ * bcv.org.ve no tiene timeout configurable. La versión en fresco se pide después
+ * de guardar la fila y solo para mostrarla.
+ */
+function tasaCache_(moneda, ss) {
+  moneda = normalizarMoneda_(moneda);
+  const sufijo = moneda === 'USD' ? 'usd' : 'eur';
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('tasa_' + sufijo);
+  if (cached) return JSON.parse(cached);
+
+  const props = PropertiesService.getScriptProperties();
+  const ultima = props.getProperty('tasa_' + sufijo + '_ultima');
+  if (ultima) {
+    const t = JSON.parse(ultima);
+    t.fuente += ' (último valor conocido)';
     return t;
   }
 
@@ -1107,8 +1187,13 @@ function config_min_extra_(config) {
   return v === '' ? 15 : Math.max(0, Math.round(toNumber_(v)));
 }
 
-/** Guarda el capture en Drive (carpeta del negocio) y devuelve su enlace. */
+/**
+ * Guarda el capture en Drive (carpeta del negocio) y devuelve su enlace.
+ * Si el negocio no tiene carpeta configurada devuelve '' sin error: la captura es
+ * un extra de la reserva, no una condición para guardarla.
+ */
 function guardarComprobante_(comprobante, nombreBase, carpetaId) {
+  if (!carpetaId) return '';
   const carpeta = DriveApp.getFolderById(carpetaId);
   const mime = /^image\/(jpeg|png|webp|heic|heif)$/.test(comprobante.mime) ? comprobante.mime : 'image/jpeg';
   const ext = mime === 'image/png' ? '.png' : mime === 'image/webp' ? '.webp' : '.jpg';
@@ -1334,6 +1419,83 @@ function descontarCupon_(ss, cupon) {
 function appendByHeaders_(sheet, record) {
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
   sheet.appendRow(headers.map(function (h) { return h in record ? record[h] : ''; }));
+}
+
+/** Índice (base 0) de una columna por su encabezado, o -1 si no existe. */
+function columna_(headers, nombre) {
+  return headers.map(String).indexOf(nombre);
+}
+
+/**
+ * Escribe campos en la fila de la reserva cuya ID coincide. Se usa para completar
+ * la fila después de crearla (el enlace del capture, la tasa fresca) sin tener que
+ * volver a escribirla entera. Busca por ID y no por número de fila, porque entre
+ * la escritura y el parcheo otra persona pudo insertar filas.
+ */
+function actualizarReserva_(ss, id, campos) {
+  if (!id) return false;
+  const sheet = ss.getSheetByName('Reservaciones');
+  if (!sheet || sheet.getLastRow() < 2) return false;
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  const colId = columna_(headers, 'ID');
+  if (colId === -1) return false;
+  const n = sheet.getLastRow() - 1;
+  const ids = sheet.getRange(2, colId + 1, n, 1).getValues();
+  for (let i = 0; i < n; i++) {
+    if (String(ids[i][0]) !== String(id)) continue;
+    Object.keys(campos).forEach(function (nombre) {
+      const c = columna_(headers, nombre);
+      if (c !== -1) sheet.getRange(i + 2, c + 1).setValue(campos[nombre]);
+    });
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Devuelve la respuesta de una reserva ya guardada, o null si no existe.
+ *
+ * El cliente manda un `reservaId` fijo por intento y lo reusa cuando reintenta,
+ * así que un reintento con el mismo id es la misma reserva: se le devuelve el
+ * éxito guardado en vez de comprobar disponibilidad, que rechazaría el reintento
+ * con "ocupado" por el evento que él mismo ya había creado. Se exige que la fecha
+ * y la hora coincidan, para que un id reutilizado en otra hora no traiga la
+ * reserva anterior.
+ */
+function buscarReservaPorId_(ss, reservaId, fechaCita, horaCita) {
+  if (!reservaId) return null;
+  const sheet = ss.getSheetByName('Reservaciones');
+  if (!sheet || sheet.getLastRow() < 2) return null;
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  const colId = columna_(headers, 'ID');
+  if (colId === -1) return null;
+  const n = sheet.getLastRow() - 1;
+  const ids = sheet.getRange(2, colId + 1, n, 1).getValues();
+  for (let i = 0; i < n; i++) {
+    if (String(ids[i][0]) !== String(reservaId)) continue;
+    const fila = i + 2;
+    const leer = function (nombre) {
+      const c = columna_(headers, nombre);
+      return c === -1 ? null : sheet.getRange(fila, c + 1).getValue();
+    };
+    if (String(leer('Fecha_Cita')) !== String(fechaCita)) return null;
+    if (String(leer('Hora_Cita')) !== String(horaCita)) return null;
+    const total = leer('Total');
+    const totalBs = leer('Total_Bs');
+    const tasa = leer('Tasa_BCV');
+    const comp = String(leer('Comprobante') || '');
+    return {
+      success: true,
+      id: String(reservaId),
+      total: total === null || total === '' ? null : toNumber_(total),
+      totalBs: totalBs === null || totalBs === '' ? null : toNumber_(totalBs),
+      tasa: tasa === null || tasa === '' ? null : toNumber_(tasa),
+      // Lo único que sirve de la columna es un enlace a Drive; el resto son
+      // marcadores como "pendiente" o "no se pudo subir".
+      comprobanteUrl: /^https:\/\//.test(comp) ? comp : null,
+    };
+  }
+  return null;
 }
 
 function toNumber_(value) {
