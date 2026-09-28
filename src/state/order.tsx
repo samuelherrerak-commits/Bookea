@@ -6,6 +6,8 @@ export interface OrderState {
   coupon: Coupon | null
   schedule: Schedule | null
   modalidad: Modalidad | null
+  /** Sede elegida cuando modalidad = local. */
+  sedeId: string | null
   customer: Customer
   payment: Payment | null
 }
@@ -17,7 +19,7 @@ export type OrderAction =
   | { type: 'setSchedule'; schedule: Schedule | null }
   | { type: 'setCustomer'; customer: Partial<Customer> }
   | { type: 'setPaymentMethod'; metodo: Payment['metodo'] }
-  | { type: 'setModalidad'; modalidad: Modalidad }
+  | { type: 'setModalidad'; modalidad: Modalidad | null; sedeId: string | null }
   | { type: 'setPagado'; pagado: boolean }
   | { type: 'setComprobante'; comprobante: Comprobante | null }
   | { type: 'reset' }
@@ -27,6 +29,7 @@ export const initialOrder: OrderState = {
   coupon: null,
   schedule: null,
   modalidad: null,
+  sedeId: null,
   customer: { nombre: '', telefono: '' },
   payment: null,
 }
@@ -54,9 +57,10 @@ export function orderReducer(state: OrderState, action: OrderAction): OrderState
           action.metodo === 'pago_movil' ? { metodo: 'pago_movil', pagado: false, comprobante: null } : { metodo: 'lugar' },
       }
     // A domicilio suma minutos: el cupo elegido deja de ser válido.
+    // Cambiar de sede no toca los minutos, pero sí el lugar del cupo: se vuelve a elegir.
     case 'setModalidad':
-      if (state.modalidad === action.modalidad) return state
-      return { ...state, modalidad: action.modalidad, schedule: null }
+      if (state.modalidad === action.modalidad && state.sedeId === action.sedeId) return state
+      return { ...state, modalidad: action.modalidad, sedeId: action.sedeId, schedule: null }
     case 'setPagado':
       if (state.payment?.metodo !== 'pago_movil') return state
       return { ...state, payment: { ...state.payment, pagado: action.pagado } }
@@ -70,7 +74,8 @@ export function orderReducer(state: OrderState, action: OrderAction): OrderState
 
 // El navegador puede recargar la pestaña al volver de la app del banco:
 // guardamos el borrador para no perder la orden.
-const STORAGE_KEY = 'bymarianails:borrador:v2'
+// v3: la modalidad pasó de 'spa' a 'local' + sede; un borrador viejo no sirve.
+const STORAGE_KEY = 'bymarianails:borrador:v3'
 
 function loadDraft(): OrderState {
   try {

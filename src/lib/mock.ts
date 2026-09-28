@@ -1,6 +1,7 @@
 import { DEFAULT_WHATSAPP } from '../config'
 import type { Catalog, Coupon, ReservationPayload, ReservationResult } from '../types'
 import { ApiError } from './errors'
+import { PLANTILLAS_MENSAJE } from './mensajes'
 import { normalizeCatalog } from './normalize'
 import { addDays, zonedParts } from './slots'
 
@@ -44,9 +45,17 @@ const CONFIG = {
   pm_cedula: 'V-12.345.678',
   recargo_domicilio_pct: '20',
   minutos_extra_domicilio: '15',
+  permite_domicilio: 'si',
+  lugar_tipo: 'spa',
+  mensaje_plantilla: 'Cálida',
   direccion_spa: '',
   direccion_spa_url: 'https://maps.app.goo.gl/MBfSuyGHQrRRcDp17',
 }
+
+const SEDES_DEMO = [
+  { Nombre: 'Sede Centro', Direccion: 'Av. Libertador, local 12', Maps_URL: 'https://maps.app.goo.gl/MBfSuyGHQrRRcDp17', Activa: 'si' },
+  { Nombre: 'Sede Norte', Direccion: 'C.C. El Norte, piso 2', Maps_URL: '', Activa: 'si' },
+]
 
 const CUPONES: Record<string, Coupon> = {
   BIENVENIDA: { codigo: 'BIENVENIDA', porcentaje: 10, monto: 0 },
@@ -110,8 +119,8 @@ const RUBROS: Record<string, { servicios: typeof SERVICIOS; promociones: typeof 
  * Sirve para ver y capturar las plantillas sin tocar una hoja. En producción el
  * mock no se usa, así que el negocio real solo se configura desde su hoja.
  */
-function previewOverrides(): { config: Record<string, string>; rubro: string } {
-  if (typeof window === 'undefined') return { config: {}, rubro: '' }
+function previewOverrides(): { config: Record<string, string>; rubro: string; sedes: string } {
+  if (typeof window === 'undefined') return { config: {}, rubro: '', sedes: '' }
   const q = new URLSearchParams(window.location.search)
   const config: Record<string, string> = {}
   const set = (param: string, key: string) => {
@@ -124,7 +133,10 @@ function previewOverrides(): { config: Record<string, string>; rubro: string } {
   set('marca', 'marca')
   set('titulo', 'hero_titulo')
   set('subtitulo', 'hero_subtitulo')
-  return { config, rubro: q.get('rubro') ?? '' }
+  set('lugar', 'lugar_tipo')
+  set('domicilio', 'permite_domicilio')
+  set('mensaje', 'mensaje_plantilla')
+  return { config, rubro: q.get('rubro') ?? '', sedes: q.get('sedes') ?? '' }
 }
 
 export async function mockFetchData(): Promise<Catalog> {
@@ -135,6 +147,9 @@ export async function mockFetchData(): Promise<Catalog> {
     servicios: rubro?.servicios ?? SERVICIOS,
     promociones: rubro?.promociones ?? PROMOCIONES,
     config: { ...CONFIG, ...preview.config },
+    // ?sedes=2 muestra un negocio con dos sedes (una sola agenda).
+    sedes: preview.sedes === '2' ? SEDES_DEMO : [],
+    mensajes: PLANTILLAS_MENSAJE.map((p) => ({ Nombre: p.nombre, Texto: p.texto })),
     tasa: { valor: 412.35, fecha: new Date().toISOString().slice(0, 10), fuente: 'BCV (demo)' },
     citasAgendadas: demoCitas(),
   })

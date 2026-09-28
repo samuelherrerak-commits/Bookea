@@ -13,7 +13,7 @@ interface SuccessViewProps {
 }
 
 // A domicilio se espera un poco más para que alcance a leer el recordatorio de la ubicación.
-const REDIRECT_MS = { spa: 1600, domicilio: 3200 } as const
+const REDIRECT_MS = { local: 1600, domicilio: 3200 } as const
 
 export function SuccessView({ whatsappUrl, calendarUrl, modalidad, onNew }: SuccessViewProps) {
   // Redirección automática; el botón queda como respaldo si el navegador la bloquea.

@@ -5,7 +5,7 @@ describe('orderReducer', () => {
   const withSchedule = { ...initialOrder, schedule: { fecha: '2026-09-24', hora: '10:00' } }
 
   it('cambiar la modalidad limpia el horario (cambia la duración)', () => {
-    const s = orderReducer(withSchedule, { type: 'setModalidad', modalidad: 'domicilio' })
+    const s = orderReducer(withSchedule, { type: 'setModalidad', modalidad: 'domicilio', sedeId: null })
     expect(s.modalidad).toBe('domicilio')
     expect(s.schedule).toBeNull()
   })

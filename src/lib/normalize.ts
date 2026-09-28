@@ -1,7 +1,9 @@
 import { DEFAULT_WHATSAPP } from '../config'
-import type { BusinessConfig, BusyRange, Catalog, Money, Promo, Service, Tasa, ThemeEstilo } from '../types'
+import type { BusinessConfig, BusyRange, Catalog, Money, Promo, Sede, Service, Tasa, ThemeEstilo } from '../types'
 import { parseHHMM } from './format'
 import { derivarAcento } from './color'
+import { capitalizar, etiquetaLugar, sedeId } from './lugar'
+import { elegirPlantilla, PLANTILLAS_MENSAJE, type PlantillaMensaje } from './mensajes'
 import { ESTILOS, paletaPorNombre } from './theme'
 
 // ---------- Normalización: la hoja la llena una persona, así que se tolera de todo ----------
@@ -160,10 +162,13 @@ export const DEFAULT_CONFIG: BusinessConfig = {
   anticipacionMinHoras: 2,
   zonaHoraria: 'America/Caracas',
   pagoMovil: { banco: '', telefono: '', cedula: '' },
-  permiteDomicilio: true,
+  // Igual que el backend: sin la clave, no hay domicilio (así el front nunca ofrece
+  // algo que doPost después rechaza).
+  permiteDomicilio: false,
   domicilio: { recargoPct: 20, minutosExtra: 15 },
   // Sin dirección por defecto: cada negocio pone la suya. Antes caía la de otro tenant.
-  spa: { direccion: '', mapsUrl: '' },
+  lugar: { tipo: 'local', etiqueta: 'el local', sedes: [{ id: 'principal', nombre: 'El local', direccion: '', mapsUrl: '' }] },
+  mensaje: { plantilla: PLANTILLAS_MENSAJE[0].nombre, texto: PLANTILLAS_MENSAJE[0].texto },
   tema: { base: '#C08497', soft: '#FBF3F4', deep: '#6B3A48', estilo: 'elegante' },
   moneda: 'EUR',
   metodosPago: [],
@@ -171,7 +176,37 @@ export const DEFAULT_CONFIG: BusinessConfig = {
   heroSubtitulo: 'Elige tus servicios, escoge el horario que prefieras y confirma por WhatsApp.',
 }
 
-export function normalizeConfig(raw: unknown, horariosRaw?: unknown): BusinessConfig {
+/** Pestaña Sedes: Nombre, Direccion, Maps_URL, Activa. Las inactivas y sin nombre se ignoran. */
+export function normalizeSedes(raw: unknown): Sede[] {
+  if (!Array.isArray(raw)) return []
+  const vistas = new Set<string>()
+  const sedes: Sede[] = []
+  for (const r of raw as Row[]) {
+    const nombre = str(r.nombre ?? r.Nombre)
+    const activa = str(r.activa ?? r.Activa ?? 'si').toLowerCase()
+    if (!nombre || ['no', 'false', '0'].includes(activa)) continue
+    let id = sedeId(nombre)
+    while (vistas.has(id)) id += '-2'
+    vistas.add(id)
+    const url = str(r.mapsUrl ?? r.Maps_URL ?? r.maps_url)
+    sedes.push({ id, nombre, direccion: str(r.direccion ?? r.Direccion), mapsUrl: /^https?:\/\//i.test(url) ? url : '' })
+  }
+  return sedes
+}
+
+/** Pestaña Mensajes: Nombre, Texto. */
+export function normalizeMensajes(raw: unknown): PlantillaMensaje[] {
+  if (!Array.isArray(raw)) return []
+  return (raw as Row[])
+    .map((r) => ({ nombre: str(r.nombre ?? r.Nombre), texto: String(r.texto ?? r.Texto ?? '').trim() }))
+    .filter((m) => m.nombre && m.texto)
+}
+
+export function normalizeConfig(
+  raw: unknown,
+  horariosRaw?: unknown,
+  extra: { sedes?: unknown; mensajes?: unknown } = {},
+): BusinessConfig {
   const map: Record<string, string> = {}
   if (Array.isArray(raw)) {
     for (const r of raw as Row[]) if (str(r.Clave)) map[str(r.Clave).toLowerCase()] = str(r.Valor)
@@ -212,8 +247,8 @@ export function normalizeConfig(raw: unknown, horariosRaw?: unknown): BusinessCo
     return /^#?(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ? (v.startsWith('#') ? v : `#${v}`) : fallback
   }
   // Precedencia: color_principal > tema_base/soft/deep > paleta del dropdown > default.
-  // color_principal gana porque es la opción simple: "Aplicar paleta elegida" escribe
-  // tema_base/soft/deep, y si mandaran esos el color nuevo no se vería nunca.
+  // color_principal gana porque es la opción simple: hojas viejas pueden tener
+  // tema_base/soft/deep escritos, y si mandaran esos el color nuevo no se vería nunca.
   // El fondo es independiente: si falta, la app usa sus neutros crema de siempre.
   const fondo = hex('color_fondo', '') || undefined
   const principal = hex('color_principal', '')
@@ -226,6 +261,24 @@ export function normalizeConfig(raw: unknown, horariosRaw?: unknown): BusinessCo
     .replace(/[\u0300-\u036f]/g, '')
   const MONEDAS: readonly Money[] = ['EUR', 'USD', 'BS']
   const monedaRaw = (map.moneda ?? '').trim().toUpperCase()
+
+  // Lugar: el tipo da la etiqueta ("el consultorio"). Sin pestaña Sedes (hojas viejas)
+  // la dirección de siempre (direccion_spa) arma una sede única con ese nombre.
+  const lugarTipo = (map.lugar_tipo ?? '').trim().toLowerCase() || 'spa'
+  const etiqueta = etiquetaLugar(lugarTipo, map.lugar_nombre ?? '')
+  let sedes = normalizeSedes(extra.sedes)
+  if (!sedes.length) {
+    const url = (map.direccion_spa_url ?? '').trim()
+    sedes = [
+      {
+        id: 'principal',
+        nombre: capitalizar(etiqueta),
+        direccion: (map.direccion_spa ?? '').trim(),
+        mapsUrl: /^https?:\/\//i.test(url) ? url : '',
+      },
+    ]
+  }
+  const plantilla = elegirPlantilla(normalizeMensajes(extra.mensajes), map.mensaje_plantilla ?? '')
 
   const whatsapp = (map.whatsapp ?? '').replace(/\D/g, '')
   return {
@@ -248,10 +301,8 @@ export function normalizeConfig(raw: unknown, horariosRaw?: unknown): BusinessCo
       recargoPct: map.recargo_domicilio_pct ? toNumber(map.recargo_domicilio_pct, d.domicilio.recargoPct) : d.domicilio.recargoPct,
       minutosExtra: int('minutos_extra_domicilio', d.domicilio.minutosExtra),
     },
-    spa: {
-      direccion: map.direccion_spa ?? '',
-      mapsUrl: /^https?:\/\//.test(map.direccion_spa_url ?? '') ? map.direccion_spa_url : d.spa.mapsUrl,
-    },
+    lugar: { tipo: lugarTipo, etiqueta, sedes },
+    mensaje: { plantilla: plantilla.nombre, texto: plantilla.texto },
     tema: {
       base: acento?.base ?? hex('tema_base', paleta?.base ?? d.tema.base),
       soft: acento?.soft ?? hex('tema_soft', paleta?.soft ?? d.tema.soft),
@@ -289,7 +340,7 @@ export function normalizeCatalog(data: Row): Catalog {
   return {
     servicios,
     promociones: normalizePromos(data.promociones, servicios),
-    config: normalizeConfig(data.config, data.horarios),
+    config: normalizeConfig(data.config, data.horarios, { sedes: data.sedes, mensajes: data.mensajes }),
     tasa: normalizeTasa(data.tasa),
     citas: normalizeCitas(data.citasAgendadas),
   }

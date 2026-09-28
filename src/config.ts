@@ -22,8 +22,3 @@ export const METODO_LABEL = {
   lugar: 'Pago en la cita',
   pago_movil: 'Bolívares (Pago Móvil)',
 } as const
-
-export const MODALIDAD_LABEL = {
-  spa: 'En el spa',
-  domicilio: 'A domicilio',
-} as const

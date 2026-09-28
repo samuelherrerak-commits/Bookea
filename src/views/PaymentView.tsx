@@ -8,7 +8,8 @@ import { OrderSummary } from '../components/OrderSummary'
 import { BottomBar } from '../components/ui/BottomBar'
 import { Button } from '../components/ui/Button'
 import { IconCalendar, IconHome, IconMapPin, IconWhatsApp } from '../components/ui/icons'
-import { METODO_LABEL, MODALIDAD_LABEL } from '../config'
+import { METODO_LABEL } from '../config'
+import { lugarElegido } from '../lib/lugar'
 import { ApiError, submitReservation } from '../lib/api'
 import { capitalize, formatEUR, formatLongDate, formatTime12 } from '../lib/format'
 import { servicesText, type OrderSummary as Summary } from '../lib/pricing'
@@ -62,7 +63,8 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
   const telefonoRef = useRef<HTMLInputElement>(null)
   const comprobanteRef = useRef<HTMLDivElement>(null)
 
-  const { customer, payment, schedule, coupon, modalidad } = state
+  const { customer, payment, schedule, coupon, modalidad, sedeId } = state
+  const lugar = modalidad ? lugarElegido(catalog.config, modalidad, sedeId) : null
   const customerErrors = validateCustomer(customer)
   const paymentError = attempted && !payment ? 'Elige cómo vas a pagar para continuar.' : null
   const comprobanteError =
@@ -97,6 +99,7 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
       metodoPago: METODO_LABEL[payment.metodo],
       cupon: coupon?.codigo ?? '',
       modalidad,
+      sede: lugar?.sede?.nombre ?? '',
       // La clienta envía su ubicación por WhatsApp (texto compatible con el Apps Script).
       direccion: modalidad === 'domicilio' ? UBICACION_WHATSAPP : '',
       comprobante:
@@ -121,7 +124,8 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
         fecha: schedule.fecha,
         hora: schedule.hora,
         duracionMin: summary.duracionMin,
-        ubicacion: modalidad === 'domicilio' ? 'A domicilio' : catalog.config.spa.direccion || catalog.config.spa.mapsUrl,
+        ubicacion:
+          modalidad === 'domicilio' ? 'A domicilio' : lugar?.sede?.direccion || lugar?.sede?.mapsUrl || lugar?.titulo || '',
         detalles: `Total: ${formatEUR(finalSummary.total, true)}\nWhatsApp: https://wa.me/${catalog.config.whatsapp}`,
         zonaHoraria: catalog.config.zonaHoraria,
       })
@@ -133,7 +137,8 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
         coupon,
         payment,
         modalidad,
-        spa: catalog.config.spa,
+        lugar: lugar ?? { titulo: '', sede: null },
+        plantilla: catalog.config.mensaje.texto,
         tasa,
         reservaId: result.id,
         comprobanteUrl: result.comprobanteUrl,
@@ -191,20 +196,20 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
                 {modalidad === 'domicilio' ? <IconHome size={20} /> : <IconMapPin size={20} />}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium">{MODALIDAD_LABEL[modalidad]}</p>
-                {modalidad === 'spa' ? (
-                  catalog.config.spa.mapsUrl ? (
+                <p className="text-[15px] font-medium">{lugar?.titulo}</p>
+                {modalidad === 'local' ? (
+                  lugar?.sede?.mapsUrl ? (
                     <a
-                      href={catalog.config.spa.mapsUrl}
+                      href={lugar.sede.mapsUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="block truncate text-[13px] font-medium text-rose-deep underline-offset-2 hover:underline"
                     >
-                      {catalog.config.spa.direccion || 'Ver ubicación en Google Maps'}
+                      {lugar.sede.direccion || 'Ver ubicación en Google Maps'}
                     </a>
                   ) : (
                     <p className="truncate text-[13px] text-muted">
-                      {catalog.config.spa.direccion || 'Te esperamos en el spa'}
+                      {lugar?.sede?.direccion || `Te esperamos en ${catalog.config.lugar.etiqueta}`}
                     </p>
                   )
                 ) : (

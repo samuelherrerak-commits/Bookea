@@ -57,8 +57,8 @@ describe('a domicilio', () => {
     expect(s.total).toBe(22) // 20 + 4 − 2
   })
 
-  it('en el spa no hay recargo ni minutos extra', () => {
-    const s = summarize(cart, c20, null, 'spa')
+  it('en el local no hay recargo ni minutos extra', () => {
+    const s = summarize(cart, c20, null, 'local')
     expect(s.recargo).toBe(0)
     expect(s.total).toBe(20)
     expect(s.duracionMin).toBe(60)

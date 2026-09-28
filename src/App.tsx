@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { CartBar } from './components/CartBar'
 import { CartSheet } from './components/CartSheet'
 import { useCatalog } from './hooks/useCatalog'
+import { eleccionValida, opcionesLugar } from './lib/lugar'
 import { spring } from './lib/motion'
 import { summarize } from './lib/pricing'
 import { applyBranding } from './lib/theme'
@@ -65,6 +66,16 @@ export default function App() {
   useEffect(() => {
     if (catalog) applyBranding(catalog.config)
   }, [catalog])
+
+  // Lugar: si hay una sola opción (una sede y sin domicilio) se elige sola. Si la
+  // elección guardada ya no existe (el negocio quitó la sede o el domicilio), se borra.
+  useEffect(() => {
+    if (!catalog) return
+    if (eleccionValida(catalog.config, state.modalidad, state.sedeId)) return
+    const opciones = opcionesLugar(catalog.config)
+    const unica = opciones.length === 1 ? opciones[0] : null
+    dispatch({ type: 'setModalidad', modalidad: unica?.modalidad ?? null, sedeId: unica?.sedeId ?? null })
+  }, [catalog, state.modalidad, state.sedeId, dispatch])
 
   // Al entrar a la agenda la ocupación tiene que ser real: el catálogo se cachea
   // 5 min para que el arranque sea instantáneo, así que acá se salta esa caché
