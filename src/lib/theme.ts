@@ -1,4 +1,6 @@
 import type { BusinessConfig, Tema, ThemeEstilo } from '../types'
+import { contrast, derivarNeutros } from './color'
+import { loadEstiloFonts } from './fonts'
 
 export interface Paleta {
   id: string
@@ -25,9 +27,6 @@ export const PALETAS: readonly Paleta[] = [
   { id: 'carbon', nombre: 'Carbón', base: '#9A9A9A', soft: '#EDEDED', deep: '#3A3A3A' },
 ]
 
-/** Elegante y editorial usan serif; moderno y amable, sans. */
-export const ESTILOS: readonly ThemeEstilo[] = ['elegante', 'moderno', 'editorial', 'amable']
-
 /** "Rosa Clásico" y "rosa-clasico" apuntan al mismo lado. */
 const norm = (value: string): string =>
   value
@@ -42,30 +41,120 @@ export function paletaPorNombre(value: string): Paleta | null {
   return PALETAS.find((p) => norm(p.id) === key || norm(p.nombre) === key) ?? null
 }
 
-const DISPLAY_FONT: Record<ThemeEstilo, string> = {
-  elegante: "'Instrument Serif', ui-serif, Georgia, serif",
-  editorial: "'Instrument Serif', ui-serif, Georgia, serif",
-  moderno: "'Inter Variable', ui-sans-serif, system-ui, sans-serif",
-  amable: "'Inter Variable', ui-sans-serif, system-ui, sans-serif",
+export interface EstiloDef {
+  nombre: string
+  /** Para quien elige en la hoja: a qué tipo de negocio le queda. */
+  descripcion: string
+  display: string
+  sans: string
 }
+
+const SANS_FALLBACK = 'ui-sans-serif, system-ui, -apple-system, sans-serif'
+const SERIF_FALLBACK = 'ui-serif, Georgia, serif'
+
+/**
+ * Cada estilo es un par de fuentes más unos detalles de forma (esquinas, mayúsculas,
+ * sombras) que viven en index.css bajo `[data-estilo]`. La distribución de la página
+ * es la misma en todos. La lista y el orden se repiten en `apps-script/Code.gs`.
+ */
+export const ESTILO_DEF: Record<ThemeEstilo, EstiloDef> = {
+  elegante: {
+    nombre: 'Elegante',
+    descripcion: 'Serif fina con acento en cursiva. Uñas, estética, novias.',
+    display: `'Instrument Serif', ${SERIF_FALLBACK}`,
+    sans: `'Inter Variable', ${SANS_FALLBACK}`,
+  },
+  moderno: {
+    nombre: 'Moderno',
+    descripcion: 'Sans geométrica y firme. Barberías, estudios, fitness.',
+    display: `'Plus Jakarta Sans', ${SANS_FALLBACK}`,
+    sans: `'Inter Variable', ${SANS_FALLBACK}`,
+  },
+  editorial: {
+    nombre: 'Editorial',
+    descripcion: 'Serif de revista y filetes finos. Consultas, terapias, estudios creativos.',
+    display: `'Newsreader', ${SERIF_FALLBACK}`,
+    sans: `'Source Sans 3', ${SANS_FALLBACK}`,
+  },
+  amable: {
+    nombre: 'Amable',
+    descripcion: 'Redondeada y cercana. Mascotas, niños, spa familiar.',
+    display: `'Nunito', ${SANS_FALLBACK}`,
+    sans: `'Nunito', ${SANS_FALLBACK}`,
+  },
+  audaz: {
+    nombre: 'Audaz',
+    descripcion: 'Condensada, gruesa y en mayúsculas, como bookeaa. Barberías, tatuajes, entrenadores.',
+    display: `'Barlow Condensed', 'Arial Narrow', ${SANS_FALLBACK}`,
+    sans: `'Barlow', ${SANS_FALLBACK}`,
+  },
+  clasico: {
+    nombre: 'Clásico',
+    descripcion: 'Serif de contraste alto, sobria. Peluquerías de siempre, sastrería, spa.',
+    display: `'Playfair Display', ${SERIF_FALLBACK}`,
+    sans: `'Lato', ${SANS_FALLBACK}`,
+  },
+  minimal: {
+    nombre: 'Minimal',
+    descripcion: 'Una sola sans, mucho aire y sin sombras. Estudios, clínicas, diseño.',
+    display: `'DM Sans', ${SANS_FALLBACK}`,
+    sans: `'DM Sans', ${SANS_FALLBACK}`,
+  },
+  retro: {
+    nombre: 'Retro',
+    descripcion: 'Serif cálida y suave, esquinas muy redondas. Cafés, pastelería, bienestar.',
+    display: `'Fraunces', ${SERIF_FALLBACK}`,
+    sans: `'Figtree', ${SANS_FALLBACK}`,
+  },
+}
+
+export const ESTILOS = Object.keys(ESTILO_DEF) as ThemeEstilo[]
+
+/** Texto oscuro o blanco, el que más se lea sobre el color de acento. */
+function textoSobre(base: string): string {
+  const oscuro = '#1A1816'
+  return contrast(base, oscuro) >= contrast(base, '#FFFFFF') ? oscuro : '#FFFFFF'
+}
+
+/** Neutros que pisa un `color_fondo`. Sin fondo propio se quitan y vuelven los de index.css. */
+const NEUTRAL_VARS = ['--color-bg', '--color-surface', '--color-sand', '--color-line', '--color-ink', '--color-muted'] as const
 
 /**
  * Tailwind v4 compila `text-rose-deep` a `var(--color-rose-deep)`, así que pisar estas
- * cuatro variables en `:root` repinta los ~58 usos de `rose` sin tocar un solo componente.
- * `sand`, `ink`, `muted` y `line` quedan neutros a propósito: son fondo y texto base.
+ * variables en `:root` repinta la app sin tocar un solo componente. Los neutros
+ * (fondo, superficies y textos) solo se pisan cuando el negocio eligió un fondo.
  */
 export function themeVars(tema: Tema): Record<string, string> {
-  return {
+  const def = ESTILO_DEF[tema.estilo] ?? ESTILO_DEF.elegante
+  const vars: Record<string, string> = {
     '--color-rose': tema.base,
     '--color-rose-soft': tema.soft,
     '--color-rose-deep': tema.deep,
-    '--font-display': DISPLAY_FONT[tema.estilo],
+    '--color-on-rose': textoSobre(tema.base),
+    '--font-display': def.display,
+    '--font-sans': def.sans,
   }
+  if (tema.fondo) {
+    const n = derivarNeutros(tema.fondo)
+    Object.assign(vars, {
+      '--color-bg': n.bg,
+      '--color-surface': n.surface,
+      '--color-sand': n.sand,
+      '--color-line': n.line,
+      '--color-ink': n.ink,
+      '--color-muted': n.muted,
+    })
+  }
+  return vars
 }
 
 export function applyTheme(tema: Tema): void {
   const root = document.documentElement
+  for (const key of NEUTRAL_VARS) root.style.removeProperty(key)
   for (const [key, value] of Object.entries(themeVars(tema))) root.style.setProperty(key, value)
+  // Las reglas de forma por estilo (esquinas, mayúsculas, sombras) cuelgan de este atributo.
+  root.dataset.estilo = tema.estilo
+  void loadEstiloFonts(tema.estilo)
 }
 
 function setMeta(selector: string, attr: string, value: string) {
@@ -91,7 +180,7 @@ export function applyBranding(config: BusinessConfig): void {
   applyTheme(config.tema)
   document.title = pageTitle(config)
   setMeta('meta[name="description"]', 'content', pageDescription(config))
-  setMeta('meta[name="theme-color"]', 'content', config.tema.soft)
+  setMeta('meta[name="theme-color"]', 'content', config.tema.fondo ?? config.tema.soft)
   if (config.logoUrl) {
     let icon = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]')
     if (!icon) {

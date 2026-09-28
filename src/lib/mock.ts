@@ -72,12 +72,69 @@ function demoCitas() {
   ]
 }
 
+/** Otros rubros para la vista previa (?rubro=), así las capturas no son todas de uñas. */
+const RUBROS: Record<string, { servicios: typeof SERVICIOS; promociones: typeof PROMOCIONES }> = {
+  barberia: {
+    servicios: [
+      { ID: 'B1', Nombre: 'Corte clásico', Precio: 10, Duracion_Min: 30, Tipo: 'Cortes' },
+      { ID: 'B2', Nombre: 'Corte y barba', Precio: 16, Duracion_Min: 45, Tipo: 'Cortes' },
+      { ID: 'B3', Nombre: 'Fade con diseño', Precio: 14, Duracion_Min: 45, Tipo: 'Cortes' },
+      { ID: 'B4', Nombre: 'Perfilado de barba', Precio: 7, Duracion_Min: 20, Tipo: 'Barba' },
+      { ID: 'B5', Nombre: 'Afeitado con toalla caliente', Precio: 12, Duracion_Min: 30, Tipo: 'Barba' },
+      { ID: 'BA1', Nombre: 'Cejas', Precio: 3, Duracion_Min: 10, Tipo: 'Adicional' },
+      { ID: 'BA2', Nombre: 'Mascarilla negra', Precio: 5, Duracion_Min: 15, Tipo: 'Adicional' },
+    ],
+    promociones: [
+      { ID: 'BP1', Nombre: 'Corte + barba + cejas', Servicios_Incluidos: 'B2, BA1', Precio_Promo: 17 },
+      { ID: 'BP2', Nombre: 'Día del padre', Servicios_Incluidos: 'B1, B5', Precio_Promo: 19 },
+    ],
+  },
+  estetica: {
+    servicios: [
+      { ID: 'E1', Nombre: 'Limpieza facial profunda', Precio: 25, Duracion_Min: 60, Tipo: 'Facial' },
+      { ID: 'E2', Nombre: 'Hidratación con ácido hialurónico', Precio: 30, Duracion_Min: 50, Tipo: 'Facial' },
+      { ID: 'E3', Nombre: 'Masaje relajante', Precio: 35, Duracion_Min: 60, Tipo: 'Corporal' },
+      { ID: 'E4', Nombre: 'Drenaje linfático', Precio: 32, Duracion_Min: 60, Tipo: 'Corporal' },
+      { ID: 'E5', Nombre: 'Diseño de cejas', Precio: 10, Duracion_Min: 30, Tipo: 'Mirada' },
+      { ID: 'EA1', Nombre: 'Aromaterapia', Precio: 5, Duracion_Min: 10, Tipo: 'Adicional' },
+    ],
+    promociones: [
+      { ID: 'EP1', Nombre: 'Facial + masaje', Servicios_Incluidos: 'E1, E3', Precio_Promo: 52 },
+      { ID: 'EP2', Nombre: 'Glow express', Servicios_Incluidos: 'E2, EA1', Precio_Promo: 31 },
+    ],
+  },
+}
+
+/**
+ * Solo en demo: ?estilo=&principal=&fondo=&marca=&rubro= arman el negocio de ejemplo.
+ * Sirve para ver y capturar las plantillas sin tocar una hoja. En producción el
+ * mock no se usa, así que el negocio real solo se configura desde su hoja.
+ */
+function previewOverrides(): { config: Record<string, string>; rubro: string } {
+  if (typeof window === 'undefined') return { config: {}, rubro: '' }
+  const q = new URLSearchParams(window.location.search)
+  const config: Record<string, string> = {}
+  const set = (param: string, key: string) => {
+    const v = q.get(param)
+    if (v) config[key] = v
+  }
+  set('estilo', 'tema_estilo')
+  set('principal', 'color_principal')
+  set('fondo', 'color_fondo')
+  set('marca', 'marca')
+  set('titulo', 'hero_titulo')
+  set('subtitulo', 'hero_subtitulo')
+  return { config, rubro: q.get('rubro') ?? '' }
+}
+
 export async function mockFetchData(): Promise<Catalog> {
   await wait(650)
+  const preview = previewOverrides()
+  const rubro = RUBROS[preview.rubro]
   return normalizeCatalog({
-    servicios: SERVICIOS,
-    promociones: PROMOCIONES,
-    config: CONFIG,
+    servicios: rubro?.servicios ?? SERVICIOS,
+    promociones: rubro?.promociones ?? PROMOCIONES,
+    config: { ...CONFIG, ...preview.config },
     tasa: { valor: 412.35, fecha: new Date().toISOString().slice(0, 10), fuente: 'BCV (demo)' },
     citasAgendadas: demoCitas(),
   })

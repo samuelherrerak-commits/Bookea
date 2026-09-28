@@ -128,7 +128,7 @@ export const PagoMovilDetails = forwardRef<HTMLDivElement, PagoMovilDetailsProps
         <AnimatePresence mode="wait" initial={false}>
           {!pagado ? (
             <motion.div key="ya-pague" exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
-              <Button block onClick={onPagado} className="!bg-rose !text-ink !shadow-card">
+              <Button block onClick={onPagado} className="!bg-rose !text-on-rose !shadow-card">
                 <IconCheck size={19} /> Ya pagué
               </Button>
               <p className="min-h-[1.25rem] pt-1.5 text-center text-[13px] text-danger" aria-live="polite">

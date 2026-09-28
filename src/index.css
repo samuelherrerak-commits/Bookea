@@ -11,6 +11,8 @@
   --color-rose: #c9c3bd;
   --color-rose-soft: #efece8;
   --color-rose-deep: #8a837a;
+  /* Texto encima de bg-rose: theme.ts elige oscuro o blanco según el color del negocio. */
+  --color-on-rose: #2d2a26;
   --color-ink: #2d2a26;
   --color-muted: #8a837a;
   --color-danger: #b4533f;
@@ -64,6 +66,82 @@
     outline: 2px solid var(--color-rose-deep);
     outline-offset: 2px;
   }
+}
+
+/*
+ * Estilos de las páginas de negocio. theme.ts pone data-estilo en <html> y las
+ * fuentes en --font-display / --font-sans; acá va la forma: peso y caja de los
+ * títulos, esquinas y sombras. Tailwind v4 lee --radius-* en rounded-xl/2xl/3xl,
+ * así que ningún componente cambia. La distribución es la misma en los 8.
+ */
+@layer base {
+  .font-display {
+    font-weight: var(--display-weight, 400);
+    text-transform: var(--display-case, none);
+  }
+  [data-estilo='moderno'] {
+    --display-weight: 700;
+    --radius-xl: 0.625rem;
+    --radius-2xl: 0.875rem;
+    --radius-3xl: 1.25rem;
+  }
+  [data-estilo='editorial'] {
+    --display-weight: 500;
+    --radius-xl: 0.375rem;
+    --radius-2xl: 0.5rem;
+    --radius-3xl: 0.75rem;
+    --shadow-card: 0 0 0 1px var(--color-line);
+  }
+  [data-estilo='amable'] {
+    --display-weight: 800;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-3xl: 2rem;
+  }
+  [data-estilo='audaz'] {
+    --display-weight: 800;
+    --display-case: uppercase;
+    --radius-xl: 0.375rem;
+    --radius-2xl: 0.5rem;
+    --radius-3xl: 0.75rem;
+    --shadow-card: 0 0 0 1.5px var(--color-ink);
+  }
+  [data-estilo='audaz'] .font-display {
+    letter-spacing: -0.005em;
+    line-height: 0.95;
+  }
+  [data-estilo='clasico'] {
+    --display-weight: 600;
+    --radius-xl: 0.25rem;
+    --radius-2xl: 0.375rem;
+    --radius-3xl: 0.5rem;
+  }
+  [data-estilo='minimal'] {
+    --display-weight: 500;
+    --radius-xl: 0.375rem;
+    --radius-2xl: 0.5rem;
+    --radius-3xl: 0.625rem;
+    --shadow-card: 0 0 0 1px var(--color-line);
+  }
+  [data-estilo='minimal'] .font-display {
+    letter-spacing: -0.03em;
+  }
+  [data-estilo='retro'] {
+    --display-weight: 600;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-3xl: 2.25rem;
+  }
+  /* Audaz, minimal y editorial son planos: sin los halos difuminados del hero y las promos. */
+  :is([data-estilo='audaz'], [data-estilo='minimal'], [data-estilo='editorial']) .halo {
+    display: none;
+  }
+}
+
+/* La cursiva del acento (wordmark) solo tiene sentido en las serif. Va fuera de
+   @layer para ganarle a la utilidad `italic` de Tailwind. */
+:is([data-estilo='moderno'], [data-estilo='amable'], [data-estilo='audaz'], [data-estilo='minimal']) .font-display .italic {
+  font-style: normal;
 }
 
 @utility no-scrollbar {

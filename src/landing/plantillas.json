@@ -1,0 +1,94 @@
+{
+  "plantillas": [
+    {
+      "file": "elegante",
+      "estilo": "elegante",
+      "marca": "Mariana Nails",
+      "principal": "#C98A9A",
+      "fondo": "#FBF7F3",
+      "rubro": ""
+    },
+    {
+      "file": "moderno",
+      "estilo": "moderno",
+      "marca": "Barbería Norte",
+      "principal": "#2F5BEA",
+      "fondo": "#F7F8FA",
+      "rubro": "barberia"
+    },
+    {
+      "file": "editorial",
+      "estilo": "editorial",
+      "marca": "Estudio Salvia",
+      "principal": "#5F7A5F",
+      "fondo": "#F3F0E8",
+      "rubro": "estetica"
+    },
+    {
+      "file": "amable",
+      "estilo": "amable",
+      "marca": "Mimos Nails",
+      "principal": "#FF7A59",
+      "fondo": "#FFF8F3",
+      "rubro": ""
+    },
+    {
+      "file": "audaz",
+      "estilo": "audaz",
+      "marca": "Barber Club",
+      "principal": "#111111",
+      "fondo": "#FFFFFF",
+      "rubro": "barberia"
+    },
+    {
+      "file": "clasico",
+      "estilo": "clasico",
+      "marca": "Casa Barbera",
+      "principal": "#C9A24B",
+      "fondo": "#141414",
+      "rubro": "barberia"
+    },
+    {
+      "file": "minimal",
+      "estilo": "minimal",
+      "marca": "Clínica Piel",
+      "principal": "#1F6F5C",
+      "fondo": "#FFFFFF",
+      "rubro": "estetica"
+    },
+    {
+      "file": "retro",
+      "estilo": "retro",
+      "marca": "Ritual Spa",
+      "principal": "#C4572E",
+      "fondo": "#F6EBDD",
+      "rubro": "estetica"
+    }
+  ],
+  "colores": [
+    {
+      "file": "azul",
+      "estilo": "moderno",
+      "marca": "Barbería Norte",
+      "principal": "#2F5BEA",
+      "fondo": "#FFFFFF",
+      "rubro": "barberia"
+    },
+    {
+      "file": "coral",
+      "estilo": "moderno",
+      "marca": "Barbería Norte",
+      "principal": "#E4572E",
+      "fondo": "#FFF4EA",
+      "rubro": "barberia"
+    },
+    {
+      "file": "lima",
+      "estilo": "moderno",
+      "marca": "Barbería Norte",
+      "principal": "#C6F432",
+      "fondo": "#111111",
+      "rubro": "barberia"
+    }
+  ]
+}
