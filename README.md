@@ -7,6 +7,14 @@ Landing page **estática y mobile-first** para reservar citas de uñas con ByMar
 - **Precios:** en euros. El monto en bolívares usa la **tasa oficial del euro del BCV**.
 - **Hosting:** Render (Static Site). `npm run build` genera `dist/` y no hace falta servidor.
 
+## Landing de bookeaa (raíz `/`)
+
+Quien abre la raíz del dominio, sin `/u/<slug>`, ve la landing comercial de **bookeaa** (`src/landing/`): problema y solución, cómo funciona, funciones, plantillas, precio (1 mes gratis, luego Pro a $15/mes) y preguntas frecuentes. Se carga en un chunk aparte, así que no pesa en la agenda de los negocios.
+
+- **"Prueba gratis"** abre WhatsApp al número de `VITE_WHATSAPP` con un mensaje ya armado (`src/landing/cta.ts`).
+- **"Ver una agenda real"** lleva a `/u/<VITE_DEFAULT_SHOP>`. La raíz ya no redirige a ese negocio.
+- Tipografías: Barlow Condensed (títulos) y Barlow (texto), solo en la landing.
+
 ## Desarrollo local
 
 ```bash

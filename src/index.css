@@ -24,6 +24,15 @@
   --shadow-sheet: 0 -8px 40px -12px rgb(45 42 38 / 0.25);
 
   --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* Landing de bookeaa (raíz /). No los usa la agenda de los negocios. */
+  --color-paper: #ffffff;
+  --color-coal: #0f0f0e;
+  --color-graphite: #5b5b57;
+  --color-mist: #f4f4f2;
+  --color-rule: #e3e3df;
+  --font-condensed: 'Barlow Condensed', 'Arial Narrow', ui-sans-serif, sans-serif;
+  --font-barlow: 'Barlow', ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
