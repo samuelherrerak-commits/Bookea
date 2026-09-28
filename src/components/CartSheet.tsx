@@ -6,7 +6,7 @@ import { useOrder } from '../state/order'
 import { DEFAULT_CONFIG } from '../lib/normalize'
 import type { BusinessConfig } from '../types'
 import { CouponInput } from './CouponInput'
-import { ModalidadSelector } from './ModalidadSelector'
+import { LugarSelector } from './LugarSelector'
 import { OrderSummary } from './OrderSummary'
 import { BottomSheet } from './ui/BottomSheet'
 import { Button } from './ui/Button'
@@ -27,7 +27,7 @@ export function CartSheet({ open, onClose, summary, onContinue, config }: CartSh
     : !summary.hasBase
       ? 'Los adicionales se suman a un servicio base. Agrega uno para continuar.'
       : !state.modalidad
-        ? 'Elige si tu cita será en el spa o a domicilio.'
+        ? 'Elige dónde será tu cita.'
         : null
 
   const remove = (line: OrderLine) =>
@@ -113,9 +113,10 @@ export function CartSheet({ open, onClose, summary, onContinue, config }: CartSh
             </AnimatePresence>
           </ul>
 
-          <ModalidadSelector
-            value={state.modalidad}
-            onChange={(modalidad) => dispatch({ type: 'setModalidad', modalidad })}
+          <LugarSelector
+            modalidad={state.modalidad}
+            sedeId={state.sedeId}
+            onChange={(modalidad, sedeId) => dispatch({ type: 'setModalidad', modalidad, sedeId })}
             config={config ?? DEFAULT_CONFIG}
           />
 

@@ -41,6 +41,100 @@ const SHEETS = [
   { name: 'Configuracion', headers: ['Clave', 'Valor'] },
   { name: 'Horarios', headers: ['Dia', 'Hora_Inicio', 'Hora_Fin'] },
   { name: 'Bloqueos', headers: ['Fecha', 'Hora_Inicio', 'Hora_Fin', 'Motivo'] },
+  // Dónde se atiende. Una sola agenda para todas las sedes: una hora ocupada lo está en todas.
+  { name: 'Sedes', headers: ['Nombre', 'Direccion', 'Maps_URL', 'Activa'] },
+  // Plantillas del mensaje de WhatsApp; `mensaje_plantilla` elige cuál se usa.
+  { name: 'Mensajes', headers: ['Nombre', 'Texto'] },
+];
+
+/**
+ * Tipos de lugar (clave `lugar_tipo`) con su artículo, porque se usan en frases:
+ * "En el consultorio". Con 'otro' manda `lugar_nombre`. La misma lista vive en
+ * src/lib/lugar.ts y en apps-script/cliente/; hay un test que las compara.
+ */
+const LUGAR_TIPOS = {
+  spa: 'el spa',
+  consultorio: 'el consultorio',
+  barberia: 'la barbería',
+  estudio: 'el estudio',
+  salon: 'el salón',
+  clinica: 'la clínica',
+  local: 'el local',
+};
+
+/**
+ * Las 3 plantillas con las que nace la pestaña Mensajes. Mismo texto que
+ * src/lib/mensajes.ts (PLANTILLAS_MENSAJE); un test falla si se desincronizan.
+ * Variables: {negocio} {nombre} {telefono} {fecha} {hora} {duracion} {servicios}
+ * {lugar} {direccion} {cupon} {total} {pago} {comprobante} {calendario} {reserva}.
+ */
+const PLANTILLAS_MENSAJE = [
+  {
+    nombre: 'Cálida',
+    texto: [
+      '✨ ¡Nueva reserva en {negocio}! ✨',
+      '',
+      '¡Hola! 😊 Quiero confirmar mi cita:',
+      '',
+      '👤 Nombre: {nombre}',
+      '📱 Teléfono: {telefono}',
+      '',
+      '🗓️ Fecha: {fecha}',
+      '⏰ Hora: {hora} ({duracion} aprox.)',
+      '',
+      '💫 Servicios:',
+      '{servicios}',
+      '',
+      '📍 Lugar: {lugar}',
+      '{direccion}',
+      '',
+      '🎟️ {cupon}',
+      '💰 Total: {total}',
+      '💳 Pago: {pago}',
+      '🧾 Capture: {comprobante}',
+      '',
+      '📆 Agrégala a tu calendario: {calendario}',
+      '',
+      '🔖 Reserva {reserva}',
+      '¡Gracias! Nos vemos pronto 💕',
+    ].join('\n'),
+  },
+  {
+    nombre: 'Formal',
+    texto: [
+      'Buen día. Quisiera confirmar la siguiente cita en {negocio}:',
+      '',
+      'Nombre: {nombre}',
+      'Teléfono: {telefono}',
+      'Fecha: {fecha}',
+      'Hora: {hora} (duración aproximada: {duracion})',
+      '',
+      'Servicios:',
+      '{servicios}',
+      '',
+      'Lugar: {lugar}',
+      '{direccion}',
+      '{cupon}',
+      'Total: {total}',
+      'Forma de pago: {pago}',
+      'Comprobante: {comprobante}',
+      '',
+      'Agregar al calendario: {calendario}',
+      'Reserva {reserva}',
+      '',
+      'Quedo atento(a) a su confirmación. Muchas gracias.',
+    ].join('\n'),
+  },
+  {
+    nombre: 'Breve',
+    texto: [
+      'Hola, {negocio} 👋 Reservé para el {fecha} a las {hora}.',
+      '{servicios}',
+      '{lugar} · Total {total} · {pago}',
+      'Soy {nombre} ({telefono}). Reserva {reserva}',
+      '{calendario}',
+    ].join('\n'),
+  },
 ];
 
 const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado'];
@@ -69,7 +163,10 @@ const CONFIG_DEFAULTS = [
   ['color_fondo', ''], // hex del fondo de la página, ej. #FFFFFF o #111111. Vacío = crema de siempre
   ['hero_titulo', ''],
   ['hero_subtitulo', ''],
+  ['lugar_tipo', 'spa'], // spa | consultorio | barberia | estudio | salon | clinica | local | otro
+  ['lugar_nombre', ''], // solo con lugar_tipo = otro: cómo se dice después de "En" (ej. "la clínica")
   ['permite_domicilio', 'si'], // si | no
+  ['mensaje_plantilla', 'Cálida'], // nombre de una fila de la pestaña Mensajes
   ['metodos_pago', 'Pago en la cita, Bolívares (Pago Móvil)'],
   ['moneda', 'EUR'], // EUR | USD | Bs
   ['pm_banco', ''],
@@ -79,8 +176,11 @@ const CONFIG_DEFAULTS = [
   ['tasa_usd_manual', ''],
   ['recargo_domicilio_pct', '20'],
   ['minutos_extra_domicilio', '15'],
-  ['direccion_spa', ''],
-  ['direccion_spa_url', ''],
+  // La dirección vive en la pestaña Sedes. direccion_spa/_url se siguen leyendo en
+  // hojas viejas y prepararHoja_ las pasa a Sedes.
+  ['slug', ''], // lo escribe crearTenant; la barra lateral lo usa para refrescar la página
+  ['api_url', ''], // URL /exec de este script; idem
+  ['pagina_url', ''], // enlace público del negocio (propiedad del script sitio_url + /u/slug)
 ];
 
 /**
@@ -227,6 +327,7 @@ function crearTenant(slug, nombre, email, opt) {
     const cfg = ss.getSheetByName('Configuracion');
     setConfigKey_(cfg, 'calendario_id', calendarioId);
     setConfigKey_(cfg, 'carpeta_id', carpetaId);
+    escribirEnlaces_(ss, slug);
   } catch (_) {}
 
   Logger.log('Negocio creado: ' + nombre + ' (slug: ' + slug + ')');
@@ -267,7 +368,7 @@ function onOpen() {
     .addItem('Diagnóstico de un negocio', 'promptDiagnostico')
     .addSeparator()
     .addItem('Actualizar un negocio', 'promptActualizarNegocio')
-    .addItem('Aplicar paleta elegida', 'promptAplicarPaleta')
+    .addItem('Actualizar todos los negocios', 'promptActualizarTodos')
     .addToUi();
 }
 
@@ -282,15 +383,13 @@ function promptActualizarNegocio() {
   }
 }
 
-function promptAplicarPaleta() {
+function promptActualizarTodos() {
   const ui = SpreadsheetApp.getUi();
-  const r = ui.prompt('Aplicar paleta elegida', 'Slug del negocio (ej. "mariana")', ui.ButtonSet.OK_CANCEL);
-  if (r.getSelectedButton() !== ui.Button.OK) return;
-  try {
-    ui.alert(aplicarPaletaElegida(r.getResponseText()));
-  } catch (err) {
-    ui.alert('Error: ' + err.message);
-  }
+  const r = ui.alert('Actualizar todos los negocios',
+    'Agrega a cada hoja lo nuevo (pestañas, claves, plantillas, dropdowns). No borra datos. ¿Seguir?',
+    ui.ButtonSet.OK_CANCEL);
+  if (r !== ui.Button.OK) return;
+  ui.alert(actualizarTodos());
 }
 
 function promptDiagnostico() {
@@ -306,17 +405,25 @@ function promptDiagnostico() {
 
 // ---------- Armado de hoja de negocio ----------
 
-/** Prepara una hoja de negocio: pestañas, encabezados, config y formato. */
+/**
+ * Prepara una hoja de negocio: pestañas, encabezados, claves, dropdowns y formato.
+ * La usan setupTemplate, crearTenant y actualizarTenant. Nunca borra ni pisa datos:
+ * solo agrega lo que falta. Devuelve qué agregó, para el resumen de "Actualizar".
+ */
 function prepararHoja_(ss, nombrePorDefecto) {
-  // Los encabezados de la hoja toman el color del negocio: hex manual > paleta > rosa.
+  const hecho = { pestanas: [], claves: [], sedesMigradas: 0, mensajesNuevos: 0 };
+  // Los encabezados toman el color del negocio: color_principal > hex manual > paleta > rosa.
   const previa = getConfig_(ss);
   const paletaPrevia = paletaPorNombre_(previa.paleta || '');
-  const colorCabecera = previa.tema_base || (paletaPrevia && paletaPrevia.base) || PALETAS[0].base;
+  const colorCabecera = hexValido_(previa.color_principal) || previa.tema_base ||
+    (paletaPrevia && paletaPrevia.base) || PALETAS[0].base;
+  const textoCabecera = esOscuro_(colorCabecera) ? '#FFFFFF' : '#1A1816';
   SHEETS.forEach(function (s) {
     let sheet = ss.getSheetByName(s.name);
     if (!sheet) {
       sheet = ss.insertSheet(s.name);
       sheet.appendRow(s.headers);
+      hecho.pestanas.push(s.name);
     } else {
       const lastCol = Math.max(sheet.getLastColumn(), 1);
       const current = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
@@ -324,7 +431,8 @@ function prepararHoja_(ss, nombrePorDefecto) {
         if (current.indexOf(h) === -1) sheet.getRange(1, sheet.getLastColumn() + 1).setValue(h);
       });
     }
-    sheet.getRange(1, 1, 1, sheet.getLastColumn()).setFontWeight('bold').setBackground(colorCabecera);
+    sheet.getRange(1, 1, 1, sheet.getLastColumn())
+      .setFontWeight('bold').setBackground(colorCabecera).setFontColor(textoCabecera);
     sheet.setFrozenRows(1);
   });
 
@@ -332,10 +440,16 @@ function prepararHoja_(ss, nombrePorDefecto) {
   config.getRange('A:B').setNumberFormat('@');
   const existentes = getConfig_(ss);
   CONFIG_DEFAULTS.forEach(function (kv) {
-    if (!(kv[0] in existentes)) config.appendRow(kv);
+    if (!(kv[0] in existentes)) {
+      config.appendRow(kv);
+      hecho.claves.push(kv[0]);
+    }
   });
   if (!(existentes['marca'])) setConfigKey_(config, 'marca', nombrePorDefecto);
-  aplicarOpcionesTema_(config);
+
+  hecho.mensajesNuevos = prepararMensajes_(ss);
+  hecho.sedesMigradas = prepararSedes_(ss);
+  aplicarOpcionesConfig_(ss, config);
 
   const horarios = ss.getSheetByName('Horarios');
   horarios.getRange('A:C').setNumberFormat('@');
@@ -350,57 +464,104 @@ function prepararHoja_(ss, nombrePorDefecto) {
     horarios.getRange(2, 1, rows.length, 3).setValues(rows);
   }
   ss.getSheetByName('Bloqueos').getRange('B:C').setNumberFormat('@');
+  return hecho;
+}
+
+/** Siembra las 3 plantillas si la pestaña Mensajes está vacía. Devuelve cuántas escribió. */
+function prepararMensajes_(ss) {
+  const sheet = ss.getSheetByName('Mensajes');
+  sheet.setColumnWidth(1, 140);
+  sheet.setColumnWidth(2, 520);
+  sheet.getRange('B:B').setWrap(true).setVerticalAlignment('top');
+  sheet.getRange('A:A').setVerticalAlignment('top');
+  if (getSheetData_(ss, 'Mensajes').length > 0) return 0;
+  const filas = PLANTILLAS_MENSAJE.map(function (p) { return [p.nombre, p.texto]; });
+  sheet.getRange(2, 1, filas.length, 2).setValues(filas);
+  sheet.getRange(1, 2).setNote(
+    'Variables: {negocio} {nombre} {telefono} {fecha} {hora} {duracion} {servicios} {lugar} ' +
+    '{direccion} {cupon} {total} {pago} {comprobante} {calendario} {reserva}.\n\n' +
+    'Si todas las variables de una línea quedan vacías (ej. no hubo cupón), esa línea no sale en el mensaje. ' +
+    'Elige cuál se usa en Configuracion → mensaje_plantilla.'
+  );
+  return filas.length;
 }
 
 /**
- * Dropdown de paleta y de tipografía en Configuracion, más una muestra de color en la
- * celda de la paleta para no tener que imaginarse cómo queda.
+ * La pestaña Sedes nace con una fila. Si la hoja es vieja y tenía direccion_spa,
+ * esa dirección pasa a la sede (las claves viejas se quedan, no se borra nada).
+ * Devuelve 1 si migró una dirección, 0 si no.
  */
-function aplicarOpcionesTema_(configSheet) {
+function prepararSedes_(ss) {
+  const sheet = ss.getSheetByName('Sedes');
+  sheet.getRange('A:C').setNumberFormat('@');
+  const n = Math.max(sheet.getLastRow() - 1, 1);
+  sheet.getRange(2, 4, n + 20, 1).insertCheckboxes();
+  sheet.getRange(1, 1).setNote('Una fila por sede. Con una sola sede la página dice "En el consultorio" (según lugar_tipo); ' +
+    'con varias, el cliente elige entre sus nombres. Todas comparten la misma agenda.');
+  if (getSheetData_(ss, 'Sedes').length > 0) return 0;
+  const cfg = getConfig_(ss);
+  const nombre = capitalizar_(etiquetaLugar_(cfg));
+  sheet.getRange(2, 1, 1, 4).setValues([[nombre, cfg.direccion_spa || '', cfg.direccion_spa_url || '', true]]);
+  return cfg.direccion_spa || cfg.direccion_spa_url ? 1 : 0;
+}
+
+/**
+ * Dropdowns y notas de Configuracion: estilo, paleta (con muestra de color), lugar,
+ * domicilio, moneda y plantilla de mensaje (lista tomada de la pestaña Mensajes).
+ */
+function aplicarOpcionesConfig_(ss, configSheet) {
+  const lista = function (valores) {
+    return SpreadsheetApp.newDataValidation().requireValueInList(valores, true).setAllowInvalid(false).build();
+  };
   const data = configSheet.getDataRange().getValues();
   let celdaPaleta = null;
   for (let i = 1; i < data.length; i++) {
     const clave = normKey_(data[i][0]);
+    const celda = configSheet.getRange(i + 1, 2);
     if (clave === 'paleta') {
-      celdaPaleta = configSheet.getRange(i + 1, 2);
-      celdaPaleta.setDataValidation(
-        SpreadsheetApp.newDataValidation()
-          .requireValueInList(PALETAS.map(function (p) { return p.nombre; }), true)
-          .setAllowInvalid(false)
-          .build()
-      );
-      celdaPaleta.setNote(
-        'Elige aquí y luego pulsa "SaaS Reservas → Aplicar paleta elegida" en la hoja maestra: eso escribe ' +
-        'tema_base, tema_soft y tema_deep.\n\n' +
-        'Ojo: si escribes un hex a mano en esas tres filas, ese hex gana sobre esta paleta. Si cambias la ' +
-        'paleta y la web no cambia de color, vuelve a pulsar "Aplicar paleta elegida".'
-      );
+      celdaPaleta = celda;
+      celda.setDataValidation(lista(PALETAS.map(function (p) { return p.nombre; })));
+      celda.setNote('Atajo de colores. Si color_principal está lleno, manda ese color y la paleta no se usa. ' +
+        'Más cómodo: menú bookeaa → Configurar mi página.');
     } else if (clave === 'temaestilo') {
-      configSheet.getRange(i + 1, 2).setDataValidation(
-        SpreadsheetApp.newDataValidation().requireValueInList(ESTILOS, true).setAllowInvalid(false).build()
-      );
-      configSheet.getRange(i + 1, 2).setNote(
+      celda.setDataValidation(lista(ESTILOS));
+      celda.setNote(
         'elegante: serif fina · moderno: sans firme · editorial: serif de revista · amable: redondeada\n' +
         'audaz: condensada en mayúsculas · clasico: serif sobria · minimal: una sans, sin adornos · ' +
         'retro: serif cálida y muy redonda.\n\nLa distribución de la página es la misma en todos.'
       );
     } else if (clave === 'colorprincipal') {
-      configSheet.getRange(i + 1, 2).setNote(
-        'Color de marca en hex (ej. #1F6F5C). De él salen botones, chips y el texto de acento; ' +
-        'el tono oscuro se ajusta solo para que se lea. Si está lleno, gana sobre la paleta y ' +
-        'tema_base/soft/deep. Déjalo vacío para usar la paleta.'
-      );
+      celda.setNote('Color de marca en hex (ej. #1F6F5C). De él salen botones, chips y el texto de acento; ' +
+        'el tono se ajusta solo para que se lea. Si está lleno, gana sobre la paleta y tema_base/soft/deep.');
     } else if (clave === 'colorfondo') {
-      configSheet.getRange(i + 1, 2).setNote(
-        'Fondo de la página en hex (ej. #FFFFFF, #F4EFE6 o #111111). Si es oscuro, los textos ' +
-        'pasan a claro solos. Vacío = el crema de siempre.'
-      );
+      celda.setNote('Fondo de la página en hex (ej. #FFFFFF, #F4EFE6 o #111111). Si es oscuro, los textos ' +
+        'pasan a claro solos. Vacío = el crema de siempre.');
+    } else if (clave === 'lugartipo') {
+      celda.setDataValidation(lista(Object.keys(LUGAR_TIPOS).concat(['otro'])));
+      celda.setNote('Cómo se llama el lugar donde atiendes: la página dice "En el consultorio", "Ver ubicación de la barbería"… ' +
+        'Con "otro", escribe el nombre en lugar_nombre. Las direcciones van en la pestaña Sedes.');
+    } else if (clave === 'lugarnombre') {
+      celda.setNote('Solo si lugar_tipo = otro. Escríbelo como va después de "En": "la clínica", "el taller", "Casa Ana".');
+    } else if (clave === 'permitedomicilio') {
+      celda.setDataValidation(lista(['si', 'no']));
+      celda.setNote('"si" agrega la opción "A domicilio" con el recargo y los minutos extra de más abajo.');
+    } else if (clave === 'moneda') {
+      celda.setDataValidation(lista(['EUR', 'USD', 'Bs']));
+    } else if (clave === 'mensajeplantilla') {
+      const mensajes = ss.getSheetByName('Mensajes');
+      if (mensajes) {
+        celda.setDataValidation(SpreadsheetApp.newDataValidation()
+          .requireValueInRange(mensajes.getRange('A2:A'), true).setAllowInvalid(false).build());
+      }
+      celda.setNote('Qué plantilla de la pestaña Mensajes se usa para el WhatsApp de cada reserva.');
     }
   }
   if (!celdaPaleta) return;
   const nombres = PALETAS.map(function (p) { return p.nombre; });
   const viejas = configSheet.getConditionalFormatRules().filter(function (r) {
-    return nombres.indexOf(r.getText()) !== -1;
+    const cond = r.getBooleanCondition();
+    const valores = cond ? cond.getCriteriaValues() : [];
+    return !(valores.length && nombres.indexOf(String(valores[0])) !== -1);
   });
   const nuevas = PALETAS.map(function (p) {
     return SpreadsheetApp.newConditionalFormatRule()
@@ -412,63 +573,73 @@ function aplicarOpcionesTema_(configSheet) {
   configSheet.setConditionalFormatRules(viejas.concat(nuevas));
 }
 
-/** Escribe los tres hex de la paleta para que la hoja quede documentada. */
-function aplicarPaleta(slug, nombrePaleta) {
-  const tenant = getTenantPorSlug_(String(slug || '').trim());
-  if (!tenant) throw new Error('No encontré el negocio: ' + slug);
-  const paleta = paletaPorNombre_(nombrePaleta);
-  if (!paleta) {
-    throw new Error(
-      'No reconocí la paleta "' + nombrePaleta + '".\n\nElige una del dropdown de la fila "paleta" ' +
-      'en Configuracion. Opciones:\n' + PALETAS.map(function (p) { return p.nombre; }).join(' · ')
-    );
-  }
-  const config = openTenant_(tenant).getSheetByName('Configuracion');
-  setConfigKey_(config, 'paleta', paleta.nombre);
-  setConfigKey_(config, 'tema_base', paleta.base);
-  setConfigKey_(config, 'tema_soft', paleta.soft);
-  setConfigKey_(config, 'tema_deep', paleta.deep);
-  limpiarCacheCatalogo_(tenant.slug); // el color se ve al instante, sin esperar el TTL
-  Logger.log('Paleta "' + paleta.nombre + '" aplicada a ' + tenant.nombre);
-  return paleta.nombre;
-}
-
-/** Lee la paleta de la propia celda del negocio y la materializa. El menú usa esta. */
-function aplicarPaletaElegida(slug) {
-  const tenant = getTenantPorSlug_(String(slug || '').trim());
-  if (!tenant) throw new Error('No encontré el negocio: ' + slug);
-  const elegida = getConfig_(openTenant_(tenant)).paleta || '';
-  if (!elegida) {
-    throw new Error(
-      'La fila "paleta" de ' + tenant.nombre + ' está vacía.\n\n' +
-      'Abre su hoja, pestaña Configuracion, y elige una del dropdown. ' +
-      'Si no aparece la lista, corre antes "Actualizar un negocio" sobre ' + tenant.slug + '.'
-    );
-  }
-  const paleta = paletaPorNombre_(elegida);
-  if (!paleta) {
-    throw new Error(
-      'No reconocí "' + elegida + '" como una paleta de ' + tenant.nombre + '.\n\n' +
-      'Escribe una de estas:\n' + PALETAS.map(function (p) { return '  ' + p.nombre; }).join('\n')
-    );
-  }
-  aplicarPaleta(tenant.slug, paleta.nombre);
-  return (
-    'Paleta "' + paleta.nombre + '" aplicada a ' + tenant.nombre + '.\n\n' +
-    'base ' + paleta.base + ' · soft ' + paleta.soft + ' · deep ' + paleta.deep
-  );
-}
-
-/** Re-aplica a un negocio ya creado lo que le falte (claves nuevas, dropdowns). No borra datos. */
+/**
+ * Pone al día la hoja de un negocio ya creado con todo lo nuevo: pestañas (Sedes,
+ * Mensajes), claves, dropdowns, plantillas de mensaje, migración de la dirección
+ * vieja a Sedes y los enlaces que usa la barra lateral. No borra ni pisa datos.
+ * Devuelve un resumen legible de lo que cambió.
+ */
 function actualizarTenant(slug) {
   const tenant = getTenantPorSlug_(String(slug || '').trim());
   if (!tenant) throw new Error('No encontré el negocio: ' + slug);
   const ss = openTenant_(tenant);
-  prepararHoja_(ss, tenant.nombre);
+  const hecho = prepararHoja_(ss, tenant.nombre);
+  const enlaces = escribirEnlaces_(ss, tenant.slug);
   limpiarCacheCatalogo_(tenant.slug);
   limpiarCacheTenants_();
   Logger.log('Hoja actualizada: ' + ss.getUrl());
-  return 'Hoja de "' + tenant.nombre + '" actualizada (claves nuevas, dropdowns y colores).\n' + ss.getUrl();
+
+  const lineas = [];
+  if (hecho.pestanas.length) lineas.push('Pestañas nuevas: ' + hecho.pestanas.join(', '));
+  if (hecho.claves.length) lineas.push('Claves nuevas: ' + hecho.claves.join(', '));
+  if (hecho.mensajesNuevos) lineas.push('Plantillas de mensaje: ' + hecho.mensajesNuevos);
+  if (hecho.sedesMigradas) lineas.push('La dirección de siempre pasó a la pestaña Sedes');
+  if (enlaces) lineas.push('Enlaces para la barra lateral: ' + enlaces);
+  return '"' + tenant.nombre + '": ' + (lineas.length ? '\n  · ' + lineas.join('\n  · ') : 'ya estaba al día.') +
+    '\n' + ss.getUrl();
+}
+
+/** Actualiza todas las hojas de negocios activos. Un negocio que falle no frena a los demás. */
+function actualizarTodos() {
+  const resumen = getTenants_().filter(tenantActivo_).map(function (t) {
+    try {
+      return actualizarTenant(t.slug);
+    } catch (err) {
+      return '"' + t.nombre + '": ERROR — ' + err.message;
+    }
+  });
+  const texto = resumen.length ? resumen.join('\n\n') : 'No hay negocios activos.';
+  Logger.log(texto);
+  return texto;
+}
+
+/**
+ * Escribe slug y api_url en la Configuracion del negocio si faltan. La barra lateral
+ * los usa para pedir la página fresca después de guardar (fresh=1). Devuelve qué escribió.
+ */
+function escribirEnlaces_(ss, slug) {
+  const cfgSheet = ss.getSheetByName('Configuracion');
+  const cfg = getConfig_(ss);
+  const escritos = [];
+  if (!cfg.slug) {
+    setConfigKey_(cfgSheet, 'slug', slug);
+    escritos.push('slug');
+  }
+  let url = '';
+  try { url = ScriptApp.getService().getUrl() || ''; } catch (_) {}
+  // /dev solo le funciona al dueño: a la barra lateral le sirve la /exec publicada.
+  if (url && /\/exec$/.test(url) && cfg.api_url !== url) {
+    setConfigKey_(cfgSheet, 'api_url', url);
+    escritos.push('api_url');
+  }
+  // Enlace público: propiedad del script "sitio_url" (ej. https://bookea.onrender.com).
+  const sitio = String(PropertiesService.getScriptProperties().getProperty('sitio_url') || '').replace(/\/+$/, '');
+  const pagina = sitio && slug ? sitio + '/u/' + slug : '';
+  if (pagina && cfg.pagina_url !== pagina) {
+    setConfigKey_(cfgSheet, 'pagina_url', pagina);
+    escritos.push('pagina_url');
+  }
+  return escritos.join(', ');
 }
 
 function setConfigKey_(configSheet, key, value) {
@@ -639,6 +810,8 @@ function doGet(e) {
       promociones: getPromociones_(ss, servicios),
       config: config, // la lista de cupones NO se envía al navegador
       horarios: getHorarios_(ss, config),
+      sedes: getSedes_(ss, config),
+      mensajes: getMensajes_(ss),
       tasa: getTasa(moneda, ss),
       moneda: moneda,
       // Citas del calendario + bloqueos de la hoja, solo como rangos (sin nombres
@@ -706,7 +879,8 @@ function doPost(e) {
     const horaCita = String(data.horaCita || '');
     const metodoPago = String(data.metodoPago || '');
     const esPagoMovil = metodoPago === PAGO_MOVIL;
-    const modalidad = String(data.modalidad || '');
+    // 'spa' era el nombre viejo de 'local': un navegador con la versión anterior en caché lo sigue mandando.
+    const modalidad = data.modalidad === 'spa' ? 'local' : String(data.modalidad || '');
     // A domicilio la clienta envía su ubicación por WhatsApp; el campo es opcional.
     const direccion = String(data.direccion || '').trim() || (data.modalidad === 'domicilio' ? 'Ubicación por WhatsApp' : '');
     const comprobante = data.comprobante && data.comprobante.base64 ? data.comprobante : null;
@@ -719,12 +893,24 @@ function doPost(e) {
       return json_({ error: 'datos_invalidos', mensaje: 'Selecciona un método de pago.' });
     }
     const permiteDomicilio = permiteDomicilio_(config);
-    if (modalidad !== 'spa' && modalidad !== 'domicilio') {
-      return json_({ error: 'datos_invalidos', mensaje: 'Elige si la cita es en el spa o a domicilio.' });
+    if (modalidad !== 'local' && modalidad !== 'domicilio') {
+      return json_({ error: 'datos_invalidos', mensaje: 'Elige dónde será tu cita.' });
     }
     if (modalidad === 'domicilio' && !permiteDomicilio) {
       return json_({ error: 'datos_invalidos', mensaje: 'Este negocio no ofrece citas a domicilio.' });
     }
+    // En el local: la sede tiene que existir. Con una sola, vale aunque no venga el nombre.
+    const sedes = getSedes_(ss, config);
+    let sede = null;
+    if (modalidad === 'local') {
+      const pedida = normKey_(data.sede || '');
+      sede = sedes.filter(function (x) { return normKey_(x.nombre) === pedida; })[0] ||
+        (sedes.length === 1 ? sedes[0] : null);
+      if (!sede) return json_({ error: 'datos_invalidos', mensaje: 'Elige dónde será tu cita.' });
+    }
+    const lugarTexto = modalidad === 'domicilio'
+      ? 'A domicilio'
+      : 'En ' + (sedes.length > 1 ? sede.nombre : etiquetaLugar_(config));
     if (esPagoMovil && !comprobante) {
       return json_({ error: 'datos_invalidos', mensaje: 'Falta el capture del Pago Móvil.' });
     }
@@ -829,8 +1015,8 @@ function doPost(e) {
       Estado: esPagoMovil ? 'Pago por verificar' : 'Confirmada',
       Tasa_BCV: moneda === 'BS' ? '' : (tasa ? tasa.valor : ''),
       Total_Bs: totalBs === null ? '' : totalBs,
-      Modalidad: modalidad === 'domicilio' ? 'A domicilio' : 'En el spa',
-      Direccion: modalidad === 'domicilio' ? direccion : 'Spa',
+      Modalidad: lugarTexto,
+      Direccion: modalidad === 'domicilio' ? direccion : (sede.direccion || sede.nombre),
       Recargo: orden.recargo,
       Comprobante: comprobanteUrl || (comprobante ? 'no se pudo subir' : 'N/A'),
     });
@@ -839,16 +1025,17 @@ function doPost(e) {
     if (calendar) {
       try {
         calendar.createEvent(
-          (modalidad === 'domicilio' ? '🏠 Domicilio · ' : '') + 'Cita: ' + cliente + ' - ' + serviciosTexto,
+          (modalidad === 'domicilio' ? '🏠 Domicilio · ' : sedes.length > 1 ? '📍 ' + sede.nombre + ' · ' : '') +
+            'Cita: ' + cliente + ' - ' + serviciosTexto,
           inicio, fin, {
-            location: ubicacionDe_(config, modalidad, direccion),
+            location: ubicacionDe_(sede, modalidad, direccion),
             // El detalle va desde el arranque, como en el original: ya se sabe el
             // capture y el total, no hace falta completar el evento después.
             description: [
               'Teléfono: ' + telefono,
               modalidad === 'domicilio'
                 ? 'A domicilio: ' + direccion + ' (incluye ' + config_min_extra_(config) + ' min de traslado)'
-                : 'En el spa',
+                : lugarTexto + (sede.direccion ? ' · ' + sede.direccion : ''),
               'Total: ' + orden.total.toFixed(2) + ' ' + moneda + (totalBs !== null ? ' (Bs. ' + totalBs.toFixed(2) + ')' : '') +
                 (orden.recargo > 0 ? ' · recargo domicilio ' + orden.recargo.toFixed(2) + ' ' + moneda : ''),
               'Pago: ' + metodoPago,
@@ -911,9 +1098,9 @@ function doPost(e) {
 }
 
 /** Dirección que se pone en el evento del calendario. */
-function ubicacionDe_(config, modalidad, direccion) {
+function ubicacionDe_(sede, modalidad, direccion) {
   if (modalidad === 'domicilio') return direccion;
-  return (config.direccion_spa ? config.direccion_spa + ' · ' : '') + (config.direccion_spa_url || '');
+  return [sede.direccion, sede.mapsUrl].filter(Boolean).join(' · ') || sede.nombre;
 }
 
 /** Cuántos días hacia adelante se mira la ocupación: el mismo que la agenda. */
@@ -1256,6 +1443,69 @@ function config_min_extra_(config) {
 
 // ---------- Catálogo tolerante (misma lógica que src/lib/normalize.ts) ----------
 
+// ---------- Lugar, sedes y mensajes ----------
+
+/** "#1f6f5c" o "1F6F5C" → "#1F6F5C"; cualquier otra cosa → ''. */
+function hexValido_(value) {
+  const v = String(value || '').trim();
+  return /^#?(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ? (v.charAt(0) === '#' ? v : '#' + v).toUpperCase() : '';
+}
+
+function esOscuro_(hex) {
+  let h = String(hex || '').replace('#', '');
+  if (h.length === 3) h = h.replace(/./g, function (c) { return c + c; });
+  const n = parseInt(h, 16);
+  if (isNaN(n)) return false;
+  const lin = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(function (v) {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2] < 0.18;
+}
+
+function capitalizar_(texto) {
+  texto = String(texto || '');
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/** "el consultorio", "la barbería"… o lo que diga lugar_nombre con lugar_tipo = otro. */
+function etiquetaLugar_(config) {
+  const tipo = normKey_(config.lugar_tipo || 'spa');
+  if (LUGAR_TIPOS[tipo]) return LUGAR_TIPOS[tipo];
+  return String(config.lugar_nombre || '').trim() || LUGAR_TIPOS.local;
+}
+
+/**
+ * Sedes activas con nombre. Sin pestaña (hoja vieja todavía sin actualizar) se arma
+ * una sede con direccion_spa, igual que hace el front.
+ */
+function getSedes_(ss, config) {
+  const sedes = getSheetData_(ss, 'Sedes')
+    .filter(function (r) {
+      const activa = String(r.Activa === undefined ? 'si' : r.Activa).trim().toLowerCase();
+      return String(r.Nombre || '').trim() && ['no', 'false', '0'].indexOf(activa) === -1;
+    })
+    .map(function (r) {
+      return {
+        nombre: String(r.Nombre).trim(),
+        direccion: String(r.Direccion || '').trim(),
+        mapsUrl: String(r.Maps_URL || '').trim(),
+      };
+    });
+  if (sedes.length) return sedes;
+  return [{
+    nombre: capitalizar_(etiquetaLugar_(config)),
+    direccion: String(config.direccion_spa || '').trim(),
+    mapsUrl: String(config.direccion_spa_url || '').trim(),
+  }];
+}
+
+function getMensajes_(ss) {
+  return getSheetData_(ss, 'Mensajes')
+    .map(function (r) { return { nombre: String(r.Nombre || '').trim(), texto: String(r.Texto || '').trim() }; })
+    .filter(function (m) { return m.nombre && m.texto; });
+}
+
 function normKey_(value) {
   return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -1422,19 +1672,27 @@ function diagnostico(slug) {
   console.log('Colores que verá la web: base ' + (config.tema_base || (paleta ? paleta.base : '—')) +
     ' · soft ' + (config.tema_soft || (paleta ? paleta.soft : '—')) +
     ' · deep ' + (config.tema_deep || (paleta ? paleta.deep : '—')));
-  console.log('Estilo: ' + (config.tema_estilo || 'elegante'));
+  console.log('Estilo: ' + (config.tema_estilo || 'elegante') +
+    (hexValido_(config.color_principal) ? ' · color principal ' + hexValido_(config.color_principal) + ' (manda sobre la paleta)' : '') +
+    (hexValido_(config.color_fondo) ? ' · fondo ' + hexValido_(config.color_fondo) : ''));
   // El hex escrito a mano gana sobre la paleta, así que pueden quedar despistados.
   if (paleta && (config.tema_base || config.tema_soft || config.tema_deep)) {
     const coinciden = config.tema_base === paleta.base && config.tema_soft === paleta.soft && config.tema_deep === paleta.deep;
     if (!coinciden) {
       console.warn(
         'La paleta dice "' + paleta.nombre + '" pero tema_base/soft/deep tienen otros hex: mandan los hex. ' +
-        'Si quieres que mande la paleta, pulsa "Aplicar paleta elegida" o borra los tres hex.'
+        'Si quieres que mande la paleta, borra los tres hex.'
       );
     }
   }
   console.log('Moneda: ' + normalizarMoneda_(config.moneda));
+  console.log('Lugar: ' + etiquetaLugar_(config) + ' · sedes: ' + getSedes_(ss, config).map(function (x) {
+    return x.nombre + (x.direccion ? ' (' + x.direccion + ')' : '');
+  }).join(', '));
   console.log('Permite domicilio: ' + (permiteDomicilio_(config) ? 'sí' : 'no'));
+  const mensajes = getMensajes_(ss);
+  const elegido = mensajes.filter(function (m) { return normKey_(m.nombre) === normKey_(config.mensaje_plantilla || ''); })[0];
+  console.log('Mensaje de WhatsApp: ' + (elegido ? elegido.nombre : (mensajes[0] ? mensajes[0].nombre + ' (la primera; mensaje_plantilla no coincide)' : 'Cálida (por defecto; falta la pestaña Mensajes)')));
   console.log('Métodos de pago: ' + (config.metodos_pago || '—'));
   ['pm_banco', 'pm_telefono', 'pm_cedula'].forEach(function (k) {
     if (!config[k]) console.warn('Falta "' + k + '" en Configuracion (datos de Pago Móvil).');

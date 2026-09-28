@@ -67,7 +67,10 @@ export interface BusinessConfig {
   /** true = el negocio atiende a domicilio. */
   permiteDomicilio: boolean
   domicilio: { recargoPct: number; minutosExtra: number }
-  spa: { direccion: string; mapsUrl: string }
+  /** Dónde se atiende: tipo de lugar ("el consultorio") y sedes. Una sola agenda para todas. */
+  lugar: { tipo: string; etiqueta: string; sedes: Sede[] }
+  /** Plantilla del mensaje de WhatsApp elegida en la hoja (texto con {variables}). */
+  mensaje: { plantilla: string; texto: string }
   tema: Tema
   /** EUR | USD | Bs. */
   moneda: Money
@@ -77,7 +80,15 @@ export interface BusinessConfig {
   heroSubtitulo: string
 }
 
-export type Modalidad = 'spa' | 'domicilio'
+export interface Sede {
+  id: string
+  nombre: string
+  direccion: string
+  mapsUrl: string
+}
+
+/** local = en una de las sedes del negocio. */
+export type Modalidad = 'local' | 'domicilio'
 
 export interface Tasa {
   /** Bolívares por 1 euro. */
@@ -142,6 +153,8 @@ export interface ReservationPayload {
   metodoPago: string
   cupon: string
   modalidad: Modalidad
+  /** Nombre de la sede cuando la cita es en el local. */
+  sede: string
   direccion: string
   comprobante: { base64: string; mime: string; nombre: string } | null
 }

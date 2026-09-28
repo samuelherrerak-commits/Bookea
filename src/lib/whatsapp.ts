@@ -1,6 +1,8 @@
-import type { BusinessConfig, Coupon, Customer, Modalidad, Payment, Schedule, Tasa } from '../types'
+import type { Coupon, Customer, Modalidad, Payment, Schedule, Tasa } from '../types'
 import { BRAND } from '../config'
 import { capitalize, formatBs, formatDuration, formatEUR, formatLongDate, formatTime12 } from './format'
+import type { LugarElegido } from './lugar'
+import { PLANTILLAS_MENSAJE, renderMensaje, type VariablesMensaje } from './mensajes'
 import type { OrderSummary } from './pricing'
 
 export interface WhatsAppInput {
@@ -11,69 +13,55 @@ export interface WhatsAppInput {
   coupon: Coupon | null
   payment: Payment
   modalidad: Modalidad
-  spa: BusinessConfig['spa']
+  lugar: LugarElegido
+  /** Texto de la plantilla elegida en la hoja. Sin ella, la "Cálida". */
+  plantilla?: string
   tasa: Tasa | null
   reservaId?: string
   comprobanteUrl?: string | null
   calendarUrl?: string | null
 }
 
-/** Mensaje fijo que la clienta envía a Maria al terminar la reserva. */
-export function buildWhatsAppMessage(input: WhatsAppInput): string {
-  const { customer, schedule, summary, coupon, payment, modalidad, spa, tasa, reservaId, comprobanteUrl, calendarUrl } =
+/** Los valores de cada {variable}. Vacío = la línea que la usa desaparece del mensaje. */
+export function variablesMensaje(input: WhatsAppInput): VariablesMensaje {
+  const { customer, schedule, summary, coupon, payment, modalidad, lugar, tasa, reservaId, comprobanteUrl, calendarUrl } =
     input
-  const negocio = input.negocio || BRAND
-  const lines: string[] = [
-    `🌸✨ ¡Nueva reserva en ${negocio}! ✨🌸`,
-    '',
-    '¡Hola! 💖 Quiero confirmar mi cita:',
-    '',
-    `👩🏻 Nombre: ${customer.nombre.trim()}`,
-    `📱 Teléfono: ${customer.telefono.trim()}`,
-    '',
-    `🗓️ Fecha: ${capitalize(formatLongDate(schedule.fecha))}`,
-    `⏰ Hora: ${formatTime12(schedule.hora)} (${formatDuration(summary.duracionMin)} aprox.)`,
-    '',
-    summary.lines.length === 1 ? '💅 Servicio:' : '💅 Servicios:',
-    ...summary.lines.map((l) => `   ▫️ ${l.nombre} — ${formatEUR(l.precio, true)}`),
-    '',
-  ]
+  const domicilio = modalidad === 'domicilio'
+  const pagoMovil = payment.metodo === 'pago_movil'
 
-  if (modalidad === 'domicilio') {
-    lines.push(
-      summary.recargo > 0
-        ? `🚗 Lugar: A domicilio (+${summary.recargoPct} %: ${formatEUR(summary.recargo, true)})`
-        : '🚗 Lugar: A domicilio',
-      '📍 Te envío mi ubicación por aquí 👇',
-    )
-  } else {
-    lines.push('🏡 Lugar: En el spa')
-    const lugar = [spa.direccion, spa.mapsUrl].filter(Boolean).join(' · ')
-    if (lugar) lines.push(`📍 Ubicación: ${lugar}`)
-  }
-  lines.push('')
-
-  if (coupon && summary.descuento > 0) lines.push(`🎟️ Cupón ${coupon.codigo}: −${formatEUR(summary.descuento, true)}`)
-  lines.push(`💰 Total: ${formatEUR(summary.total, true)}`)
-
-  if (payment.metodo === 'pago_movil') {
-    lines.push(
-      summary.totalBs !== null
-        ? `💸 Pagado por Pago Móvil: ${formatBs(summary.totalBs)}`
-        : '💸 Pagado por Pago Móvil',
-    )
-    if (tasa) lines.push(`   (tasa BCV ${formatBs(tasa.valor)})`)
-    lines.push(comprobanteUrl ? `🧾 Capture: ${comprobanteUrl}` : '🧾 Capture: adjunto en la reserva')
-  } else {
-    lines.push('💵 Pago: en la cita')
+  let pago = 'En la cita'
+  if (pagoMovil) {
+    pago = summary.totalBs !== null ? `Pago Móvil, ${formatBs(summary.totalBs)}` : 'Pago Móvil'
+    if (tasa) pago += ` (tasa BCV ${formatBs(tasa.valor)})`
   }
 
-  if (calendarUrl) lines.push('', '📆 Agrégala a tu calendario:', calendarUrl)
+  return {
+    negocio: input.negocio || BRAND,
+    nombre: customer.nombre.trim(),
+    telefono: customer.telefono.trim(),
+    fecha: capitalize(formatLongDate(schedule.fecha)),
+    hora: formatTime12(schedule.hora),
+    duracion: formatDuration(summary.duracionMin),
+    servicios: summary.lines.map((l) => `• ${l.nombre} — ${formatEUR(l.precio, true)}`).join('\n'),
+    lugar:
+      domicilio && summary.recargo > 0
+        ? `${lugar.titulo} (+${summary.recargoPct} %: ${formatEUR(summary.recargo, true)})`
+        : lugar.titulo,
+    direccion: domicilio
+      ? 'Te envío mi ubicación por aquí 👇'
+      : [lugar.sede?.direccion, lugar.sede?.mapsUrl].filter(Boolean).join(' · '),
+    cupon: coupon && summary.descuento > 0 ? `Cupón ${coupon.codigo}: −${formatEUR(summary.descuento, true)}` : '',
+    total: formatEUR(summary.total, true),
+    pago,
+    comprobante: pagoMovil ? comprobanteUrl || 'adjunto en la reserva' : '',
+    calendario: calendarUrl ?? '',
+    reserva: reservaId ? `#${reservaId.slice(0, 8).toUpperCase()}` : '',
+  }
+}
 
-  lines.push('')
-  if (reservaId) lines.push(`🔖 Reserva #${reservaId.slice(0, 8).toUpperCase()}`)
-  lines.push('¡Gracias! Nos vemos pronto 💕')
-  return lines.join('\n')
+/** El mensaje que el cliente envía al negocio al terminar la reserva, con la plantilla elegida. */
+export function buildWhatsAppMessage(input: WhatsAppInput): string {
+  return renderMensaje(input.plantilla?.trim() || PLANTILLAS_MENSAJE[0].texto, variablesMensaje(input))
 }
 
 export function buildWhatsAppUrl(numero: string, message: string): string {

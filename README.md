@@ -68,6 +68,8 @@ Si no defines `VITE_API_URL`, la app corre en **modo demo**: usa datos de ejempl
 | `Promociones` | `ID, Nombre, Servicios_Incluidos, Precio_Promo` | `Servicios_Incluidos` acepta IDs o nombres separados por comas, por ejemplo `Manicure, Nivelacion`. |
 | `Horarios` | `Dia, Hora_Inicio, Hora_Fin` | Tu horario semanal. Una fila por tramo; puedes repetir el día para una pausa (Lunes 09:00–12:00 y Lunes 14:00–18:00). Deja las horas vacías para cerrar ese día. |
 | `Bloqueos` | `Fecha, Hora_Inicio, Hora_Fin, Motivo` | Cierra fechas u horas puntuales (vacaciones, citas por fuera). Sin horas, bloquea el día completo. El motivo no se muestra a las clientas. |
+| `Sedes` | `Nombre, Direccion, Maps_URL, Activa` | Dónde se atiende. Con una sola sede la página dice "En el consultorio" (según `lugar_tipo`); con varias, el cliente elige entre sus nombres. **Todas comparten la misma agenda**. `Activa` es una casilla: desmárcala para ocultar una sede sin borrarla. |
+| `Mensajes` | `Nombre, Texto` | Plantillas del WhatsApp que llega con cada reserva. Nace con 3 (Cálida, Formal, Breve); se pueden editar o agregar más. `mensaje_plantilla` elige cuál se usa. |
 | `Cupones` | `Codigo, Descuento_Porcentaje, Descuento_Monto, Usos_Restantes` | Se usa el porcentaje si es mayor que 0; si no, el monto en €. Si `Usos_Restantes` está vacío, el cupón es ilimitado. |
 | `Reservaciones` | `ID, Fecha_Solicitud, Cliente, Telefono, Servicios, Total, Fecha_Cita, Hora_Cita, Metodo_Pago, Referencia, Cupon, Estado, Tasa_BCV, Total_Bs, Modalidad, Direccion, Recargo, Comprobante` | La llena el script. Las reservas con Pago Móvil entran con estado `Pago por verificar` y con el enlace al capture en Drive. `Referencia` ya no se usa (queda "N/A"). |
 | `Configuracion` | `Clave, Valor` | Ver la tabla siguiente. |
@@ -86,8 +88,12 @@ Si no defines `VITE_API_URL`, la app corre en **modo demo**: usa datos de ejempl
 | `tasa_eur_manual` | `412,35` | Solo se usa si no se puede obtener la tasa BCV. |
 | `recargo_domicilio_pct` | `20` | % que se suma a domicilio, sobre el precio de los servicios (antes del cupón). |
 | `minutos_extra_domicilio` | `15` | Minutos de traslado que se reservan en la agenda para citas a domicilio. |
-| `direccion_spa` | `Urb. …, local 3` | Opcional: texto de la dirección del spa. |
-| `direccion_spa_url` | `https://maps.app.goo.gl/MBfSuyGHQrRRcDp17` | Enlace de Google Maps del spa (en la página y en el mensaje). |
+| `lugar_tipo` | `consultorio` | `spa` · `consultorio` · `barberia` · `estudio` · `salon` · `clinica` · `local` · `otro`. Da el nombre del lugar en la página y el mensaje ("En el consultorio"). |
+| `lugar_nombre` | `la clínica` | Solo con `lugar_tipo = otro`: cómo se dice después de "En". |
+| `permite_domicilio` | `si` | `si` agrega "A domicilio" (con `recargo_domicilio_pct` y `minutos_extra_domicilio`). Vacío o `no`: no se ofrece. |
+| `mensaje_plantilla` | `Formal` | Qué fila de la pestaña Mensajes se usa. |
+| `slug`, `api_url`, `pagina_url` | — | Los escribe el maestro (`crearTenant` / "Actualizar"). La barra lateral los usa para refrescar la página al guardar y para el botón "Ver página". `pagina_url` sale de la propiedad del script `sitio_url` (ej. `https://bookea.onrender.com`). |
+| `direccion_spa`, `direccion_spa_url` | — | Solo hojas viejas: "Actualizar" las pasa a la pestaña Sedes. |
 
 **Calendario:** se sigue llamando "Citas Mariana" a propósito. Si se renombrara, el script crearía un calendario nuevo y vacío y dejaría de ver las citas ya guardadas.
 
@@ -98,6 +104,33 @@ Si no defines `VITE_API_URL`, la app corre en **modo demo**: usa datos de ejempl
 **Cambiar el token:** edita `const TOKEN` en `Code.gs` y `VITE_API_TOKEN` en `.env.local` y `render.yaml`, y vuelve a implementar. Si no coinciden, todo responde `no_autorizado`.
 
 **Después de cambiar el código del script** entra en **Implementar → Gestionar implementaciones → ✏️ → Versión: Nueva versión → Implementar**. Si en cambio creas una implementación nueva, la URL cambia y hay que actualizarla en `render.yaml`. Los cambios en la hoja (servicios, horarios, bloqueos) se ven al instante, sin volver a implementar.
+
+### Mensaje de WhatsApp: variables
+
+`{negocio}` `{nombre}` `{telefono}` `{fecha}` `{hora}` `{duracion}` `{servicios}` `{lugar}` `{direccion}` `{cupon}` `{total}` `{pago}` `{comprobante}` `{calendario}` `{reserva}`.
+
+Si **todas** las variables de una línea quedan vacías (por ejemplo, no hubo cupón o el pago no fue por Pago Móvil), la línea no sale en el mensaje. Las 3 plantillas originales viven en `src/lib/mensajes.ts`, `apps-script/Code.gs` y `apps-script/cliente/Configurador.gs`; un test comprueba que sean iguales.
+
+### Actualizar negocios existentes
+
+En la hoja maestra, menú **SaaS Reservas**:
+
+- **Actualizar un negocio**: le agrega a esa hoja todo lo nuevo (pestañas Sedes y Mensajes, claves, plantillas, dropdowns y la migración de `direccion_spa` a Sedes) y muestra un resumen. No borra ni pisa datos.
+- **Actualizar todos los negocios**: lo mismo para cada negocio activo, con un resumen por negocio.
+
+Después de cambiar `Code.gs`, publica una **nueva versión** de la implementación (la URL no cambia).
+
+### Barra lateral de configuración (hoja de cada negocio)
+
+`apps-script/cliente/` es un proyecto de Apps Script **aparte** del maestro: una barra lateral en la hoja del negocio para configurar todo sin tocar celdas (marca, estilo y colores con vista previa, lugar y sedes, domicilio, mensaje con vista previa, horario y pagos). Solo lee y escribe esa hoja; al guardar pide la página fresca (`fresh=1`) para que el cambio se vea de inmediato.
+
+Instalación:
+
+1. Abre la **hoja plantilla** (menú maestro → *Ver ID plantilla*) → **Extensiones → Apps Script**.
+2. Pega `Configurador.gs` en un archivo `.gs` y crea un archivo HTML llamado **`Sidebar`** con el contenido de `Sidebar.html`. Guarda.
+3. Recarga la hoja: aparece el menú **bookeaa → Configurar mi página**. La primera vez pide permisos (la hoja y conectarse a la URL del maestro).
+
+Los negocios que se creen desde entonces ya traen la barra lateral (se copia con la plantilla). En hojas **ya creadas** hay que pegarla una vez a mano (mismos pasos en su hoja) y correr antes "Actualizar un negocio" para que tengan las pestañas nuevas.
 
 ### Tasa BCV del euro
 

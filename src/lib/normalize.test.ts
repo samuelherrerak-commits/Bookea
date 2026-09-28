@@ -153,7 +153,52 @@ describe('paleta y textos del negocio', () => {
 
   it('no hereda la dirección de otro negocio', () => {
     const cfg = normalizeConfig([])
-    expect(cfg.spa.direccion).toBe('')
-    expect(cfg.spa.mapsUrl).toBe('')
+    expect(cfg.lugar.sedes).toHaveLength(1)
+    expect(cfg.lugar.sedes[0]).toMatchObject({ direccion: '', mapsUrl: '' })
+  })
+})
+
+describe('lugar, sedes, domicilio y mensaje', () => {
+  it('sin lugar_tipo sigue siendo "el spa" y la dirección vieja arma la sede única', () => {
+    const cfg = normalizeConfig({ direccion_spa: 'Urb. X, local 3', direccion_spa_url: 'https://maps.app.goo.gl/x' })
+    expect(cfg.lugar.etiqueta).toBe('el spa')
+    expect(cfg.lugar.sedes).toEqual([
+      { id: 'principal', nombre: 'El spa', direccion: 'Urb. X, local 3', mapsUrl: 'https://maps.app.goo.gl/x' },
+    ])
+  })
+
+  it('el tipo de lugar da la etiqueta; "otro" usa lugar_nombre', () => {
+    expect(normalizeConfig({ lugar_tipo: 'consultorio' }).lugar.etiqueta).toBe('el consultorio')
+    expect(normalizeConfig({ lugar_tipo: 'Barbería' }).lugar.etiqueta).toBe('la barbería')
+    expect(normalizeConfig({ lugar_tipo: 'otro', lugar_nombre: 'Casa Ana' }).lugar.etiqueta).toBe('Casa Ana')
+  })
+
+  it('la pestaña Sedes manda: ignora inactivas y filas sin nombre, ids únicos', () => {
+    const cfg = normalizeConfig({ direccion_spa: 'vieja' }, undefined, {
+      sedes: [
+        { Nombre: 'Sede Centro', Direccion: 'Av. 1', Maps_URL: 'https://maps.app.goo.gl/a', Activa: true },
+        { Nombre: 'Sede Norte', Direccion: 'Av. 2', Maps_URL: 'no es url', Activa: 'si' },
+        { Nombre: 'Cerrada', Activa: false },
+        { Nombre: '', Direccion: 'sin nombre' },
+      ],
+    })
+    expect(cfg.lugar.sedes.map((s) => s.id)).toEqual(['sede-centro', 'sede-norte'])
+    expect(cfg.lugar.sedes[1].mapsUrl).toBe('')
+  })
+
+  it('domicilio igual que el backend: vacío o "no" = no se ofrece', () => {
+    expect(normalizeConfig({}).permiteDomicilio).toBe(false)
+    expect(normalizeConfig({ permite_domicilio: 'no' }).permiteDomicilio).toBe(false)
+    expect(normalizeConfig({ permite_domicilio: 'Si' }).permiteDomicilio).toBe(true)
+  })
+
+  it('el mensaje sale de la pestaña Mensajes según mensaje_plantilla', () => {
+    const mensajes = [
+      { Nombre: 'Cálida', Texto: 'A {nombre}' },
+      { Nombre: 'Formal', Texto: 'B {nombre}' },
+    ]
+    expect(normalizeConfig({ mensaje_plantilla: 'formal' }, undefined, { mensajes }).mensaje.texto).toBe('B {nombre}')
+    expect(normalizeConfig({}, undefined, { mensajes }).mensaje.texto).toBe('A {nombre}')
+    expect(normalizeConfig({ mensaje_plantilla: 'Breve' }).mensaje.plantilla).toBe('Breve')
   })
 })
