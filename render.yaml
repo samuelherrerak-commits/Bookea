@@ -15,6 +15,9 @@ services:
         value: Bookeav1.1.1
       - key: VITE_WHATSAPP
         value: "584122516390"
+      # WhatsApp de bookeaa: recibe las consultas y pruebas gratis de la landing.
+      - key: VITE_BOOKEAA_WHATSAPP
+        value: "584120298203"
       # Negocio al que entra quien abre la raiz del dominio, sin /u/<slug>.
       - key: VITE_DEFAULT_SHOP
         value: samuel-herrera

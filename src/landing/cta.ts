@@ -1,11 +1,11 @@
-import { DEFAULT_SHOP, DEFAULT_WHATSAPP } from '../config'
+import { BOOKEAA_WHATSAPP, DEFAULT_SHOP } from '../config'
 import { buildWhatsAppUrl } from '../lib/whatsapp'
 import { shopPath } from '../lib/tenant'
 
 /** Todavía no hay registro de cuentas: la prueba se pide por WhatsApp y el alta es a mano. */
 export const TRIAL_MESSAGE = 'Hola, quiero probar bookeaa 1 mes gratis. Mi negocio es: '
 
-export function trialWhatsappUrl(numero: string = DEFAULT_WHATSAPP): string {
+export function trialWhatsappUrl(numero: string = BOOKEAA_WHATSAPP): string {
   return buildWhatsAppUrl(numero, TRIAL_MESSAGE)
 }
 

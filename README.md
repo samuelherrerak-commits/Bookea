@@ -11,7 +11,7 @@ Landing page **estática y mobile-first** para reservar citas de uñas con ByMar
 
 Quien abre la raíz del dominio, sin `/u/<slug>`, ve la landing comercial de **bookeaa** (`src/landing/`): problema y solución, cómo funciona, funciones, plantillas, precio (1 mes gratis, luego Pro a $15/mes) y preguntas frecuentes. Se carga en un chunk aparte, así que no pesa en la agenda de los negocios.
 
-- **"Prueba gratis"** abre WhatsApp al número de `VITE_WHATSAPP` con un mensaje ya armado (`src/landing/cta.ts`).
+- **"Prueba gratis"** abre WhatsApp al número de `VITE_BOOKEAA_WHATSAPP` (+58 412 029 8203) con un mensaje ya armado (`src/landing/cta.ts`).
 - **"Ver una agenda real"** lleva a `/u/<VITE_DEFAULT_SHOP>`. La raíz ya no redirige a ese negocio.
 - Tipografías: Barlow Condensed (títulos) y Barlow (texto), solo en la landing.
 - La sección **Plantillas** muestra capturas reales de la página de reservas (`public/landing/`). Para regenerarlas después de cambiar un estilo: `npm run capture:plantillas`. Usa el modo demo y Chromium (`CHROMIUM_PATH`, por defecto `/opt/pw-browsers/chromium`); qué negocio, estilo y colores sale en cada captura se define en `src/landing/plantillas.json`.
@@ -46,6 +46,7 @@ Si no defines `VITE_API_URL`, la app corre en **modo demo**: usa datos de ejempl
 | `VITE_API_URL` | URL de la aplicación web de Apps Script (termina en `/exec`). |
 | `VITE_API_TOKEN` | Token que exige el script. Debe coincidir con `const TOKEN` en `Code.gs`. |
 | `VITE_WHATSAPP` | Número de respaldo, solo dígitos. Por defecto: `584122516390`. La clave `whatsapp` de la hoja tiene prioridad. |
+| `VITE_BOOKEAA_WHATSAPP` | WhatsApp de bookeaa al que llevan los botones de la landing. Por defecto: `584120298203`. |
 
 ## Instalar el backend (Google Apps Script)
 
