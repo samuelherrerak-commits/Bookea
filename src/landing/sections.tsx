@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
-import { PALETAS } from '../lib/theme'
+import { ESTILO_DEF } from '../lib/theme'
+import type { ThemeEstilo } from '../types'
+import capturas from './plantillas.json'
 import {
   BrowserIcon,
   CalendarCheckIcon,
@@ -154,7 +156,7 @@ const MORE_FEATURES: { icon: ReactNode; title: string; text: string }[] = [
   {
     icon: <TemplatesIcon />,
     title: 'Plantillas',
-    text: 'Elige un estilo (elegante, moderno, editorial o amable) y una paleta. Cámbialo cuando quieras.',
+    text: '8 estilos con fuentes y formas propias, y tus colores. Cámbialo cuando quieras.',
   },
   {
     icon: <ClockIcon />,
@@ -269,46 +271,54 @@ export function Features() {
 
 /* ─────────────────────────── Plantillas ─────────────────────────── */
 
-const pal = (id: string) => PALETAS.find((p) => p.id === id)!
+type Captura = (typeof capturas.plantillas)[number]
 
-const TEMPLATES = [
-  {
-    estilo: 'Elegante',
-    negocio: 'Mariana Nails',
-    paleta: pal('rosa-clasico'),
-    font: "'Instrument Serif', ui-serif, Georgia, serif",
-    upper: false,
-    servicios: [
-      ['Manicure clásico', '$12'],
-      ['Semipermanente', '$18'],
-      ['Pedicure spa', '$20'],
-    ],
-  },
-  {
-    estilo: 'Moderno',
-    negocio: 'Barbería Norte',
-    paleta: pal('carbon'),
-    font: "'Barlow Condensed', ui-sans-serif, sans-serif",
-    upper: true,
-    servicios: [
-      ['Corte', '$10'],
-      ['Corte y barba', '$18'],
-      ['Perfilado', '$6'],
-    ],
-  },
-  {
-    estilo: 'Editorial',
-    negocio: 'Estudio Salvia',
-    paleta: pal('salvia'),
-    font: "'Instrument Serif', ui-serif, Georgia, serif",
-    upper: false,
-    servicios: [
-      ['Limpieza facial', '$25'],
-      ['Masaje relajante', '$30'],
-      ['Depilación cejas', '$8'],
-    ],
-  },
-]
+/** "'Fraunces', ui-serif…" → "Fraunces". */
+const familia = (stack: string) => (/'([^']+)'/.exec(stack)?.[1] ?? stack).replace(/ Variable$/, '')
+
+/** Marco de teléfono con una captura real de la página de reservas (390×844 @2x). */
+function PhoneShot({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[34px] border-[6px] border-coal bg-coal shadow-[0_24px_48px_-28px_rgb(15_15_14/0.55)] ${className ?? ''}`}
+    >
+      <img src={src} alt={alt} width={390} height={844} loading="lazy" decoding="async" className="block h-auto w-full rounded-[28px]" />
+    </div>
+  )
+}
+
+function Swatch({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 font-barlow text-[13px] text-graphite">
+      <span aria-hidden className="h-3.5 w-3.5 rounded-full ring-1 ring-coal/15" style={{ background: color }} />
+      {label}
+    </span>
+  )
+}
+
+function PlantillaCard({ p, i }: { p: Captura; i: number }) {
+  const def = ESTILO_DEF[p.estilo as ThemeEstilo]
+  return (
+    <Reveal delay={(i % 4) * 0.05} className="w-[62%] shrink-0 snap-start sm:w-[40%] md:w-auto">
+      <PhoneShot src={`/landing/plantillas/${p.file}.jpg`} alt={`Página de reservas de ${p.marca} con el estilo ${def.nombre}`} />
+      <div className="mt-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="font-condensed text-[26px] leading-none font-bold uppercase">{def.nombre}</p>
+          <span className="font-condensed text-[13px] font-semibold tracking-[0.1em] text-graphite uppercase">
+            {String(i + 1).padStart(2, '0')}
+          </span>
+        </div>
+        <p className="mt-1.5 text-[14px] text-graphite">
+          {familia(def.display)} + {familia(def.sans)}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+          <Swatch color={p.principal} label={p.principal} />
+          <Swatch color={p.fondo} label={p.fondo} />
+        </div>
+      </div>
+    </Reveal>
+  )
+}
 
 export function Templates() {
   return (
@@ -318,63 +328,48 @@ export function Templates() {
         <SectionHead
           index="03"
           kicker="Plantillas"
-          title="Tu marca, no la nuestra."
-          intro="Elige una plantilla, ponle tus colores y tu nombre. Tus clientes ven tu negocio, no una app genérica."
+          title="8 estilos. Tus colores."
+          intro="Todas tienen la misma distribución, pensada para reservar rápido desde el celular. Cambian las fuentes, las formas y los colores. Estas son capturas reales de la página que ven tus clientes."
         />
 
-        <div className="no-scrollbar -mx-4 mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
-          {TEMPLATES.map((t, i) => (
-            <Reveal key={t.estilo} delay={i * 0.06} className="w-[78%] shrink-0 snap-start sm:w-[58%] md:w-auto">
-              <div
-                aria-hidden
-                className="rounded-3xl p-6 transition-transform duration-300 ease-out hover:-translate-y-1"
-                style={{ background: t.paleta.soft }}
-              >
-                <div className="rounded-2xl bg-paper p-5 shadow-[0_12px_30px_-18px_rgb(15_15_14/0.35)]">
-                  <p
-                    className={`text-[30px] leading-none ${t.upper ? 'font-extrabold uppercase' : ''}`}
-                    style={{ fontFamily: t.font, color: t.paleta.deep }}
-                  >
-                    {t.negocio}
-                  </p>
-                  <p className="mt-1.5 text-[12px] text-graphite">Elige tu servicio</p>
-                  <ul className="mt-4 divide-y divide-rule">
-                    {t.servicios.map(([n, p]) => (
-                      <li key={n} className="flex items-center justify-between py-2.5 text-[14px]">
-                        <span>{n}</span>
-                        <span className="flex items-center gap-2 font-semibold">
-                          {p}
-                          <span
-                            className="flex h-6 w-6 items-center justify-center rounded-full text-paper"
-                            style={{ background: t.paleta.deep }}
-                          >
-                            <PlusIcon width={14} height={14} strokeWidth={2.4} />
-                          </span>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div
-                    className="mt-4 flex h-10 items-center justify-center rounded-full text-[13px] font-semibold text-paper"
-                    style={{ background: t.paleta.deep }}
-                  >
-                    Elegir horario
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 flex items-baseline justify-between">
-                <p className="font-condensed text-[24px] font-bold uppercase">{t.estilo}</p>
-                <p className="font-condensed text-[14px] font-semibold tracking-[0.1em] text-graphite uppercase">
-                  Paleta {t.paleta.nombre}
-                </p>
-              </div>
-            </Reveal>
+        <div className="no-scrollbar -mx-4 mt-14 flex snap-x snap-mandatory scroll-px-4 gap-5 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-4 md:gap-x-6 md:gap-y-14 md:overflow-visible md:px-0">
+          {capturas.plantillas.map((p, i) => (
+            <PlantillaCard key={p.file} p={p} i={i} />
           ))}
         </div>
-        <Reveal>
-          <p className="mt-8 font-condensed text-[16px] font-semibold tracking-[0.1em] text-graphite uppercase">
-            4 estilos · {PALETAS.length} paletas · Tu logo y tu nombre
-          </p>
+
+        {/* El mismo estilo con tres colores: el color principal y el fondo son libres. */}
+        <Reveal className="mt-20 overflow-hidden rounded-[32px] bg-mist">
+          <div className="grid items-center gap-10 p-7 md:p-12 lg:grid-cols-[0.9fr_1.4fr]">
+            <div>
+              <p className="font-condensed text-[15px] font-semibold uppercase tracking-[0.14em] text-graphite">Colores</p>
+              <h3 className="mt-3 font-condensed text-[clamp(36px,5.4vw,64px)] leading-[0.9] font-extrabold uppercase">
+                <Brackets>
+                  <span className="block">Tu color.</span>
+                  <span className="block">Tu fondo.</span>
+                </Brackets>
+              </h3>
+              <span aria-hidden className="mt-6 block h-[3px] w-10 bg-coal" />
+              <p className="mt-6 max-w-[40ch] text-[17px] leading-relaxed text-graphite">
+                Eliges el color principal de tu marca y el color de fondo, claro u oscuro. Los tonos de los botones y los
+                textos se ajustan solos para que todo se lea bien.
+              </p>
+            </div>
+            <div className="no-scrollbar -mx-7 flex snap-x snap-mandatory scroll-px-7 gap-4 overflow-x-auto px-7 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
+              {capturas.colores.map((c) => (
+                <figure key={c.file} className="w-[58%] shrink-0 snap-start sm:w-[38%] md:w-auto">
+                  <PhoneShot
+                    src={`/landing/colores/${c.file}.jpg`}
+                    alt={`La misma plantilla con color ${c.principal} sobre fondo ${c.fondo}`}
+                  />
+                  <figcaption className="mt-3 flex flex-wrap gap-x-3 gap-y-1">
+                    <Swatch color={c.principal} label={c.principal} />
+                    <Swatch color={c.fondo} label={c.fondo} />
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
         </Reveal>
       </div>
     </section>
@@ -424,7 +419,7 @@ const PRO_INCLUDES = [
   'Conexión con Google Calendar',
   'Link personalizado bookeaa.com/u/tu-negocio',
   'Web con tu marca, colores y logo',
-  'Todas las plantillas y paletas',
+  'Los 8 estilos, con tus colores',
   'Horarios, pausas y bloqueos',
   'Servicios, promociones y cupones',
   'Confirmación por WhatsApp',
@@ -522,7 +517,7 @@ const FAQS = [
   },
   {
     q: '¿Puedo tener mis propios colores y mi logo?',
-    a: 'Sí. Eliges una de las plantillas, una paleta de colores y subes tu nombre y logo. Tu página se ve como tu negocio.',
+    a: 'Sí. Eliges uno de los 8 estilos, tu color principal y tu color de fondo (claro u oscuro), y pones tu nombre y logo. Tu página se ve como tu negocio.',
   },
   {
     q: '¿Qué pasa cuando termina el mes gratis?',

@@ -25,7 +25,15 @@ export interface PagoMovilData {
 
 export type Money = 'EUR' | 'USD' | 'BS'
 
-export type ThemeEstilo = 'elegante' | 'moderno' | 'editorial' | 'amable'
+export type ThemeEstilo =
+  | 'elegante'
+  | 'moderno'
+  | 'editorial'
+  | 'amable'
+  | 'audaz'
+  | 'clasico'
+  | 'minimal'
+  | 'retro'
 
 export interface Tema {
   /** Color de acento principal (hex). */
@@ -36,6 +44,8 @@ export interface Tema {
   deep: string
   /** Tipografía por preset. */
   estilo: ThemeEstilo
+  /** Color de fondo de la página (hex). Sin él se usan los neutros crema de la app. */
+  fondo?: string
 }
 
 export interface BusinessConfig {

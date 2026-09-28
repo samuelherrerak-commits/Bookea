@@ -1,6 +1,7 @@
 import { DEFAULT_WHATSAPP } from '../config'
 import type { BusinessConfig, BusyRange, Catalog, Money, Promo, Service, Tasa, ThemeEstilo } from '../types'
 import { parseHHMM } from './format'
+import { derivarAcento } from './color'
 import { ESTILOS, paletaPorNombre } from './theme'
 
 // ---------- Normalización: la hoja la llena una persona, así que se tolera de todo ----------
@@ -206,12 +207,23 @@ export function normalizeConfig(raw: unknown, horariosRaw?: unknown): BusinessCo
     return v === 'si' || v === 'true' || v === '1' || v === 'yes'
   }
   const hex = (key: string, fallback: string) => {
+    // En la hoja es fácil olvidar el "#": "1F6F5C" también vale.
     const v = (map[key] ?? '').trim()
-    return /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ? v : fallback
+    return /^#?(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ? (v.startsWith('#') ? v : `#${v}`) : fallback
   }
-  // Precedencia: hex escrito a mano > paleta elegida del dropdown > default de la app.
+  // Precedencia: color_principal > tema_base/soft/deep > paleta del dropdown > default.
+  // color_principal gana porque es la opción simple: "Aplicar paleta elegida" escribe
+  // tema_base/soft/deep, y si mandaran esos el color nuevo no se vería nunca.
+  // El fondo es independiente: si falta, la app usa sus neutros crema de siempre.
+  const fondo = hex('color_fondo', '') || undefined
+  const principal = hex('color_principal', '')
+  const acento = principal ? derivarAcento(principal, fondo) : null
   const paleta = paletaPorNombre(map.paleta ?? '')
-  const estiloRaw = (map.tema_estilo ?? '').trim().toLowerCase()
+  const estiloRaw = (map.tema_estilo ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
   const MONEDAS: readonly Money[] = ['EUR', 'USD', 'BS']
   const monedaRaw = (map.moneda ?? '').trim().toUpperCase()
 
@@ -241,10 +253,11 @@ export function normalizeConfig(raw: unknown, horariosRaw?: unknown): BusinessCo
       mapsUrl: /^https?:\/\//.test(map.direccion_spa_url ?? '') ? map.direccion_spa_url : d.spa.mapsUrl,
     },
     tema: {
-      base: hex('tema_base', paleta?.base ?? d.tema.base),
-      soft: hex('tema_soft', paleta?.soft ?? d.tema.soft),
-      deep: hex('tema_deep', paleta?.deep ?? d.tema.deep),
+      base: acento?.base ?? hex('tema_base', paleta?.base ?? d.tema.base),
+      soft: acento?.soft ?? hex('tema_soft', paleta?.soft ?? d.tema.soft),
+      deep: acento?.deep ?? hex('tema_deep', paleta?.deep ?? d.tema.deep),
       estilo: ESTILOS.includes(estiloRaw as ThemeEstilo) ? (estiloRaw as ThemeEstilo) : d.tema.estilo,
+      ...(fondo ? { fondo } : {}),
     },
     moneda: MONEDAS.includes(monedaRaw as Money) ? (monedaRaw as Money) : d.moneda,
     metodosPago: (map.metodos_pago ?? '')

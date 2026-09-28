@@ -85,9 +85,9 @@ export function Hero({ config, loading = false }: { config: BusinessConfig | nul
       {/* Halo del color de acento, muy sutil */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-24 -top-28 size-80 rounded-full bg-rose/35 blur-3xl"
+        className="halo pointer-events-none absolute -right-24 -top-28 size-80 rounded-full bg-rose/35 blur-3xl"
       />
-      <div aria-hidden className="pointer-events-none absolute -left-20 top-24 size-56 rounded-full bg-sand blur-3xl" />
+      <div aria-hidden className="halo pointer-events-none absolute -left-20 top-24 size-56 rounded-full bg-sand blur-3xl" />
 
       <div className="relative flex items-center justify-between">
         {c.logoUrl ? (
@@ -96,7 +96,7 @@ export function Hero({ config, loading = false }: { config: BusinessConfig | nul
           <Wordmark marca={marca} />
         )}
         {DEMO_MODE && (
-          <span className="rounded-full bg-sand px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-muted">
+          <span data-demo-badge className="rounded-full bg-sand px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-muted">
             Demo
           </span>
         )}

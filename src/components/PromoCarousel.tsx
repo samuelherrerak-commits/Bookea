@@ -60,7 +60,7 @@ function PromoCard({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-10 -top-10 size-36 rounded-full bg-rose/30 blur-2xl"
+        className="halo pointer-events-none absolute -right-10 -top-10 size-36 rounded-full bg-rose/30 blur-2xl"
       />
       <div className="relative flex items-center justify-between">
         {ahorro > 0 ? (
@@ -93,7 +93,7 @@ function PromoCard({
           whileTap={tap}
           transition={spring.snappy}
           className={`relative h-11 overflow-hidden rounded-full px-5 text-[14px] font-medium transition-colors duration-200 ${
-            selected ? 'bg-ink text-bg' : 'bg-rose text-ink'
+            selected ? 'bg-ink text-bg' : 'bg-rose text-on-rose'
           }`}
         >
           <AnimatePresence mode="popLayout" initial={false}>

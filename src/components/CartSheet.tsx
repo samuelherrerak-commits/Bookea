@@ -83,7 +83,7 @@ export function CartSheet({ open, onClose, summary, onContinue, config }: CartSh
                       <p className="flex items-center gap-2 text-[15px] font-medium leading-snug">
                         {line.nombre}
                         {line.tipo === 'promo' && (
-                          <span className="rounded-full bg-rose px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ink">
+                          <span className="rounded-full bg-rose px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-on-rose">
                             Promo
                           </span>
                         )}

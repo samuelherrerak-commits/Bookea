@@ -127,6 +127,24 @@ describe('paleta y textos del negocio', () => {
     expect(cfg.tema.estilo).toBe(DEFAULT_CONFIG.tema.estilo)
   })
 
+  it('color_principal gana sobre la paleta y los hex a mano, y acepta hex sin #', () => {
+    const cfg = normalizeConfig({ paleta: 'Azul Noche', tema_base: '#ABCDEF', color_principal: '1F6F5C' })
+    expect(cfg.tema.base).toBe('#1F6F5C')
+    expect(cfg.tema.deep).toBe('#1F6F5C')
+    expect(cfg.tema.soft).not.toBe('#E6EDF6')
+  })
+
+  it('color_fondo llega al tema; sin él no hay fondo propio', () => {
+    expect(normalizeConfig({ color_fondo: '#111111' }).tema.fondo).toBe('#111111')
+    expect(normalizeConfig({}).tema.fondo).toBeUndefined()
+    expect(normalizeConfig({ color_fondo: 'negro' }).tema.fondo).toBeUndefined()
+  })
+
+  it('reconoce los estilos nuevos, con o sin tilde', () => {
+    expect(normalizeConfig({ tema_estilo: 'Audaz' }).tema.estilo).toBe('audaz')
+    expect(normalizeConfig({ tema_estilo: 'clásico' }).tema.estilo).toBe('clasico')
+  })
+
   it('los textos del hero nunca llegan vacíos a la pantalla', () => {
     const cfg = normalizeConfig([])
     expect(cfg.heroTitulo).not.toBe('')

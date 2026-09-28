@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Tema } from '../types'
-import { ESTILOS, PALETAS, pageDescription, pageTitle, paletaPorNombre, themeVars } from './theme'
+import { luminance } from './color'
+import { ESTILO_DEF, ESTILOS, PALETAS, pageDescription, pageTitle, paletaPorNombre, themeVars } from './theme'
 import { DEFAULT_CONFIG } from './normalize'
 
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
@@ -39,14 +40,28 @@ describe('themeVars', () => {
     expect(vars['--color-rose-deep']).toBe('#333333')
   })
 
-  it('el estilo decide la tipografía del título', () => {
+  it('el estilo decide las dos tipografías', () => {
     expect(themeVars({ ...tema, estilo: 'elegante' })['--font-display']).toContain('Instrument Serif')
-    expect(themeVars({ ...tema, estilo: 'editorial' })['--font-display']).toContain('Instrument Serif')
-    expect(themeVars({ ...tema, estilo: 'amable' })['--font-display']).toContain('Inter Variable')
+    expect(themeVars({ ...tema, estilo: 'audaz' })['--font-display']).toContain('Barlow Condensed')
+    expect(themeVars({ ...tema, estilo: 'audaz' })['--font-sans']).toContain("'Barlow'")
+    expect(themeVars({ ...tema, estilo: 'retro' })['--font-display']).toContain('Fraunces')
   })
 
-  it('no toca los colores neutros de fondo y texto', () => {
-    expect(Object.keys(themeVars(tema))).toHaveLength(4)
+  it('cada estilo tiene un par de fuentes propio', () => {
+    const pares = ESTILOS.map((e) => `${ESTILO_DEF[e].display}|${ESTILO_DEF[e].sans}`)
+    expect(new Set(pares).size).toBe(ESTILOS.length)
+    expect(ESTILOS).toHaveLength(8)
+  })
+
+  it('sin fondo propio no toca los neutros', () => {
+    expect(themeVars(tema)['--color-bg']).toBeUndefined()
+    expect(themeVars(tema)['--color-ink']).toBeUndefined()
+  })
+
+  it('con fondo oscuro los textos pasan a claros', () => {
+    const vars = themeVars({ ...tema, fondo: '#111111' })
+    expect(vars['--color-bg']).toBe('#111111')
+    expect(luminance(vars['--color-ink'])).toBeGreaterThan(0.7)
   })
 })
 
@@ -88,6 +103,6 @@ describe('Code.gs y theme.ts tienen la misma lista de paletas', () => {
 
   it('coinciden los estilos de tipografía', () => {
     for (const e of ESTILOS) expect(gs).toContain(`'${e}'`)
-    expect(gs).toContain('elegante | moderno | editorial | amable')
+    expect(gs).toContain(`const ESTILOS = [${ESTILOS.map((e) => `'${e}'`).join(', ')}];`)
   })
 })

@@ -64,7 +64,9 @@ const CONFIG_DEFAULTS = [
   ['tema_base', ''], // hex manual; si está vacío manda la paleta
   ['tema_soft', ''],
   ['tema_deep', ''],
-  ['tema_estilo', 'elegante'], // elegante | moderno | editorial | amable
+  ['tema_estilo', 'elegante'], // elegante | moderno | editorial | amable | audaz | clasico | minimal | retro
+  ['color_principal', ''], // hex, ej. #1F6F5C. Si está lleno gana sobre la paleta y tema_base/soft/deep
+  ['color_fondo', ''], // hex del fondo de la página, ej. #FFFFFF o #111111. Vacío = crema de siempre
   ['hero_titulo', ''],
   ['hero_subtitulo', ''],
   ['permite_domicilio', 'si'], // si | no
@@ -99,8 +101,11 @@ const PALETAS = [
   { id: 'carbon', nombre: 'Carbón', base: '#9A9A9A', soft: '#EDEDED', deep: '#3A3A3A' },
 ];
 
-/** Elegante y editorial usan serif; moderno y amable, sans. */
-const ESTILOS = ['elegante', 'moderno', 'editorial', 'amable'];
+/**
+ * Estilos de tipografía y forma. La misma lista (y orden) vive en src/lib/theme.ts.
+ * elegante, editorial, clasico y retro usan serif; moderno, amable, audaz y minimal, sans.
+ */
+const ESTILOS = ['elegante', 'moderno', 'editorial', 'amable', 'audaz', 'clasico', 'minimal', 'retro'];
 
 function paletaPorNombre_(valor) {
   const key = normKey_(valor);
@@ -373,6 +378,22 @@ function aplicarOpcionesTema_(configSheet) {
     } else if (clave === 'temaestilo') {
       configSheet.getRange(i + 1, 2).setDataValidation(
         SpreadsheetApp.newDataValidation().requireValueInList(ESTILOS, true).setAllowInvalid(false).build()
+      );
+      configSheet.getRange(i + 1, 2).setNote(
+        'elegante: serif fina · moderno: sans firme · editorial: serif de revista · amable: redondeada\n' +
+        'audaz: condensada en mayúsculas · clasico: serif sobria · minimal: una sans, sin adornos · ' +
+        'retro: serif cálida y muy redonda.\n\nLa distribución de la página es la misma en todos.'
+      );
+    } else if (clave === 'colorprincipal') {
+      configSheet.getRange(i + 1, 2).setNote(
+        'Color de marca en hex (ej. #1F6F5C). De él salen botones, chips y el texto de acento; ' +
+        'el tono oscuro se ajusta solo para que se lea. Si está lleno, gana sobre la paleta y ' +
+        'tema_base/soft/deep. Déjalo vacío para usar la paleta.'
+      );
+    } else if (clave === 'colorfondo') {
+      configSheet.getRange(i + 1, 2).setNote(
+        'Fondo de la página en hex (ej. #FFFFFF, #F4EFE6 o #111111). Si es oscuro, los textos ' +
+        'pasan a claro solos. Vacío = el crema de siempre.'
       );
     }
   }

@@ -14,6 +14,20 @@ Quien abre la raíz del dominio, sin `/u/<slug>`, ve la landing comercial de **b
 - **"Prueba gratis"** abre WhatsApp al número de `VITE_WHATSAPP` con un mensaje ya armado (`src/landing/cta.ts`).
 - **"Ver una agenda real"** lleva a `/u/<VITE_DEFAULT_SHOP>`. La raíz ya no redirige a ese negocio.
 - Tipografías: Barlow Condensed (títulos) y Barlow (texto), solo en la landing.
+- La sección **Plantillas** muestra capturas reales de la página de reservas (`public/landing/`). Para regenerarlas después de cambiar un estilo: `npm run capture:plantillas`. Usa el modo demo y Chromium (`CHROMIUM_PATH`, por defecto `/opt/pw-browsers/chromium`); qué negocio, estilo y colores sale en cada captura se define en `src/landing/plantillas.json`.
+
+## Estilos y colores de cada negocio
+
+Se eligen en la hoja **Configuracion** del negocio. Todos los estilos usan la misma distribución; cambian las fuentes, las esquinas y los detalles.
+
+| Clave | Valores | Qué hace |
+| --- | --- | --- |
+| `tema_estilo` | `elegante` · `moderno` · `editorial` · `amable` · `audaz` · `clasico` · `minimal` · `retro` | Par de fuentes y forma. `audaz` es el de la landing de bookeaa: condensada, gruesa y en mayúsculas. |
+| `color_principal` | hex, ej. `#1F6F5C` (el `#` es opcional) | Color de marca: botones, chips y acentos. El tono del texto de acento se oscurece o aclara solo hasta leerse bien. Si está lleno, gana sobre `paleta` y `tema_base/soft/deep`. |
+| `color_fondo` | hex, ej. `#FFFFFF`, `#F4EFE6`, `#111111` | Fondo de la página. Superficies, bordes y textos salen de él; con un fondo oscuro los textos pasan a claros. Vacío = el crema de siempre. |
+| `paleta` / `tema_base` / `tema_soft` / `tema_deep` | igual que antes | Siguen funcionando si `color_principal` está vacío. |
+
+En modo demo (sin `VITE_API_URL`) se puede probar cualquier combinación en la URL: `/u/demo?estilo=retro&principal=%23C4572E&fondo=%23F6EBDD&marca=Ritual%20Spa&rubro=estetica` (`rubro`: `barberia` o `estetica`; vacío = uñas). En producción esos parámetros no hacen nada.
 
 ## Desarrollo local
 

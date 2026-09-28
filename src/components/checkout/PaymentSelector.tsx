@@ -88,7 +88,7 @@ export const PaymentSelector = forwardRef<PaymentSelectorHandle, PaymentSelector
               >
                 <span
                   className={`grid size-11 shrink-0 place-items-center rounded-xl transition-colors duration-200 ${
-                    selected ? 'bg-rose text-ink' : 'bg-sand text-muted'
+                    selected ? 'bg-rose text-on-rose' : 'bg-sand text-muted'
                   }`}
                 >
                   <Icon size={22} />

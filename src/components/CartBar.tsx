@@ -30,7 +30,7 @@ export function CartBar({ count, total, onOpen }: CartBarProps) {
             className="pointer-events-auto flex h-16 w-full items-center gap-3 rounded-full bg-ink pl-2.5 pr-6 text-bg shadow-float"
             aria-label={`Ver mi orden: ${count} ${count === 1 ? 'servicio' : 'servicios'}, total ${fmt(total)}`}
           >
-            <span className="relative grid size-11 place-items-center overflow-hidden rounded-full bg-rose text-[15px] font-semibold text-ink">
+            <span className="relative grid size-11 place-items-center overflow-hidden rounded-full bg-rose text-[15px] font-semibold text-on-rose">
               <AnimatePresence mode="popLayout" initial={false}>
                 <motion.span
                   key={count}
