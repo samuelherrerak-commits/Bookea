@@ -7,4 +7,8 @@ describe('trialWhatsappUrl', () => {
     expect(url.origin + url.pathname).toBe('https://wa.me/584122516390')
     expect(url.searchParams.get('text')).toBe(TRIAL_MESSAGE)
   })
+
+  it('por defecto va al WhatsApp de bookeaa, no al respaldo de los negocios', () => {
+    expect(new URL(trialWhatsappUrl()).pathname).toBe('/584120298203')
+  })
 })
