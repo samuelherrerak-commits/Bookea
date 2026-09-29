@@ -2,3 +2,4 @@ node_modules/
 public/entrada/
 public/tmp/
 salida/
+__pycache__/
