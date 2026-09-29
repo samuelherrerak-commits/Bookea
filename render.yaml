@@ -11,11 +11,11 @@ services:
       # nueva en Apps Script y la URL cambia, actualiza aqui.
       - key: VITE_API_URL
         value: https://script.google.com/macros/s/AKfycbzX8PIP_j_UNfQHb-nGwcEdQMGeZ7lYH4wWxLnP5G-bJwrSHQNwWBHed8XwINOMXFjG4g/exec
-      # El token NO va en el repo: se carga en Render (Environment) con el valor que
-      # da el menú "Generar token de la API" del Apps Script. sync: false = Render
-      # lo pide al crear el servicio y nunca lo pisa desde este archivo.
+      # Token del menú "Generar token de la API" del Apps Script. Tiene que ser el
+      # mismo que guardó el script, o todo responde no_autorizado. No es secreto
+      # (viaja en cada petición del navegador), pero si lo cambias, cámbialo aquí.
       - key: VITE_API_TOKEN
-        sync: false
+        value: bk_c7433c38c7484b698191c45079085af5a907d9d6
       - key: VITE_WHATSAPP
         value: "584122516390"
       # WhatsApp de bookeaa: recibe las consultas y pruebas gratis de la landing.
