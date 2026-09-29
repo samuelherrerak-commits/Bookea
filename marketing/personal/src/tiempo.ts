@@ -30,12 +30,19 @@ export function remapearCaptions(captions: Caption[], segmentos: Segmento[]): Ca
     const s = segmentos[i]
     const mover = (ms: number) =>
       Math.round((ini[i] + Math.min(Math.max(ms / 1000, s.desde), s.hasta) - s.desde) * 1000)
+    // Página nueva al terminar una oración o un tramo, para no mezclar frases de dos cortes.
+    const finTramo = c.endMs / 1000 >= s.hasta - 0.05
     salida.push({
       ...c,
+      pageBreakAfter: c.pageBreakAfter || finTramo || /[.?!]$/.test(c.text.trim()),
       startMs: mover(c.startMs),
       endMs: mover(c.endMs),
       timestampMs: c.timestampMs == null ? null : mover(c.timestampMs),
     })
+  }
+  // El último de cada tramo también corta la página aunque su tiempo no llegue al final.
+  for (let k = 0; k < salida.length - 1; k++) {
+    if (salida[k + 1].startMs - salida[k].endMs > 250) salida[k].pageBreakAfter = true
   }
   return salida
 }

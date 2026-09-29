@@ -31,4 +31,4 @@ El script guarda cada paso en la edición: `video`, `segmentos` y `<edición>.ca
 
 ## Requisitos de red
 
-Para bajar videos de Drive y el modelo de Whisper, el entorno tiene que permitir `drive.google.com`, `drive.usercontent.google.com` y `huggingface.co`. Remotion usa el Chromium de Playwright (`CHROMIUM_PATH` para cambiarlo) y el ffmpeg de `imageio-ffmpeg` (`FFMPEG_PATH`).
+Para bajar videos de Drive, el entorno tiene que permitir `drive.google.com` y `drive.usercontent.google.com`; si no, adjunta el video en el chat y usa su ruta local como `fuente`. Los subtítulos salen por defecto de Whisper turbo con sherpa-onnx (`pip install sherpa-onnx`), cuyos modelos se bajan de GitHub Releases; `motorWhisper: "faster"` usa faster-whisper, que necesita `huggingface.co`. Remotion usa el Chromium de Playwright (`CHROMIUM_PATH` para cambiarlo) y el ffmpeg de `imageio-ffmpeg` (`FFMPEG_PATH`).

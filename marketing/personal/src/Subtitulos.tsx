@@ -51,7 +51,7 @@ const PaginaSub: React.FC<{ p: Pagina }> = ({ p }) => {
                 transform: activa ? 'scale(1.08) rotate(-1.5deg)' : 'none',
               }}
             >
-              {t.text.trim()}
+              {t.text.trim().replace(/[.,;:]+$/, '')}
             </span>
           )
         })}

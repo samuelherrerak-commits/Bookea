@@ -1,7 +1,7 @@
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Easing } from 'remotion'
 import { LETRA } from './fuentes'
 
-/** Palabra o cifra clave en grande, a media altura (acompaña un "pop"). */
+/** Palabra o cifra clave en grande, arriba (sin tapar la cara) (acompaña un "pop"). */
 export const Enfasis: React.FC<{ texto: string }> = ({ texto }) => {
   const frame = useCurrentFrame()
   const { fps, durationInFrames } = useVideoConfig()
@@ -12,12 +12,12 @@ export const Enfasis: React.FC<{ texto: string }> = ({ texto }) => {
     easing: Easing.in(Easing.cubic),
   })
   return (
-    <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', top: -260 }}>
+    <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center', top: 300 }}>
       <div
         style={{
           fontFamily: LETRA,
           fontWeight: 800,
-          fontSize: 170,
+          fontSize: texto.length > 10 ? 118 : 170,
           lineHeight: 0.9,
           textTransform: 'uppercase',
           textAlign: 'center',

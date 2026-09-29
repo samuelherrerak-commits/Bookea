@@ -78,7 +78,7 @@ function traer() {
   console.log('⚙ Normalizando a 1080×1920 · 30 fps')
   correr(FFMPEG, [
     '-y', '-hide_banner', '-loglevel', 'error', '-i', original,
-    '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30',
+    '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,fps=30,unsharp=5:5:0.5',
     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '17', '-pix_fmt', 'yuv420p',
     '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', join(PUBLIC, destino),
   ])
@@ -87,11 +87,21 @@ function traer() {
 }
 
 // 2. Subtítulos palabra por palabra.
+//    Por defecto Whisper turbo con sherpa-onnx (modelos en GitHub Releases, no necesita
+//    huggingface). Con `motorWhisper: "faster"` usa faster-whisper (alineación exacta,
+//    pero baja el modelo de huggingface.co).
 function transcribir() {
   const ruta = rutaEdicion.replace(/\.json$/, '.captions.json')
   if (!existsSync(ruta)) {
     console.log('✎ Transcribiendo con Whisper')
-    correr('python3', [join(RAIZ, 'scripts', 'transcribir.py'), join(PUBLIC, e.video), ruta, '--modelo', e.modeloWhisper ?? 'small'])
+    if (e.motorWhisper === 'faster') {
+      correr('python3', [join(RAIZ, 'scripts', 'transcribir.py'), join(PUBLIC, e.video), ruta, '--modelo', e.modeloWhisper ?? 'small'])
+    } else {
+      const wav = join(PUBLIC, 'tmp', `${nombre}-16k.wav`)
+      mkdirSync(dirname(wav), { recursive: true })
+      correr(FFMPEG, ['-y', '-hide_banner', '-loglevel', 'error', '-i', join(PUBLIC, e.video), '-ac', '1', '-ar', '16000', wav])
+      correr('python3', [join(RAIZ, 'scripts', 'transcribir_sherpa.py'), wav, ruta, '--modelo', e.modeloWhisper ?? 'turbo'])
+    }
   }
   return JSON.parse(readFileSync(ruta, 'utf8'))
 }
@@ -169,7 +179,8 @@ function renderizar(captions) {
   correr(FFMPEG, [
     '-y', '-hide_banner', '-loglevel', 'error', '-i', crudo,
     '-af', 'highpass=f=70,acompressor=threshold=-20dB:ratio=3:attack=5:release=120,loudnorm=I=-14:TP=-1.5:LRA=9',
-    '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', final,
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-pix_fmt', 'yuv420p', '-color_range', 'tv',
+    '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', final,
   ])
   console.log('✔', final)
 }
