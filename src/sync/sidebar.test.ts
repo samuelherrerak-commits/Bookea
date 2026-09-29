@@ -111,9 +111,13 @@ describe('barra lateral: mismos cálculos que la página', () => {
 })
 
 describe('Configurador.gs', () => {
-  it('usa el mismo token y las mismas plantillas que el maestro', () => {
-    expect(constanteGs(configurador, 'TOKEN')).toBe(constanteGs(codeGs, 'TOKEN'))
+  it('usa las mismas plantillas que el maestro', () => {
     expect(constanteGs(configurador, 'PLANTILLAS_MENSAJE')).toEqual(PLANTILLAS_MENSAJE)
+  })
+
+  it('ningún script tiene el token escrito: lo leen de las propiedades o de la hoja', () => {
+    for (const fuente of [codeGs, configurador]) expect(fuente).not.toMatch(/const TOKEN\b|Bookea[v]1/)
+    expect(configurador).toMatch(/config\.api_token/)
   })
 
   it('las claves que guarda cada sección son las mismas en la barra lateral y existen en la hoja', () => {

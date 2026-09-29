@@ -5,7 +5,8 @@ const env = import.meta.env
  * Igual para todos los tenant: el slug se elige en la URL (/u/mariana).
  */
 export const API_URL: string = (env.VITE_API_URL ?? '').trim()
-export const API_TOKEN: string = (env.VITE_API_TOKEN ?? '').trim() || 'Bookeav1.1.1'
+/** Viaja en cada petición, así que no es secreto; solo que no vive en el repo. Se fija en Render. */
+export const API_TOKEN: string = (env.VITE_API_TOKEN ?? '').trim()
 /** Solo respaldo: la hoja de cada negocio manda en su clave `whatsapp`. */
 export const DEFAULT_WHATSAPP: string = (env.VITE_WHATSAPP ?? '').replace(/\D/g, '') || '584122516390'
 /** Contacto de bookeaa (landing): a dónde llegan las consultas y los pedidos de prueba gratis. */

@@ -10,6 +10,29 @@
     <link rel="preconnect" href="https://script.google.com" />
     <link rel="preconnect" href="https://script.googleusercontent.com" />
     <title>bookeaa · Tu agenda online, sin libreta</title>
+    <!--
+      Pide el catálogo del negocio apenas llega el HTML, en paralelo con el JS de la
+      app (que antes esperaba a que React montara). api.ts toma esta respuesta en su
+      primer pedido. Vite reemplaza las %VITE_…% en el build; el CSP lo arma
+      vite.config.ts con el hash de este script.
+    -->
+    <script>
+      ;(function () {
+        var url = '%VITE_API_URL%', token = '%VITE_API_TOKEN%'
+        if (!/^https?:\/\//.test(url) || !token || token.charAt(0) === '%') return
+        var m = /^\/u\/([^/]+)\/?$/.exec(location.pathname)
+        var slug = m ? m[1] : new URLSearchParams(location.search).get('shop')
+        slug = String(slug || '').trim().toLowerCase()
+        if (!slug) return
+        try {
+          var u = new URL(url)
+          u.searchParams.set('token', token)
+          u.searchParams.set('shop', slug)
+          window.__catalogoTemprano = { url: u.toString(), respuesta: fetch(u.toString(), { redirect: 'follow' }) }
+          window.__catalogoTemprano.respuesta.catch(function () {})
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

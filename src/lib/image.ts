@@ -1,8 +1,8 @@
 /**
  * Reduce una foto/captura para enviarla al Apps Script: lado mayor ≤ maxSide
- * y JPEG. Una captura de teléfono (~2–4 MB) queda en ~150–400 KB.
+ * y JPEG. Una captura de teléfono (~2–4 MB) queda en ~100–250 KB, legible y liviana para Drive.
  */
-export async function compressImage(file: File, maxSide = 1600, quality = 0.8): Promise<string> {
+export async function compressImage(file: File, maxSide = 1280, quality = 0.72): Promise<string> {
   if (!file.type.startsWith('image/')) throw new Error('El archivo debe ser una imagen (foto o captura).')
   const url = URL.createObjectURL(file)
   try {

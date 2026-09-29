@@ -10,10 +10,6 @@
  * heredan (crearTenant copia la hoja con su script). En hojas ya creadas se pega a mano.
  */
 
-// El mismo token que Code.gs (y VITE_API_TOKEN). Solo se usa para pedir la página
-// fresca después de guardar; un test compara los dos archivos.
-const TOKEN = 'Bookeav1.1.1';
-
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 /** Las pestañas que la barra lateral necesita; si falta alguna, pide actualizar la hoja. */
@@ -281,16 +277,19 @@ function reemplazarFilas_(sheet, columnas, filas) {
 // ---------- Refrescar la página ----------
 
 /**
- * La página cachea el catálogo 5 minutos. Con fresh=1 el maestro lo vuelve a leer
- * y lo guarda, así el cambio se ve apenas se recarga. Si falla, se ve en 5 minutos.
+ * La página cachea el catálogo 15 minutos. Con fresh=1 el maestro lo vuelve a leer
+ * y lo guarda, así el cambio se ve apenas se recarga. Si falla, se ve en 15 minutos.
+ * La URL y el token los escribe el maestro en Configuracion (api_url, api_token) al
+ * crear o actualizar el negocio: acá no hay ninguna clave escrita en el código.
  */
 function refrescarPagina_(config) {
   const url = String(config.api_url || '').trim();
   const slug = String(config.slug || '').trim();
-  if (!url || !slug) return false;
+  const token = String(config.api_token || '').trim();
+  if (!url || !slug || !token) return false;
   try {
     const res = UrlFetchApp.fetch(
-      url + '?token=' + encodeURIComponent(TOKEN) + '&slug=' + encodeURIComponent(slug) + '&fresh=1',
+      url + '?token=' + encodeURIComponent(token) + '&slug=' + encodeURIComponent(slug) + '&fresh=1',
       { muteHttpExceptions: true, followRedirects: true }
     );
     return res.getResponseCode() === 200;
