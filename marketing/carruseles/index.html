@@ -43,6 +43,15 @@
   .faq { margin-top: 56px; display: flex; flex-direction: column; gap: 38px; }
   .faq div { border-top: 4px solid currentColor; padding-top: 26px; }
   .faq b { display: block; font: 800 54px/1.05 'Barlow Condensed', sans-serif; text-transform: uppercase; }
+  .comparar { margin-top: 60px; display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  .comparar > div { border-radius: 36px; padding: 40px 36px; display: flex; flex-direction: column; gap: 26px; }
+  .comparar .sin { border: 4px solid currentColor; }
+  .comparar .con { background: var(--coal); color: var(--paper); }
+  .negra .comparar .con { background: var(--paper); color: var(--coal); }
+  .comparar h3 { font: 800 44px/1 'Barlow Condensed', sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
+  .comparar p { font-size: 36px; line-height: 1.25; }
+  .comparar .sin p { opacity: 0.7; text-decoration: line-through; text-decoration-thickness: 3px; }
+  .unidad { font: 800 88px/0.95 'Barlow Condensed', sans-serif; text-transform: uppercase; margin-top: 30px; }
   .faq span { display: block; font-size: 40px; margin-top: 12px; opacity: 0.75; }
 </style>
 </head>
@@ -137,6 +146,19 @@
     faq: (l) => [
       titulo(l.titulo),
       h('div', { class: 'faq' }, l.items.map(([q, a]) => h('div', {}, h('b', { text: q }), h('span', { text: a })))),
+    ],
+    comparar: (l) => [
+      titulo(l.titulo),
+      h('div', { class: 'comparar' },
+        h('div', { class: 'sin' }, h('h3', { text: 'Sin bookeaa' }), l.sin.map((t) => h('p', { text: t }))),
+        h('div', { class: 'con' }, h('h3', { text: 'Con bookeaa' }), l.con.map((t) => h('p', { text: t })))),
+    ],
+    cuenta: (l) => [
+      h('p', { class: 'kicker', text: l.kicker }),
+      h('div', { class: 'monto', text: l.monto }),
+      h('p', { class: 'unidad', text: l.unidad }),
+      h('i', { class: 'regla' }),
+      h('p', { class: 'texto', text: l.texto }),
     ],
     cta: (l, negra) => [
       h('p', { class: 'kicker', text: 'Empieza hoy' }),

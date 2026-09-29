@@ -1,5 +1,6 @@
 /*
- * Los 7 carruseles de la primera campaña (1080×1350, formato 4:5 de Instagram).
+ * Los carruseles de Instagram (1080×1350, formato 4:5).
+ * 1–7: lanzamiento (octubre). 8–15: cómo mejora tu negocio (noviembre).
  * Cada lámina es { tipo, fondo, ...datos }; index.html la dibuja según su tipo.
  * El texto de cada post (caption y hashtags) está en la página de la campaña y en marketing/README.md.
  */
@@ -141,6 +142,152 @@
           ],
         },
         cta(['EMPIEZA', 'HOY.']),
+      ],
+    },
+    // ---------------- NOVIEMBRE · Cómo mejora tu negocio ----------------
+    {
+      id: 8,
+      nombre: 'Así cambia tu día',
+      laminas: [
+        { tipo: 'portada', fondo: 'negro', kicker: 'Antes y después', titulo: ['ASÍ', 'CAMBIA', 'TU DÍA.'], texto: 'Mismo negocio, otra agenda.' },
+        {
+          tipo: 'comparar', fondo: 'blanco', titulo: ['POR LA', 'MAÑANA'],
+          sin: ['Te despiertas con 14 chats', 'Respondes uno por uno', 'Todavía no sabes cómo es tu día'],
+          con: ['Te despiertas con 3 reservas', 'Ya están en tu calendario', 'Sabes a quién atiendes y a qué hora'],
+        },
+        {
+          tipo: 'comparar', fondo: 'negro', titulo: ['AL', 'MEDIODÍA'],
+          sin: ['Anotas en la libreta entre cliente y cliente', 'Se te cruzan dos citas'],
+          con: ['Una hora, una cita', 'Si bloqueas tu almuerzo, nadie reserva ahí'],
+        },
+        {
+          tipo: 'comparar', fondo: 'blanco', titulo: ['EN LA', 'NOCHE'],
+          sin: ['Sigues respondiendo "¿tienes hora mañana?"', 'Tu día de trabajo no termina'],
+          con: ['Tu link agenda por ti', 'Mañana ya está armado'],
+        },
+        { tipo: 'telefono', fondo: 'negro', kicker: 'La diferencia', titulo: ['UN LINK', 'QUE AGENDA', 'POR TI'], texto: 'Tus clientes ven tus horas libres y reservan solos.', img: F + '4-agenda.jpg' },
+        cta(),
+      ],
+    },
+    {
+      id: 9,
+      nombre: '¿Cuántas horas pierdes agendando?',
+      laminas: [
+        { tipo: 'portada', fondo: 'blanco', kicker: 'Haz la cuenta', titulo: ['¿CUÁNTAS', 'HORAS', 'PIERDES', 'AGENDANDO?'], texto: 'Te sorprende el número.' },
+        { tipo: 'cuenta', fondo: 'negro', kicker: 'Ejemplo', monto: '20', unidad: 'CHATS AL DÍA', texto: 'Cada uno para preguntar precio, horario o si tienes espacio.' },
+        { tipo: 'cuenta', fondo: 'blanco', kicker: '× 3 minutos', monto: '60', unidad: 'MINUTOS AL DÍA', texto: 'Una hora diaria solo respondiendo para agendar.' },
+        { tipo: 'cuenta', fondo: 'negro', kicker: '× 6 días', monto: '6', unidad: 'HORAS A LA SEMANA', texto: 'Casi un día de trabajo entero que no cobras.' },
+        {
+          tipo: 'texto', fondo: 'blanco', kicker: 'Tu turno', titulo: ['HAZ TU', 'PROPIA', 'CUENTA.'],
+          texto: 'Chats al día × minutos por chat × días que trabajas. Cuéntanos en los comentarios cuánto te dio.',
+        },
+        {
+          tipo: 'lista', fondo: 'negro', titulo: ['CON BOOKEAA,', 'ESE TIEMPO', 'VUELVE A TI'], marca: '✓',
+          items: ['Tu link responde servicios y precios', 'Tus clientes ven tus horas libres', 'Reservan solos, a cualquier hora', 'Tú solo atiendes'],
+        },
+        cta(),
+      ],
+    },
+    {
+      id: 10,
+      nombre: '3 errores que te hacen perder clientes',
+      laminas: [
+        { tipo: 'portada', fondo: 'negro', kicker: 'Guarda este post', titulo: ['3 ERRORES', 'QUE TE HACEN', 'PERDER', 'CLIENTES'], clase: 'grande', texto: '¿Cometes alguno?' },
+        { tipo: 'senal', fondo: 'blanco', num: '01', titulo: ['RESPONDER', 'TARDE.'], texto: 'Quien escribe para reservar quiere respuesta ya. Si tardas, reserva en otro lado.' },
+        { tipo: 'senal', fondo: 'negro', num: '02', titulo: ['NO MOSTRAR', 'TUS PRECIOS.'], texto: 'Si tienen que preguntar cuánto cuesta, muchos ni preguntan.' },
+        { tipo: 'senal', fondo: 'blanco', num: '03', titulo: ['SOLO AGENDAR', 'EN TU HORARIO.'], texto: 'Muchos clientes deciden de noche. Si nadie contesta, se enfrían.' },
+        {
+          tipo: 'lista', fondo: 'negro', titulo: ['CÓMO LO', 'RESUELVE', 'BOOKEAA'], marca: '→',
+          items: ['Respuesta inmediata: tu link muestra tus horas', 'Servicios con precio y duración a la vista', 'Reservas 24/7, aunque estés dormido'],
+        },
+        cta(),
+      ],
+    },
+    {
+      id: 11,
+      nombre: 'Por qué tus clientes faltan',
+      laminas: [
+        { tipo: 'portada', fondo: 'blanco', kicker: 'Hablemos de esto', titulo: ['¿POR QUÉ', 'TUS CLIENTES', 'FALTAN?'], clase: 'grande', texto: 'Casi nunca es mala intención.' },
+        { tipo: 'senal', fondo: 'negro', num: '01', titulo: ['SE LES', 'OLVIDA.'], texto: 'Reservaron hace una semana por chat y el mensaje quedó enterrado.' },
+        { tipo: 'senal', fondo: 'blanco', num: '02', titulo: ['ANOTARON', 'MAL LA HORA.'], texto: '"¿No era a las 5?" Una cita de palabra se confunde fácil.' },
+        { tipo: 'senal', fondo: 'negro', num: '03', titulo: ['NADIE LES', 'RECORDÓ.'], texto: 'Sin un aviso, la cita compite con todo lo demás de su día.' },
+        { tipo: 'telefono', fondo: 'blanco', kicker: 'Con bookeaa', titulo: ['LA CITA QUEDA', 'EN SU', 'CALENDARIO'], texto: 'Con un toque la agrega, y su propio celular le avisa antes.', img: F + '6-listo.jpg' },
+        {
+          tipo: 'texto', fondo: 'negro', kicker: 'Y además', titulo: ['EL DETALLE', 'LLEGA POR', 'WHATSAPP.'],
+          texto: 'Servicio, día, hora y lugar, por escrito. Sin "¿a qué hora era?".',
+        },
+        cta(),
+      ],
+    },
+    {
+      id: 12,
+      nombre: 'Dónde poner tu link de reservas',
+      laminas: [
+        { tipo: 'portada', fondo: 'negro', kicker: 'Guía rápida', titulo: ['DÓNDE', 'PONER TU', 'LINK'], texto: '5 lugares donde tus clientes ya te buscan.' },
+        { tipo: 'senal', fondo: 'blanco', num: '01', titulo: ['EN TU BIO', 'DE INSTAGRAM.'], texto: 'Y di "reserva en el link de la bio" en cada post y cada historia.' },
+        { tipo: 'senal', fondo: 'negro', num: '02', titulo: ['EN TUS', 'ESTADOS.'], texto: 'Una vez por semana: "¿Quieres hora esta semana? Reserva aquí".' },
+        { tipo: 'senal', fondo: 'blanco', num: '03', titulo: ['EN WHATSAPP', 'BUSINESS.'], texto: 'En tu perfil y en la respuesta automática: "Reserva tu hora aquí".' },
+        { tipo: 'senal', fondo: 'negro', num: '04', titulo: ['EN GOOGLE', 'MAPS.'], texto: 'En tu Perfil de Empresa de Google, como enlace para reservar.' },
+        { tipo: 'senal', fondo: 'blanco', num: '05', titulo: ['EN UN QR', 'EN TU LOCAL.'], texto: 'En la caja o el espejo: el cliente reserva la próxima antes de irse.' },
+        cta(),
+      ],
+    },
+    {
+      id: 13,
+      nombre: 'Tu negocio se ve más profesional',
+      laminas: [
+        { tipo: 'portada', fondo: 'blanco', kicker: 'Imagen', titulo: ['TU NEGOCIO', 'SE VE MÁS', 'PRO.'], texto: 'La primera impresión empieza en tu link.' },
+        { tipo: 'telefono', fondo: 'negro', kicker: 'Tu página', titulo: ['CON TU', 'NOMBRE', 'Y TU MARCA'], texto: 'Tu logo, tus colores, tus servicios y precios.', img: F + '1-inicio.jpg' },
+        { tipo: 'grilla', fondo: 'blanco', titulo: ['8 ESTILOS', 'PARA ELEGIR'], imgs: ['elegante', 'moderno', 'audaz', 'minimal'].map((e) => P + e + '.jpg'), nombres: ['Elegante', 'Moderno', 'Audaz', 'Minimal'] },
+        {
+          tipo: 'comparar', fondo: 'negro', titulo: ['LO QUE VE', 'TU CLIENTE'],
+          sin: ['"Escríbeme por DM"', 'Precios por preguntar', 'Espera tu respuesta'],
+          con: ['Un link con tu nombre', 'Servicios y precios claros', 'Reserva en un minuto'],
+        },
+        {
+          tipo: 'whatsapp', fondo: 'blanco', kicker: 'Hasta el mensaje', titulo: ['CON TU', 'TONO'],
+          mensaje: '✨ ¡Nueva reserva en Barbería Norte! ✨\n\n👤 Carlos Méndez\n🗓️ Jueves 12 de noviembre\n⏰ 4:00 p. m. (45 min)\n💫 • Corte y barba\n📍 En Sede Centro',
+          texto: 'Cálido, formal o breve: tú eliges.',
+        },
+        cta(),
+      ],
+    },
+    {
+      id: 14,
+      nombre: 'Checklist: activa tu agenda en 1 día',
+      laminas: [
+        { tipo: 'portada', fondo: 'negro', kicker: 'Checklist', titulo: ['TU AGENDA', 'ONLINE', 'EN 1 DÍA'], texto: 'Guárdalo y ve marcando.' },
+        {
+          tipo: 'lista', fondo: 'blanco', titulo: ['ANTES DE', 'EMPEZAR'], marca: '□',
+          items: ['Lista de servicios con precio', 'Duración de cada uno', 'Tu horario de atención', 'Tu logo (si tienes)'],
+        },
+        {
+          tipo: 'lista', fondo: 'negro', titulo: ['EN BOOKEAA'], marca: '□',
+          items: ['Conecta tu Google Calendar', 'Elige tu estilo y tus colores', 'Sedes o domicilio, si aplica', 'Tu mensaje de WhatsApp'],
+        },
+        {
+          tipo: 'lista', fondo: 'blanco', titulo: ['Y A', 'COMPARTIR'], marca: '□',
+          items: ['Link en tu bio', 'Historia anunciando que ya reservas online', 'Estado de WhatsApp', 'QR en tu local'],
+        },
+        {
+          tipo: 'texto', fondo: 'negro', kicker: 'No lo haces solo', titulo: ['TE AYUDAMOS', 'A DEJARLO', 'LISTO.'],
+          texto: 'Escríbenos y lo configuramos contigo por WhatsApp.',
+        },
+        cta(),
+      ],
+    },
+    {
+      id: 15,
+      nombre: 'Cierre de mes: 1 mes gratis',
+      laminas: [
+        { tipo: 'portada', fondo: 'blanco', kicker: 'Diciembre llega', titulo: ['EMPIEZA', 'DICIEMBRE', 'CON AGENDA.'], clase: 'grande', texto: 'Tu temporada más movida, sin libreta.' },
+        {
+          tipo: 'lista', fondo: 'negro', titulo: ['LO QUE VIMOS', 'ESTE MES'], marca: '✓',
+          items: ['Menos tiempo respondiendo chats', 'Menos citas cruzadas', 'Clientes que sí llegan', 'Reservas mientras duermes', 'Un negocio que se ve pro'],
+        },
+        { tipo: 'precio', fondo: 'blanco', monto: '$0', detalle: 'EL PRIMER MES', items: ['Todo incluido desde el día uno', 'Te ayudamos a configurarlo', 'Sin tarjeta, sin permanencia'] },
+        { tipo: 'precio', fondo: 'negro', monto: '$15', detalle: 'AL MES · DESPUÉS', items: ['Reservas ilimitadas', 'Google Calendar', 'Tu página con tu marca', 'Soporte por WhatsApp'] },
+        cta(['ESCRÍBENOS', 'HOY.']),
       ],
     },
   ]

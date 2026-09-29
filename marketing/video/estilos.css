@@ -133,3 +133,24 @@ body { font-family: 'Barlow', sans-serif; -webkit-font-smoothing: antialiased; }
 .tachado { position: relative; display: inline-block; }
 .tachado::after { content: ''; position: absolute; left: -4%; right: -4%; top: 47%; height: 0.09em; background: currentColor;
   transform: scaleX(var(--tacha, 0)); transform-origin: left; }
+
+/* Noviembre: notificaciones, reloj y agenda del día */
+.notif {
+  width: 900px; border-radius: 46px; padding: 30px 36px; display: grid; grid-template-columns: 84px 1fr auto; gap: 24px; align-items: center;
+  background: #f1f1ef; color: var(--coal); box-shadow: 0 30px 60px -30px rgb(15 15 14 / 0.45);
+}
+.negra .notif { background: #262624; color: var(--paper); box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.7); }
+.notif .ico { width: 84px; height: 84px; border-radius: 22px; background: var(--coal); display: grid; place-items: center; }
+.negra .notif .ico { background: var(--paper); }
+.notif .ico svg { width: 56px; height: 56px; }
+.notif b { display: block; font: 600 38px/1.2 'Barlow', sans-serif; }
+.notif span { display: block; font-size: 34px; line-height: 1.3; opacity: 0.75; }
+.notif time { align-self: start; font-size: 30px; opacity: 0.55; }
+.reloj { font: 800 330px/0.8 'Barlow Condensed', sans-serif; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.etiqueta { display: inline-block; font: 800 44px/1 'Barlow Condensed', sans-serif; letter-spacing: 0.08em; text-transform: uppercase; padding: 14px 26px; border: 6px solid currentColor; border-radius: 999px; }
+.dia-v { width: 900px; border-top: 4px solid currentColor; }
+.dia-v p { display: flex; gap: 40px; align-items: baseline; padding: 30px 0; border-bottom: 3px solid rgb(127 127 127 / 0.35); font-size: 42px; }
+.dia-v p b { font: 800 64px/1 'Barlow Condensed', sans-serif; width: 170px; flex: none; }
+.badge { display: inline-grid; place-items: center; width: 250px; height: 250px; border-radius: 50%; background: var(--paper); color: var(--coal);
+  font: 800 150px/1 'Barlow Condensed', sans-serif; }
+.blanca .badge { background: var(--coal); color: var(--paper); }

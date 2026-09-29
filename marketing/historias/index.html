@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>bookeaa · historias</title>
+<link rel="stylesheet" href="../video/estilos.css" />
+<style>
+  body { background: #222; }
+  body.preview { padding: 30px; display: flex; flex-wrap: wrap; gap: 20px; }
+  body.preview .historia { transform: scale(0.25); transform-origin: top left; margin: 0 -810px -1440px 0; flex: none; }
+
+  /* Zonas seguras: arriba ~250 px (barra de progreso y perfil) y abajo ~300 px (responder). */
+  .historia { position: relative; width: 1080px; height: 1920px; overflow: hidden; padding: 270px 90px 0; }
+  .historia.blanca { background: var(--paper); color: var(--coal); }
+  .historia.negra { background: var(--coal); color: var(--paper); }
+  .historia .kicker { font-size: 38px; margin-bottom: 30px; }
+  .historia .grande { font-size: 132px; }
+  .historia .texto { font-size: 44px; margin-top: 40px; }
+  .historia .regla { margin-top: 40px; }
+  .historia .cruces { top: 150px; right: 60px; }
+  .marca { position: absolute; left: 90px; bottom: 310px; display: flex; align-items: center; gap: 14px; font: 800 50px/1 'Barlow Condensed', sans-serif; }
+  .marca svg { width: 52px; height: 52px; }
+  .fecha { position: absolute; right: 90px; bottom: 318px; font: 700 32px/1 'Barlow Condensed', sans-serif; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.5; }
+
+  /* Zona del sticker: queda vacía para agregarlo en Instagram; solo una indicación arriba. */
+  .zona { position: absolute; left: 90px; right: 90px; top: 1060px; height: 470px; display: flex; flex-direction: column; align-items: center; }
+  .zona .flecha { font: 800 40px/1 'Barlow Condensed', sans-serif; letter-spacing: 0.14em; text-transform: uppercase; display: flex; align-items: center; gap: 18px; }
+  .zona .flecha::before, .zona .flecha::after { content: ''; width: 90px; height: 4px; background: currentColor; }
+  .guia .zona { outline: 4px dashed rgb(127 127 127 / 0.6); outline-offset: 10px; border-radius: 40px; }
+  .guia .zona::after { content: attr(data-sticker); margin-top: auto; margin-bottom: 30px; font: 600 34px/1.2 system-ui; opacity: 0.6; text-align: center; }
+
+  .portada-reel { position: absolute; left: 50%; top: 960px; width: 470px; transform: translateX(-50%) rotate(-3deg); border-radius: 46px; overflow: hidden; border: 10px solid currentColor; box-shadow: 0 40px 80px rgb(0 0 0 / 0.35); }
+  .portada-reel img { display: block; width: 100%; }
+  .portada-reel::after { content: '▶'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 110px; color: #fff; text-shadow: 0 6px 30px rgb(0 0 0 / 0.5); }
+  .toca { position: absolute; left: 0; right: 0; bottom: 360px; text-align: center; font: 800 44px/1 'Barlow Condensed', sans-serif; letter-spacing: 0.12em; text-transform: uppercase; }
+  .respuesta .caja { position: absolute; left: 90px; right: 90px; top: 700px; bottom: 420px; border: 4px solid currentColor; border-radius: 50px; opacity: 0.35; }
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<script src="../video/motor.js"></script>
+<script src="historias.js"></script>
+<script>
+  const { h } = Motor
+  const logoSvg = (claro) => {
+    const fg = claro ? '#ffffff' : '#0f0f0e', bg = claro ? '#0f0f0e' : '#ffffff'
+    return `<svg viewBox="0 0 32 32"><rect x="2" y="4" width="28" height="26" rx="7" fill="${fg}"/><path d="M10 2.5v5M22 2.5v5" stroke="${fg}" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="${bg}" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>`
+  }
+  const titulo = (lineas) => h('div', { class: 'grande', html: lineas.join('<br>') })
+  const INDICA = { encuesta: 'Vota aquí', pregunta: 'Responde aquí', quiz: 'Adivina', slider: 'Desliza', cuenta: 'Activa el recordatorio', tip: '' }
+
+  function historia(s) {
+    const negra = s.fondo === 'negro'
+    const el = h('div', { class: `historia ${negra ? 'negra' : 'blanca'} ${s.tipo}`, 'data-id': s.id })
+    el.append(h('p', { class: 'kicker', text: s.kicker }))
+    const t = titulo(s.titulo)
+    el.append(s.tipo === 'nuevo' || s.tipo === 'respuesta' ? t : Motor.esquinas(t, negra))
+    if (s.texto) el.append(h('i', { class: 'regla' }), h('p', { class: 'texto', text: s.texto }))
+    if (s.tipo === 'nuevo') {
+      el.append(h('div', { class: 'portada-reel' }, h('img', { src: s.img })), h('p', { class: 'toca', text: 'Ya en el feed · míralo' }))
+    } else if (s.tipo === 'respuesta') {
+      el.append(h('div', { class: 'caja' }))
+    } else if (s.tipo !== 'tip') {
+      el.append(h('div', { class: 'zona', 'data-sticker': 'Sticker: ' + s.sticker.tipo }, h('span', { class: 'flecha', text: INDICA[s.tipo] })))
+      el.append(Motor.cruces(negra))
+    }
+    el.append(h('div', { class: 'marca', html: logoSvg(negra) + 'bookeaa' }))
+    return el
+  }
+
+  // ?s=3 dibuja una sola historia (para el render); &guia=1 marca la zona del sticker.
+  const q = new URLSearchParams(location.search)
+  const raiz = document.getElementById('raiz')
+  if (q.has('guia')) document.body.classList.add('guia')
+  if (q.has('s')) raiz.appendChild(historia(HISTORIAS.find((s) => s.id === Number(q.get('s')))))
+  else {
+    document.body.classList.add('preview', 'guia')
+    HISTORIAS.forEach((s) => raiz.appendChild(historia(s)))
+  }
+  window.listo = Promise.all([document.fonts.ready, ...[...document.images].map((img) => img.decode().catch(() => {}))])
+</script>
+</body>
+</html>

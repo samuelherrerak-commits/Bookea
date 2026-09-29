@@ -47,7 +47,21 @@
    * Título grande en líneas que suben desde abajo, una tras otra (máscara por línea).
    * Devuelve { el, update(t) }; entra en `a` y, si se pasa `sale`, se va hacia arriba.
    */
-  function lineas(textos, { a = 0, paso = 0.09, clase = 'mega', sale = null, estilo = {} } = {}) {
+  // ---------- Sonido ----------
+  // Mientras una escena se arma, sus efectos se anotan aquí con tiempo LOCAL; montar()
+  // los pasa a tiempo absoluto. render-video.mjs los lee (window.cues) y genera el audio.
+  let registro = null
+  /** Anota un efecto de sonido: tipo = tecla | whoosh | desliza | golpe | pop | texto | ding | check | final. */
+  function sonido(t, tipo, extra = {}) {
+    if (registro) registro.push({ t, tipo, ...extra })
+  }
+  /** Teclas para un texto que se escribe entre a y a+d (una por carácter, con algo de azar). */
+  function teclear(a, d, caracteres) {
+    for (let i = 0; i < caracteres; i++) sonido(a + (d * i) / caracteres + ((i * 7919) % 13) / 1000, 'tecla')
+  }
+
+  function lineas(textos, { a = 0, paso = 0.09, clase = 'mega', sale = null, estilo = {}, mudo = false } = {}) {
+    if (!mudo) sonido(a + 0.05, 'texto')
     const inner = textos.map((txt) => h('span', { class: 'linea-in', html: txt }))
     const el = h('div', { class: clase, style: estilo }, inner.map((i) => h('span', { class: 'linea' }, i)))
     return {
@@ -141,8 +155,10 @@
     const escenas = video.escenas.map((esc) => {
       const cont = h('div', { class: 'escena ' + (esc.fondo === 'negro' ? 'negra' : 'blanca') })
       stage.appendChild(cont)
+      registro = []
       const update = esc.build(cont)
-      const item = { ...esc, cont, update, inicio }
+      const item = { ...esc, cont, update, inicio, sonidos: registro }
+      registro = null
       inicio += esc.dur
       return item
     })
@@ -197,8 +213,21 @@
       prog.firstChild.style.transform = `scaleX(${T / duracion})`
     }
 
-    return { seek, duracion }
+    /** Todos los efectos en tiempo absoluto: los de cada escena y los de las transiciones. */
+    function cues() {
+      const lista = []
+      escenas.forEach((e, i) => {
+        e.sonidos.forEach((c) => lista.push({ ...c, t: e.inicio + c.t }))
+        if (i === 0) return
+        const tipo = e.entrada || 'ola'
+        if (tipo === 'ola' || tipo === 'lado') lista.push({ t: e.inicio - TRANS - 0.05, tipo: 'whoosh' })
+        if (tipo === 'persiana') lista.push({ t: e.inicio - 0.06, tipo: 'golpe' })
+      })
+      return lista.filter((c) => c.t >= 0 && c.t < duracion).sort((a, b) => a.t - b.t)
+    }
+
+    return { seek, duracion, cues }
   }
 
-  window.Motor = { W, H, clamp, lerp, p, ease, tw, h, lineas, aparece, telefono, esquinas, cruces, eventoCalendario, burbuja, montar }
+  window.Motor = { sonido, teclear, W, H, clamp, lerp, p, ease, tw, h, lineas, aparece, telefono, esquinas, cruces, eventoCalendario, burbuja, montar }
 })()

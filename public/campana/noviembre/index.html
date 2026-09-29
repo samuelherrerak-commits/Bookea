@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<!-- Página interna de la campaña: accesible con el enlace, pero fuera de los buscadores. -->
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" type="image/svg+xml" href="/bookeaa.svg" />
+<title>Noviembre bookeaa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700;800&display=swap" />
+<style>
+  /* Una columna de lectura; videos y láminas en bloques anchos. Blanco y negro como la marca. */
+  :root {
+    --bg: #ffffff;
+    --fg: #0f0f0e;
+    --muted: #5b5b57;
+    --line: #e3e3df;
+    --surface: #f4f4f2;
+    --inv-bg: #0f0f0e;
+    --inv-fg: #ffffff;
+    --ok: #1f7a4d;
+    --display: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+    --body: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #0f0f0e; --fg: #f4f4f2; --muted: #a3a39e; --line: #2c2c2a; --surface: #1a1a19;
+      --inv-bg: #f4f4f2; --inv-fg: #0f0f0e; --ok: #5cc98f; color-scheme: dark;
+    }
+  }
+  :root[data-theme='dark'] {
+    --bg: #0f0f0e; --fg: #f4f4f2; --muted: #a3a39e; --line: #2c2c2a; --surface: #1a1a19;
+    --inv-bg: #f4f4f2; --inv-fg: #0f0f0e; --ok: #5cc98f; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font: 17px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 90px; }
+  h1, h2, h3, .cond { font-family: var(--display); text-transform: uppercase; letter-spacing: -0.005em; text-wrap: balance; margin: 0; }
+  h1 { font-weight: 800; font-size: clamp(44px, 10vw, 118px); line-height: 0.88; overflow-wrap: break-word; }
+  h2 { font-weight: 800; font-size: clamp(38px, 6vw, 60px); line-height: 0.92; }
+  h3 { font-weight: 700; font-size: 28px; line-height: 1; }
+  p { margin: 0; max-width: 66ch; }
+  .kicker { font: 600 14px/1 var(--display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .regla { display: block; width: 44px; height: 4px; background: var(--fg); }
+  .muted { color: var(--muted); }
+  section { display: flex; flex-direction: column; gap: 22px; padding-top: 70px; }
+  a { color: inherit; }
+
+  /* Portada */
+  header { display: flex; flex-direction: column; gap: 22px; }
+  .marca { display: flex; align-items: center; gap: 10px; font: 800 30px/1 var(--display); }
+  .marca svg { width: 30px; height: 30px; }
+  .resumen { display: flex; flex-wrap: wrap; gap: 10px 26px; font: 700 20px/1.2 var(--display); text-transform: uppercase; letter-spacing: 0.04em; }
+  .resumen span { display: inline-flex; gap: 8px; align-items: baseline; }
+  .resumen b { font-size: 34px; }
+  .lead { font-size: 21px; line-height: 1.45; }
+
+  /* Bloques */
+  .dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .caja { border: 2px solid var(--line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .caja.inv { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+  .caja.inv .kicker { color: inherit; opacity: 0.65; }
+  ul.lista { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  ul.lista li { display: flex; gap: 10px; }
+  ul.lista li::before { content: '→'; font-weight: 700; }
+
+  /* Calendario */
+  .tabla { overflow-x: auto; border: 2px solid var(--line); border-radius: 14px; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 700 14px/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); background: var(--surface); }
+  tr:last-child td { border-bottom: 0; }
+  td.sem { font: 800 18px/1.1 var(--display); text-transform: uppercase; }
+  .tipo { display: inline-block; font: 700 12px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 8px; border-radius: 99px; border: 1.5px solid var(--fg); white-space: nowrap; }
+  .tipo.video { background: var(--fg); color: var(--bg); }
+
+  /* Videos */
+  .video { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 28px; padding-block: 28px; border-top: 2px solid var(--line); }
+  .video video { width: 100%; max-width: 100%; aspect-ratio: 9 / 16; border-radius: 18px; background: #0f0f0e; display: block; }
+  .video .info { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font: 600 15px/1.3 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  ol.guion { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-variant-numeric: tabular-nums; }
+  ol.guion li { display: grid; grid-template-columns: 76px 1fr; gap: 10px; }
+  ol.guion b { font: 700 16px/1.5 var(--display); color: var(--muted); }
+  @media (max-width: 700px) { .video { grid-template-columns: 1fr; } .video video { max-width: 320px; } }
+
+  /* Texto para copiar */
+  .copia { background: var(--surface); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .copia pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 15.5px/1.5 var(--body); }
+  .copia .pie { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  button.copiar {
+    font: 700 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; background: var(--fg); color: var(--bg);
+    border: 0; border-radius: 99px; padding: 10px 16px; cursor: pointer; transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  button.copiar:active { transform: scale(0.97); }
+  button.copiar:focus-visible, a:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+  .hecho { color: var(--ok); font-weight: 600; font-size: 14px; }
+
+  /* Carruseles */
+  .carrusel { padding-block: 28px; border-top: 2px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+  .tira { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
+  .tira img { width: 216px; max-width: 70vw; height: auto; aspect-ratio: 4 / 5; border-radius: 10px; flex: none; scroll-snap-align: start; border: 1px solid var(--line); }
+
+  a.descargar {
+    display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; text-decoration: none;
+    font: 700 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase;
+    border: 2px solid var(--fg); border-radius: 99px; padding: 10px 16px; transition: background-color 150ms, color 150ms;
+  }
+  a.descargar:hover { background: var(--fg); color: var(--bg); }
+  .descargas { display: flex; flex-wrap: wrap; gap: 10px; }
+  footer { padding-top: 70px; color: var(--muted); font-size: 15px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  /* Navegación entre meses */
+  nav.meses { display: flex; gap: 8px; flex-wrap: wrap; }
+  nav.meses a { font: 700 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; padding: 9px 14px; border-radius: 99px; border: 2px solid var(--line); }
+  nav.meses a[aria-current] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .tipo.historia { border-style: dashed; }
+
+  /* Historias */
+  .semana { padding-block: 28px; border-top: 2px solid var(--line); display: flex; flex-direction: column; gap: 16px; }
+  .historias { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 18px; }
+  .historia { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .historia img { width: 100%; height: auto; aspect-ratio: 9 / 16; border-radius: 14px; border: 1px solid var(--line); display: block; background: var(--surface); }
+  .historia .dia { font: 700 15px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .sticker { background: var(--surface); border-radius: 10px; padding: 10px 12px; font-size: 14.5px; line-height: 1.4; display: flex; flex-direction: column; gap: 4px; }
+  .sticker b { font: 700 13px/1.2 var(--display); letter-spacing: 0.1em; text-transform: uppercase; }
+  .historia a { font-size: 14px; }
+</style></head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="marca" aria-label="bookeaa">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="28" height="26" rx="7" fill="currentColor"/><path d="M10 2.5v5M22 2.5v5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="var(--bg)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>
+      bookeaa
+    </div>
+    <nav class="meses" aria-label="Campañas"><a href="/campana/index.html">Octubre · Lanzamiento</a><a href="/campana/noviembre/index.html" aria-current="page">Noviembre · Tu negocio</a></nav>
+    <p class="kicker">Instagram · 2 al 27 de noviembre de 2026</p>
+    <h1>Cómo mejora tu negocio</h1>
+    <span class="regla"></span>
+    <div class="resumen">
+      <span><b>4</b> reels</span><span><b>8</b> carruseles</span><span><b>20</b> historias</span><span><b>4</b> semanas</span>
+    </div>
+    <div class="descargas">
+      <a class="descargar" href="#reels">Ver los reels ↓</a>
+      <a class="descargar" href="/campana/media/bookeaa-carruseles-noviembre.zip" download>Descargar los 8 carruseles (ZIP)</a>
+      <a class="descargar" href="/campana/media/bookeaa-historias-noviembre.zip" download>Descargar las 20 historias (ZIP)</a>
+    </div>
+    <p class="lead">Octubre presentó bookeaa. Noviembre muestra lo que cambia en el día a día: menos tiempo en el chat, menos citas cruzadas, clientes que sí llegan y reservas a cualquier hora. Cada semana tiene un tema, con un reel, dos carruseles y una historia por día hábil con sticker para conversar.</p>
+  </header>
+
+  <section id="estrategia" aria-labelledby="t-estrategia">
+    <p class="kicker">Estrategia</p>
+    <h2 id="t-estrategia">De conocer a querer</h2>
+    <div class="dos">
+      <div class="caja">
+        <p class="kicker">Público</p>
+        <p>El mismo de octubre (negocios con cita que agendan por chat o libreta), más quienes ya siguen la cuenta y todavía no escriben.</p>
+      </div>
+      <div class="caja">
+        <p class="kicker">Objetivo</p>
+        <p>Conversación. Respuestas en historias, comentarios con "su cuenta" y chats de WhatsApp. Meta: 30 negocios en prueba gratis sumando octubre y noviembre.</p>
+      </div>
+      <div class="caja inv">
+        <p class="kicker">Idea central</p>
+        <h3>Tu negocio, sin el chat de por medio.</h3>
+        <p>Lo que ganas con bookeaa: tiempo, orden, clientes que llegan y una imagen profesional.</p>
+      </div>
+    </div>
+    <div class="dos">
+      <div class="caja">
+        <p class="kicker">Temas por semana</p>
+        <ul class="lista">
+          <li>Semana 1 · Así cambia tu día</li>
+          <li>Semana 2 · Tiempo y clientes que faltan</li>
+          <li>Semana 3 · Tu link y tu imagen</li>
+          <li>Semana 4 · Activa tu agenda antes de diciembre</li>
+        </ul>
+      </div>
+      <div class="caja">
+        <p class="kicker">Reglas</p>
+        <ul class="lista">
+          <li>Los números del reel 2 y el carrusel 9 son un ejemplo: dilo así, no como estadística.</li>
+          <li>Responde en la primera hora cada respuesta de historia y cada comentario.</li>
+          <li>Las respuestas a la caja de preguntas del lunes 23 se contestan el martes 24 con la historia 17.</li>
+          <li>Cada historia con sticker lleva también el sticker de enlace a WhatsApp.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="calendario" aria-labelledby="t-calendario">
+    <p class="kicker">Calendario</p>
+    <h2 id="t-calendario">Todo el mes</h2>
+    <p class="muted">Posts los lunes, miércoles y viernes a las 7:00 p. m. Historias todos los días hábiles a las 12:00 p. m.; los días de post, además, compártelo en historias a las 7:30 p. m.</p>
+    <div class="tabla">
+      <table>
+        <thead><tr><th>Semana</th><th>Fecha</th><th>Post</th><th>Historia del día</th></tr></thead>
+        <tbody id="tabla-calendario"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="reels" aria-labelledby="t-reels">
+    <p class="kicker">Reels · 1080×1920 · 30 fps · con sonido</p>
+    <h2 id="t-reels">Los 4 videos</h2>
+    <p class="muted">Traen su propia música (original, sin derechos de autor) y efectos sincronizados: teclado, transiciones, notificaciones. Súbelos con su audio; si prefieres un audio en tendencia, baja el volumen del original al 0 % en Instagram.</p>
+    <div id="lista-videos"></div>
+  </section>
+
+  <section id="carruseles" aria-labelledby="t-carruseles">
+    <p class="kicker">Carruseles · 1080×1350 (4:5)</p>
+    <h2 id="t-carruseles">Las 8 publicaciones</h2>
+    <p class="muted">Desliza cada tira para ver las láminas. El botón descarga los originales en 1080×1350.</p>
+    <div id="lista-carruseles"></div>
+  </section>
+
+  <section id="historias" aria-labelledby="t-historias">
+    <p class="kicker">Historias · 1080×1920 (9:16)</p>
+    <h2 id="t-historias">20 historias con stickers</h2>
+    <p class="muted">Cada imagen deja libre la zona central para el sticker. Al subirla en Instagram: toca el ícono de stickers, elige el que dice abajo de cada historia, escribe el texto y colócalo en el espacio vacío. El texto de arriba y el logo quedan fuera de las zonas que tapa Instagram.</p>
+    <div id="lista-historias"></div>
+  </section>
+
+  <section id="leads" aria-labelledby="t-leads">
+    <p class="kicker">Cuando responden</p>
+    <h2 id="t-leads">Respuestas rápidas</h2>
+    <p class="muted">Para contestar respuestas de historias y comentarios sin pensar cada vez.</p>
+    <div class="dos" id="respuestas"></div>
+  </section>
+
+  <footer>
+    <p>Las piezas se generan desde el repositorio con <b>npm run marketing:videos</b>, <b>marketing:carruseles</b> y <b>marketing:historias</b>, y se copian aquí con <b>marketing:publicar</b>. Las pantallas de la app son capturas reales en modo demo.</p>
+  </footer>
+</div>
+
+<script>
+  const TAGS_BASE = '#agendaonline #reservasonline #citasonline #emprendedores #negociosvenezuela'
+
+  const VIDEOS = [
+    {
+      n: 5, titulo: 'Un día sin y con bookeaa', fecha: 'Mié 4 nov', dur: '31 s',
+      objetivo: 'Alcance. El mismo día contado dos veces: el contraste vende solo.',
+      guion: [
+        ['0:00', 'Gancho: "Dos días. Una diferencia." Mismo negocio.'],
+        ['0:03', '7:00 sin bookeaa: 14 chats sin responder, las burbujas se apilan.'],
+        ['0:07', '7:00 con bookeaa: 3 notificaciones de reservas nuevas.'],
+        ['0:10', '12:00 sin: dos eventos que se cruzan en el calendario.'],
+        ['0:14', '12:00 con: una hora, una cita. El día ordenado.'],
+        ['0:18', '21:00 sin: todavía escribiendo "Sí, mañana tengo a las 4…".'],
+        ['0:22', '21:00 con: la agenda de mañana ya llena (pantalla real).'],
+        ['0:26', 'Cierre: 1 mes gratis. Elige tu día.'],
+      ],
+      caption: 'Mismo negocio. Dos días muy distintos 👇\n\nSin bookeaa: chats sin responder a las 7 a. m., citas cruzadas al mediodía y sigues respondiendo a las 9 p. m.\n\nCon bookeaa: te despiertas con reservas nuevas, cada hora tiene una sola cita y mañana ya está armado.\n\n¿Cuál es tu día hoy? Cuéntanos 👇\n\n1 mes gratis. Link en la bio.',
+      tags: '#bookeaa #antesydespues #barberia #uñas #productividad',
+    },
+    {
+      n: 6, titulo: '¿Cuánto tiempo pierdes agendando?', fecha: 'Mié 11 nov', dur: '27 s',
+      objetivo: 'Que hagan su propia cuenta. Comentarios y guardados.',
+      guion: [
+        ['0:00', 'Gancho: "¿Cuánto tiempo pierdes agendando?"'],
+        ['0:03', 'Contador: 20 chats al día para agendar (ejemplo).'],
+        ['0:07', '× 3 minutos cada uno = 60 minutos al día.'],
+        ['0:10', '× 6 días = 6 horas a la semana, solo agendando.'],
+        ['0:14', 'Con bookeaa, tu link responde por ti (pantalla real).'],
+        ['0:19', '"Usa esas horas en lo que cobras."'],
+        ['0:22', 'Cierre: 1 mes gratis. Recupera tu tiempo.'],
+      ],
+      caption: 'Haz la cuenta conmigo 🧮\n\n20 chats al día para agendar × 3 minutos = 1 hora diaria.\n× 6 días = 6 horas a la semana respondiendo "¿tienes hora?".\n\nEs un ejemplo: haz la tuya y déjala en los comentarios 👇\n\nCon bookeaa tu link muestra tus servicios y horas libres, y tus clientes reservan solos. Esas horas vuelven a ti.\n\n1 mes gratis. Link en la bio.',
+      tags: '#bookeaa #tiempo #emprendedoras #salondebelleza #negocios',
+    },
+    {
+      n: 7, titulo: 'Clientes que sí llegan', fecha: 'Mié 18 nov', dur: '24 s',
+      objetivo: 'Dolor concreto (las inasistencias) y la función que lo resuelve.',
+      guion: [
+        ['0:00', 'Gancho: "¿Te dejan plantado?"'],
+        ['0:03', 'Por qué: se le olvidó, anotó mal la hora, nadie se lo recordó.'],
+        ['0:07', 'La cita queda en su calendario (pantalla real de confirmación).'],
+        ['0:11', 'Y su celular le avisa: notificación "en 1 hora".'],
+        ['0:15', '"Menos huecos en tu agenda."'],
+        ['0:18', 'Cierre: 1 mes gratis. Que lleguen todos.'],
+      ],
+      caption: '¿Te han dejado plantado esta semana? 😮‍💨\n\nCasi nunca es mala intención: se les olvida, anotan mal la hora o nadie se lo recuerda.\n\nCon bookeaa, al reservar tu cliente guarda la cita en su propio calendario con un toque, y su celular le avisa antes. Además le llega el detalle por WhatsApp.\n\nMenos huecos, más citas cumplidas.\n\n1 mes gratis. Link en la bio.',
+      tags: '#bookeaa #clientes #consultorio #spa #agendadecitas',
+    },
+    {
+      n: 8, titulo: 'Reservas mientras duermes', fecha: 'Mié 25 nov', dur: '21 s',
+      objetivo: 'Conversión. El beneficio más fácil de desear: la agenda abierta 24/7.',
+      guion: [
+        ['0:00', 'Gancho: "Reservas mientras duermes."'],
+        ['0:03', 'El reloj avanza: 23:04, 1:17, 6:42, y llega una reserva en cada hora.'],
+        ['0:08', 'Tu negocio abierto 24/7, sin contestar un solo mensaje (pantalla real).'],
+        ['0:12', '7:00 a. m.: tu día, ya armado.'],
+        ['0:16', 'Cierre: 1 mes gratis. Abre tu agenda.'],
+      ],
+      caption: 'Mientras duermes, tu agenda sigue abierta 🌙\n\nCon bookeaa tus clientes reservan a la hora que se acuerdan: 11 de la noche, 1 de la mañana o 6:42 antes del trabajo. Tú te levantas con el día armado.\n\nSin contestar un solo mensaje.\n\nEmpieza diciembre con tu agenda online: 1 mes gratis. Link en la bio.',
+      tags: '#bookeaa #reservas247 #barberos #uñas #emprendimiento',
+    },
+  ]
+
+  const CARRUSELES = [
+    { n: 8, titulo: 'Así cambia tu día', fecha: 'Lun 2 nov', laminas: 6,
+      caption: 'Así cambia tu día con una agenda online ☀️🌙\n\nPor la mañana: reservas nuevas en vez de chats sin responder.\nAl mediodía: una hora, una cita.\nEn la noche: mañana ya está armado.\n\nDesliza y dinos: ¿en qué parte del día estás tú? 👉', tags: '#bookeaa #antesydespues #rutina' },
+    { n: 9, titulo: '¿Cuántas horas pierdes agendando?', fecha: 'Vie 6 nov', laminas: 7,
+      caption: '¿Cuántas horas a la semana se te van agendando? 🧮\n\nEjemplo: 20 chats × 3 minutos × 6 días = 6 horas.\n\nHaz tu cuenta (chats al día × minutos por chat × días que trabajas) y déjala en los comentarios. Te leemos 👇', tags: '#bookeaa #tiempo #productividad' },
+    { n: 10, titulo: '3 errores que te hacen perder clientes', fecha: 'Lun 9 nov', laminas: 6,
+      caption: '3 errores que te hacen perder clientes (sin darte cuenta):\n\n1. Responder tarde\n2. No mostrar tus precios\n3. Solo agendar en tu horario\n\nDesliza para ver cómo resolverlos 👉 y guárdalo para después.', tags: '#bookeaa #tips #clientes' },
+    { n: 11, titulo: 'Por qué tus clientes faltan', fecha: 'Vie 13 nov', laminas: 7,
+      caption: '¿Por qué tus clientes faltan a la cita? 🤔\n\n1. Se les olvida\n2. Anotaron mal la hora\n3. Nadie les recordó\n\nCon bookeaa la cita queda en su calendario, su celular le avisa antes y el detalle le llega por WhatsApp.\n\nEtiqueta a alguien a quien le han dejado plantado 👇', tags: '#bookeaa #citas #consultorio' },
+    { n: 12, titulo: 'Dónde poner tu link de reservas', fecha: 'Lun 16 nov', laminas: 7,
+      caption: '5 lugares para poner tu link de reservas 📍\n\n1. Tu bio de Instagram\n2. Tus estados\n3. WhatsApp Business\n4. Google Maps\n5. Un QR en tu local\n\nGuárdalo para cuando tengas tu link de bookeaa ✨', tags: '#bookeaa #marketingdigital #whatsappbusiness' },
+    { n: 13, titulo: 'Tu negocio se ve más profesional', fecha: 'Vie 20 nov', laminas: 6,
+      caption: 'La primera impresión de tu negocio empieza en tu link 👀\n\nUna página con tu nombre, tu logo y tus colores. Servicios con precio. Reserva en un minuto. Y hasta el mensaje de WhatsApp con tu tono.\n\n¿Qué estilo va contigo? Te leemos 👇', tags: '#bookeaa #branding #imagenprofesional' },
+    { n: 14, titulo: 'Checklist: activa tu agenda en 1 día', fecha: 'Lun 23 nov', laminas: 6,
+      caption: 'Checklist para tener tu agenda online en 1 día ✅\n\nAntes: servicios con precio y duración, horario y logo.\nEn bookeaa: Google Calendar, estilo y colores, sedes o domicilio, mensaje de WhatsApp.\nY a compartir: bio, historia, estado y QR.\n\nGuárdalo. Y si quieres, lo hacemos contigo por WhatsApp.', tags: '#bookeaa #checklist #emprendedores' },
+    { n: 15, titulo: 'Cierre de mes: 1 mes gratis', fecha: 'Vie 27 nov', laminas: 5,
+      caption: 'Diciembre es tu temporada más movida. Empiézala con agenda 🎄\n\nLo que vimos este mes: menos tiempo en el chat, menos citas cruzadas, clientes que sí llegan, reservas mientras duermes y un negocio que se ve pro.\n\nEl primer mes es gratis, sin tarjeta. Después, $15 al mes con todo incluido.\n\nEscríbenos desde el link de la bio y lo dejamos listo contigo.', tags: '#bookeaa #diciembre #1mesgratis' },
+  ]
+
+  // Una historia por día hábil. `sticker` dice qué agregar en Instagram al subirla.
+  const HISTORIAS = [
+    [1, 'Lun 2 nov', 'Encuesta', '"¿Cómo agendas a tus clientes hoy?" · Por chat 💬 / En libreta 📓'],
+    [2, 'Mar 3 nov', 'Preguntas', 'Texto del sticker: "Escríbelo aquí 👇"'],
+    [3, 'Mié 4 nov', 'Nuevo reel', 'Comparte el reel 5 en tu historia y colócalo sobre el recuadro. Agrega el sticker de enlace a WhatsApp.'],
+    [4, 'Jue 5 nov', 'Quiz', '"¿Cuánto tiempo a la semana?" · 2 horas / 6 horas ✓ / 10 horas'],
+    [5, 'Vie 6 nov', 'Slider', 'Emoji 😩 · texto "Muévelo 👉"'],
+    [6, 'Lun 9 nov', 'Encuesta', 'Sí, seguido 😅 / A veces'],
+    [7, 'Mar 10 nov', 'Tip (sin sticker de respuesta)', 'Opcional: sticker de enlace a WhatsApp o emoji 🔥.'],
+    [8, 'Mié 11 nov', 'Nuevo reel', 'Comparte el reel 6 y colócalo sobre el recuadro.'],
+    [9, 'Jue 12 nov', 'Preguntas', 'Texto del sticker: "Dinos un número 👇"'],
+    [10, 'Vie 13 nov', 'Quiz', '"Adivina" · Mala intención / Se les olvida ✓ / No les gustó'],
+    [11, 'Lun 16 nov', 'Encuesta', 'Sí ✅ / Todavía no'],
+    [12, 'Mar 17 nov', 'Tip (sin sticker de respuesta)', 'Opcional: emoji 🙌 o enlace a WhatsApp.'],
+    [13, 'Mié 18 nov', 'Nuevo reel', 'Comparte el reel 7 y colócalo sobre el recuadro.'],
+    [14, 'Jue 19 nov', 'Slider', 'Emoji 🔥 · texto "Califícate 👉"'],
+    [15, 'Vie 20 nov', 'Encuesta', 'Elegante ✨ / Audaz ⚡'],
+    [16, 'Lun 23 nov', 'Preguntas', 'Texto del sticker: "Pregúntanos lo que quieras 👇"'],
+    [17, 'Mar 24 nov', 'Responder preguntas', 'Fondo para contestar las del lunes: en las respuestas toca "Compartir", elige esta imagen como fondo, pon la pregunta arriba del recuadro y escribe la respuesta dentro. Repite con cada pregunta.'],
+    [18, 'Mié 25 nov', 'Nuevo reel', 'Comparte el reel 8 y colócalo sobre el recuadro.'],
+    [19, 'Jue 26 nov', 'Cuenta regresiva', 'Nombre: "Diciembre" · 1 dic 2026, 12:00 a. m. Agrega también el enlace a WhatsApp.'],
+    [20, 'Vie 27 nov', 'Encuesta', '¡Sí, escríbanme! / Más adelante. A quien vote "sí", escríbele por DM ese mismo día.'],
+  ]
+
+  const RESPUESTAS = [
+    ['r-1', 'A quien vota o responde en historias', '¡Gracias por responder! 🙌 Si quieres, te enseño cómo se vería tu página de reservas con tu nombre y tus servicios. El primer mes es gratis y no necesitas tarjeta. ¿Te paso los detalles por WhatsApp?'],
+    ['r-2', 'A quien comenta su cuenta de horas', '¡Uf, son muchas horas! 😅 Con bookeaa tus clientes reservan solos desde tu link, así que esas horas vuelven a ti. Si quieres probarlo, escríbenos por WhatsApp (link en la bio) y te lo dejamos listo. El primer mes es gratis.'],
+    ['r-3', 'A quien vota "¡Sí, escríbanme!"', '¡Hola! 👋 Vi que quieres activar tu agenda. Para dejarte tu página lista necesito 4 cosas:\n1. Nombre de tu negocio y tu logo (si tienes).\n2. Tus servicios con precio y duración.\n3. Tu horario de atención.\n4. Dónde atiendes (tu local, varias sedes o a domicilio).\n\nEl primer mes es gratis y no necesitas tarjeta.'],
+  ]
+
+  const SEMANAS = [
+    ['1 · Así cambia tu día', [['Lun 2 nov', ['Carrusel 8', 'Así cambia tu día'], 1], ['Mar 3 nov', null, 2], ['Mié 4 nov', ['Reel 5', 'Un día sin y con bookeaa', true], 3], ['Jue 5 nov', null, 4], ['Vie 6 nov', ['Carrusel 9', '¿Cuántas horas pierdes agendando?'], 5]]],
+    ['2 · Tiempo y clientes', [['Lun 9 nov', ['Carrusel 10', '3 errores que te hacen perder clientes'], 6], ['Mar 10 nov', null, 7], ['Mié 11 nov', ['Reel 6', '¿Cuánto tiempo pierdes agendando?', true], 8], ['Jue 12 nov', null, 9], ['Vie 13 nov', ['Carrusel 11', 'Por qué tus clientes faltan'], 10]]],
+    ['3 · Tu link y tu imagen', [['Lun 16 nov', ['Carrusel 12', 'Dónde poner tu link de reservas'], 11], ['Mar 17 nov', null, 12], ['Mié 18 nov', ['Reel 7', 'Clientes que sí llegan', true], 13], ['Jue 19 nov', null, 14], ['Vie 20 nov', ['Carrusel 13', 'Tu negocio se ve más profesional'], 15]]],
+    ['4 · Activa tu agenda', [['Lun 23 nov', ['Carrusel 14', 'Checklist: activa tu agenda en 1 día'], 16], ['Mar 24 nov', null, 17], ['Mié 25 nov', ['Reel 8', 'Reservas mientras duermes', true], 18], ['Jue 26 nov', null, 19], ['Vie 27 nov', ['Carrusel 15', 'Cierre de mes: 1 mes gratis'], 20]]],
+  ]
+
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag)
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'text') n.textContent = v
+      else n.setAttribute(k, v)
+    }
+    kids.flat().forEach((c) => c && n.append(c))
+    return n
+  }
+
+  function bloqueCopia(id, texto) {
+    const pre = el('pre', { id, text: texto })
+    const aviso = el('span', { class: 'hecho', 'aria-live': 'polite' })
+    const btn = el('button', { class: 'copiar', type: 'button', 'data-copiar': id, text: 'Copiar texto' })
+    return el('div', { class: 'copia' }, pre, el('div', { class: 'pie' }, aviso, btn))
+  }
+
+  const cuerpo = document.getElementById('tabla-calendario')
+  SEMANAS.forEach(([sem, dias]) => dias.forEach(([fecha, post, hist], i) => {
+    const h = HISTORIAS[hist - 1]
+    cuerpo.append(el('tr', {},
+      i === 0 ? el('td', { class: 'sem', rowspan: String(dias.length), text: sem }) : null,
+      el('td', { text: fecha }),
+      el('td', {}, post ? [el('span', { class: 'tipo' + (post[2] ? ' video' : ''), text: post[0] }), ' ' + post[1]] : el('span', { class: 'muted', text: '—' })),
+      el('td', {}, el('span', { class: 'tipo historia', text: `Historia ${h[0]}` }), ' ' + h[2]),
+    ))
+  }))
+
+  const listaV = document.getElementById('lista-videos')
+  VIDEOS.forEach((v) => {
+    const video = el('video', { src: `/campana/media/video-${v.n}.mp4`, poster: `/campana/media/video-${v.n}-portada.jpg`, controls: '', playsinline: '', preload: 'none' })
+    listaV.append(el('article', { class: 'video', id: `reel-${v.n}` },
+      video,
+      el('div', { class: 'info' },
+        el('p', { class: 'kicker', text: `Reel ${v.n - 4}` }),
+        el('h3', { text: v.titulo }),
+        el('div', { class: 'meta' }, el('span', { text: v.fecha }), el('span', { text: v.dur }), el('span', { text: '9:16 · con sonido' })),
+        el('p', { text: v.objetivo }),
+        el('ol', { class: 'guion' }, v.guion.map(([t, d]) => el('li', {}, el('b', { text: t }), el('span', { text: d })))),
+        el('a', { class: 'descargar', href: `/campana/media/video-${v.n}.mp4`, download: `bookeaa-reel-${v.n}.mp4`, text: 'Descargar MP4 (1080×1920)' }),
+        bloqueCopia(`cap-v${v.n}`, `${v.caption}\n\n${v.tags} ${TAGS_BASE}`),
+      )))
+  })
+
+  const listaC = document.getElementById('lista-carruseles')
+  CARRUSELES.forEach((c) => {
+    const imgs = Array.from({ length: c.laminas }, (_, i) =>
+      el('img', { src: `/campana/media/c${c.n}/${String(i + 1).padStart(2, '0')}.jpg`, alt: `${c.titulo}, lámina ${i + 1} de ${c.laminas}`, loading: 'lazy', width: '540', height: '675' }))
+    listaC.append(el('article', { class: 'carrusel', id: `carrusel-${c.n}` },
+      el('div', { class: 'meta' }, el('span', { text: `Carrusel ${c.n}` }), el('span', { text: c.fecha }), el('span', { text: `${c.laminas} láminas` })),
+      el('h3', { text: c.titulo }),
+      el('div', { class: 'tira', tabindex: '0', 'aria-label': `Láminas de ${c.titulo}` }, imgs),
+      el('a', { class: 'descargar', href: `/campana/media/bookeaa-carrusel-${c.n}.zip`, download: '', text: `Descargar carrusel ${c.n} (ZIP, 1080×1350)` }),
+      bloqueCopia(`cap-c${c.n}`, `${c.caption}\n\n${c.tags} ${TAGS_BASE}`),
+    ))
+  })
+
+  const listaH = document.getElementById('lista-historias')
+  SEMANAS.forEach(([sem, dias]) => {
+    const tarjetas = dias.map(([, , n]) => {
+      const [id, fecha, tipo, texto] = HISTORIAS[n - 1]
+      const src = `/campana/media/historias/${String(id).padStart(2, '0')}.jpg`
+      return el('article', { class: 'historia', id: `historia-${id}` },
+        el('img', { src, alt: `Historia ${id}, ${fecha}: ${tipo}`, loading: 'lazy', width: '1080', height: '1920' }),
+        el('p', { class: 'dia', text: `${id} · ${fecha}` }),
+        el('div', { class: 'sticker' }, el('b', { text: tipo }), el('span', { text: texto })),
+        el('a', { href: src, download: `bookeaa-historia-${String(id).padStart(2, '0')}.jpg`, text: 'Descargar (1080×1920)' }),
+      )
+    })
+    listaH.append(el('div', { class: 'semana' }, el('h3', { text: `Semana ${sem}` }), el('div', { class: 'historias' }, tarjetas)))
+  })
+
+  const resp = document.getElementById('respuestas')
+  RESPUESTAS.forEach(([id, titulo, texto]) => resp.append(el('div', { class: 'caja' }, el('p', { class: 'kicker', text: titulo }), bloqueCopia(id, texto))))
+
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-copiar]')
+    if (!btn) return
+    const pre = document.getElementById(btn.dataset.copiar)
+    const aviso = btn.parentElement.querySelector('.hecho')
+    try {
+      await navigator.clipboard.writeText(pre.textContent)
+      aviso.textContent = 'Copiado'
+    } catch {
+      const r = document.createRange()
+      r.selectNodeContents(pre)
+      const sel = getSelection()
+      sel.removeAllRanges()
+      sel.addRange(r)
+      aviso.textContent = 'Texto seleccionado: cópialo con Ctrl+C'
+    }
+    setTimeout(() => (aviso.textContent = ''), 2500)
+  })
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 // Renderiza los videos de la campaña a MP4 (1080×1920, 30 fps, H.264).
 //
-//   node marketing/scripts/render-video.mjs            → los 4 videos
+//   node marketing/scripts/render-video.mjs            → los 8 videos (octubre 1-4, noviembre 5-8)
 //   node marketing/scripts/render-video.mjs 1 3        → solo el 1 y el 3
 //   node marketing/scripts/render-video.mjs 2 --cuadros 1,4.5,9   → PNG sueltos para revisar
 //
@@ -9,9 +9,10 @@
 // el PATH) y Chromium (CHROMIUM_PATH, por defecto el de /opt/pw-browsers).
 
 import { spawn } from 'node:child_process'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from 'playwright-core'
+import { generarAudio } from './audio.mjs'
 import { RAIZ, servir } from './servidor.mjs'
 
 const SALIDA = join(RAIZ, 'marketing/salida/videos')
@@ -23,7 +24,7 @@ const args = process.argv.slice(2)
 const iCuadros = args.indexOf('--cuadros')
 const cuadros = iCuadros >= 0 ? args[iCuadros + 1].split(',').map(Number) : null
 const videos = args.filter((a, i) => /^\d$/.test(a) && (iCuadros < 0 || i !== iCuadros + 1)).map(Number)
-const lista = videos.length ? videos : [1, 2, 3, 4]
+const lista = videos.length ? videos : [1, 2, 3, 4, 5, 6, 7, 8]
 
 const { url, cerrar } = await servir()
 const base = `${url}/marketing/video/index.html`
@@ -51,11 +52,21 @@ try {
     }
 
     const total = Math.round(duracion * FPS)
+    // Audio primero: los efectos salen de las marcas de cada escena (window.cues)
+    // y la música se genera con la duración exacta del video.
+    const cues = await page.evaluate(() => window.cues)
+    const wav = join(SALIDA, `.audio-${n}.wav`)
+    await generarAudio({ duracion, cues, destino: wav, semilla: 7 + n })
     const destino = join(SALIDA, `bookeaa-video-${n}.mp4`)
     const ff = spawn(FFMPEG, [
       '-y', '-loglevel', 'error',
       '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
+      '-i', wav,
+      '-map', '0:v', '-map', '1:a',
       '-c:v', 'libx264', '-preset', 'medium', '-crf', '19', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+      // Instagram normaliza cerca de -14 LUFS: se entrega ahí para que no la baje ni la suba.
+      '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11',
+      '-c:a', 'aac', '-b:a', '192k', '-shortest',
       destino,
     ], { stdio: ['pipe', 'inherit', 'inherit'] })
     const termino = new Promise((ok, mal) => ff.on('exit', (c) => (c === 0 ? ok() : mal(new Error('ffmpeg salió con ' + c)))))
@@ -68,6 +79,7 @@ try {
     }
     ff.stdin.end()
     await termino
+    await rm(wav, { force: true })
     // Portada: un cuadro del gancho, cuando el título ya está completo.
     await page.evaluate(() => window.seek(1.6))
     await stage.screenshot({ path: join(SALIDA, `bookeaa-video-${n}-portada.jpg`), type: 'jpeg', quality: 90 })
