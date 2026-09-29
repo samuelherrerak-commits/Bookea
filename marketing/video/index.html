@@ -31,6 +31,7 @@
   const player = Motor.montar(video)
   window.seek = player.seek
   window.duracion = player.duracion
+  window.cues = player.cues()
 
   // Listo = fuentes cargadas + todas las imágenes decodificadas.
   window.listo = Promise.all([

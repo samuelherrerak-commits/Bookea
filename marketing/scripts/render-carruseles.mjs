@@ -1,6 +1,6 @@
 // Renderiza los carruseles de Instagram a JPG (1080×1350).
 //
-//   node marketing/scripts/render-carruseles.mjs        → los 7
+//   node marketing/scripts/render-carruseles.mjs        → todos (1-7 octubre, 8-15 noviembre)
 //   node marketing/scripts/render-carruseles.mjs 2 5    → solo el 2 y el 5
 //
 // Deja marketing/salida/carruseles/carrusel-N/NN.jpg, listos para subir en orden.
