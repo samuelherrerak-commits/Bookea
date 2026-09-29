@@ -1,5 +1,5 @@
 /**
- * bookeaa · Configurador de la hoja de cada negocio (barra lateral).
+ * bookeaa · Configurador de la hoja de cada negocio (ventana de configuración y QR).
  *
  * Es un proyecto de Apps Script APARTE del maestro (apps-script/Code.gs): va pegado
  * en la hoja de cada negocio (Extensiones → Apps Script) junto con Sidebar.html.
@@ -12,7 +12,7 @@
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-/** Las pestañas que la barra lateral necesita; si falta alguna, pide actualizar la hoja. */
+/** Las pestañas que la ventana necesita; si falta alguna, pide actualizar la hoja. */
 const PESTANAS = ['Configuracion', 'Horarios', 'Sedes', 'Mensajes'];
 
 /** Qué claves de Configuracion puede escribir cada sección. Nada fuera de esta lista. */
@@ -95,23 +95,39 @@ const PLANTILLAS_MENSAJE = [
   },
 ];
 
-// ---------- Menú y barra lateral ----------
+// ---------- Menú y ventana ----------
 
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('bookeaa')
     .addItem('Configurar mi página', 'abrirConfigurador')
+    .addItem('Generar código QR', 'abrirQr')
     .addToUi();
 }
 
 function abrirConfigurador() {
-  const html = HtmlService.createHtmlOutputFromFile('Sidebar').setTitle('bookeaa · Configurar mi página');
-  SpreadsheetApp.getUi().showSidebar(html);
+  abrirVentana_('marca');
+}
+
+function abrirQr() {
+  abrirVentana_('qr');
+}
+
+/**
+ * La configuración se abre como ventana grande dentro de la hoja (antes era una
+ * barra lateral angosta). Si la pantalla es más chica, Sheets la achica sola.
+ * `inicio` es la sección con la que abre.
+ */
+function abrirVentana_(inicio) {
+  const plantilla = HtmlService.createTemplateFromFile('Sidebar');
+  plantilla.inicio = inicio;
+  const html = plantilla.evaluate().setWidth(1200).setHeight(780);
+  SpreadsheetApp.getUi().showModalDialog(html, 'bookeaa · Mi página');
 }
 
 // ---------- Lectura ----------
 
-/** Todo lo que la barra lateral muestra, en una sola llamada. */
+/** Todo lo que la ventana muestra, en una sola llamada. */
 function leerTodo() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const faltan = PESTANAS.filter(function (n) { return !ss.getSheetByName(n); });
@@ -299,7 +315,7 @@ function refrescarPagina_(config) {
   }
 }
 
-/** La escribe el maestro (escribirEnlaces_). Sin ella, la barra lateral no muestra "Ver mi página". */
+/** La escribe el maestro (escribirEnlaces_). Sin ella, la ventana no muestra "Ver mi página". */
 function paginaUrl_(config) {
   const url = String(config.pagina_url || '').trim();
   return /^https?:\/\//i.test(url) ? url : '';

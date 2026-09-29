@@ -120,17 +120,25 @@ En la hoja maestra, menú **SaaS Reservas**:
 
 Después de cambiar `Code.gs`, publica una **nueva versión** de la implementación (la URL no cambia).
 
-### Barra lateral de configuración (hoja de cada negocio)
+### Ventana de configuración y código QR (hoja de cada negocio)
 
-`apps-script/cliente/` es un proyecto de Apps Script **aparte** del maestro: una barra lateral en la hoja del negocio para configurar todo sin tocar celdas (marca, estilo y colores con vista previa, lugar y sedes, domicilio, mensaje con vista previa, horario y pagos). Solo lee y escribe esa hoja; al guardar pide la página fresca (`fresh=1`) para que el cambio se vea de inmediato.
+`apps-script/cliente/` es un proyecto de Apps Script **aparte** del maestro: una ventana grande dentro de la hoja del negocio (menú a la izquierda, formulario al centro y vista previa a la derecha) para configurar todo sin tocar celdas. Tiene marca, estilo y colores con vista previa, lugar y sedes, domicilio, mensaje con vista previa, horario y pagos. Solo lee y escribe esa hoja; al guardar pide la página fresca (`fresh=1`) para que el cambio se vea de inmediato.
+
+La sección **Código QR** arma una imagen con el QR del link del negocio (`pagina_url`), con sus colores y las fuentes de su estilo:
+
+- **Formatos:** cartel de mostrador (A6, 1240×1748), historia (1080×1920), post (1080×1350), tarjeta de presentación (1050×600) y solo el código (1024×1024).
+- **Textos editables:** título, subtítulo y frase destacada, más casillas para mostrar el nombre y el link escrito.
+- **Colores:** "Mis colores", "Invertido" o "Blanco y negro". El código va siempre sobre una tarjeta blanca con módulos oscuros (contraste ≥ 4,5), para que cualquier cámara lo lea.
+- **Descargar PNG** baja la imagen en tamaño real. Si el navegador bloquea la descarga dentro de Sheets, clic derecho sobre la imagen → "Guardar imagen como".
+- La librería es `qrcode-generator` (MIT), copiada en línea en `Sidebar.html`: no depende de ningún CDN ni pide permisos extra. Un test comprueba que sea idéntica a la de npm.
 
 Instalación:
 
 1. Abre la **hoja plantilla** (menú maestro → *Ver ID plantilla*) → **Extensiones → Apps Script**.
-2. Pega `Configurador.gs` en un archivo `.gs` y crea un archivo HTML llamado **`Sidebar`** con el contenido de `Sidebar.html`. Guarda.
-3. Recarga la hoja: aparece el menú **bookeaa → Configurar mi página**. La primera vez pide permisos (la hoja y conectarse a la URL del maestro).
+2. Pega `Configurador.gs` en un archivo `.gs` y crea un archivo HTML llamado **`Sidebar`** con el contenido de `Sidebar.html` (se sigue llamando así para que en las hojas viejas baste con reemplazar el contenido). Guarda.
+3. Recarga la hoja: aparece el menú **bookeaa → Configurar mi página / Generar código QR**. La primera vez pide permisos (la hoja y conectarse a la URL del maestro).
 
-Los negocios que se creen desde entonces ya traen la barra lateral (se copia con la plantilla). En hojas **ya creadas** hay que pegarla una vez a mano (mismos pasos en su hoja) y correr antes "Actualizar un negocio" para que tengan las pestañas nuevas.
+Los negocios que se creen desde entonces ya traen la ventana (se copia con la plantilla). En hojas **ya creadas** hay que pegarla una vez a mano (mismos pasos en su hoja) y correr antes "Actualizar un negocio" para que tengan las pestañas nuevas y su `pagina_url`.
 
 ### Tasa BCV del euro
 
