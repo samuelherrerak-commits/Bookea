@@ -11,8 +11,11 @@ services:
       # nueva en Apps Script y la URL cambia, actualiza aqui.
       - key: VITE_API_URL
         value: https://script.google.com/macros/s/AKfycbzX8PIP_j_UNfQHb-nGwcEdQMGeZ7lYH4wWxLnP5G-bJwrSHQNwWBHed8XwINOMXFjG4g/exec
+      # El token NO va en el repo: se carga en Render (Environment) con el valor que
+      # da el menú "Generar token de la API" del Apps Script. sync: false = Render
+      # lo pide al crear el servicio y nunca lo pisa desde este archivo.
       - key: VITE_API_TOKEN
-        value: Bookeav1.1.1
+        sync: false
       - key: VITE_WHATSAPP
         value: "584122516390"
       # WhatsApp de bookeaa: recibe las consultas y pruebas gratis de la landing.
@@ -29,6 +32,23 @@ services:
         source: /*
         destination: /index.html
     headers:
+      # Seguridad para todo el sitio. El CSP de la app va como <meta> en index.html
+      # (lo arma vite.config.ts); acá va lo que un <meta> no puede hacer.
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
       - path: /assets/*
         name: Cache-Control
         value: public, max-age=31536000, immutable

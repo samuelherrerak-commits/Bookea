@@ -22,3 +22,25 @@ export function constanteGs<T>(fuente: string, nombre: string, deps: string[] = 
   const previas = deps.map((d) => `const ${d} = ${JSON.stringify(constanteGs(fuente, d))};`).join('\n')
   return new Function(`${previas}\n${codigo}\nreturn ${nombre};`)() as T
 }
+
+/**
+ * Saca funciones de nivel superior de un archivo de Apps Script y las devuelve
+ * listas para probar. `globales` reemplaza los servicios de Google (CacheService,
+ * Utilities…) con dobles de prueba.
+ */
+export function funcionesGs<T extends Record<string, (...args: never[]) => unknown>>(
+  fuente: string,
+  nombres: string[],
+  globales: Record<string, unknown> = {},
+): T {
+  const codigo = nombres
+    .map((nombre) => {
+      const inicio = fuente.indexOf(`function ${nombre}(`)
+      if (inicio === -1) throw new Error(`No encontré function ${nombre}`)
+      const fin = fuente.indexOf('\n}', inicio)
+      return fuente.slice(inicio, fin + 2)
+    })
+    .join('\n')
+  const claves = Object.keys(globales)
+  return new Function(...claves, `${codigo}\nreturn { ${nombres.join(', ')} };`)(...claves.map((k) => globales[k])) as T
+}

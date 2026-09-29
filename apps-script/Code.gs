@@ -11,19 +11,34 @@
  *   2. Ejecuta `setupTemplate` para crear la hoja plantilla que se clona por negocio
  *      (guarda su ID en las propiedades del script).
  *   3. Ejecuta `crearTenant(slug, nombre, email)` por cada clienta.
- *   4. Implementar > Nueva implementación > Aplicación web
+ *   4. Menú SaaS Reservas > "Generar token de la API". Copia el token que muestra
+ *      en VITE_API_TOKEN de Render y ejecuta "Actualizar todos los negocios".
+ *   5. Menú SaaS Reservas > "Actualizar la tasa cada 2 horas" (instala el disparador).
+ *   6. Implementar > Nueva implementación > Aplicación web
  *      Ejecutar como: Yo · Quién tiene acceso: Cualquier persona.
  *      Copia la URL (termina en /exec) para usarla como VITE_API_URL en el front.
  *   Cada vez que cambies este código: Implementar > Gestionar implementaciones >
  *   editar > Nueva versión (la URL se mantiene).
  */
 
-const TOKEN = 'Bookeav1.1.1';
+// El token que exige cada petición NO vive en el código: está en las propiedades
+// del script (clave api_token) y se crea con el menú "Generar token de la API".
+// Ojo: el navegador lo manda en cada petición, así que no es una contraseña; solo
+// frena bots casuales. Lo que protege de verdad son las validaciones de doPost.
+const PROPIEDAD_TOKEN = 'api_token';
 const ZONA = 'America/Caracas';
 const PAGO_MOVIL = 'Bolívares (Pago Móvil)';
 // Etiquetas conocidas. La hoja de cada negocio decide cuáles se ofrecen (config.metodos_pago).
 const METODOS_PAGO = ['Pago en la cita', 'Pago en el lugar', PAGO_MOVIL];
-const MAX_COMPROBANTE_BYTES = 6 * 1024 * 1024;
+// El front comprime el capture a ~150 KB; 3 MB deja margen sin abrir la puerta a basura.
+const MAX_COMPROBANTE_BYTES = 3 * 1024 * 1024;
+// Topes anti-spam (ver limite_). Por negocio: reservas por minuto, reservas del
+// mismo teléfono por día y consultas de cupón cada 10 minutos.
+const MAX_RESERVAS_POR_MINUTO = 30;
+const MAX_RESERVAS_POR_TELEFONO_DIA = 3;
+const MAX_CUPONES_10_MIN = 30;
+// Largo máximo de lo que escribe la clienta.
+const LARGO = { cliente: 80, telefono: 20, direccion: 200, sede: 80, cupon: 40 };
 const CARPETA_RAIZ = 'SaaS-Reservas';
 const NOMBRE_CARPETA_NEGOCIOS = 'Negocios';
 const PROPIEDAD_TEMPLATE = 'tenant_plantilla_id';
@@ -369,6 +384,9 @@ function onOpen() {
     .addSeparator()
     .addItem('Actualizar un negocio', 'promptActualizarNegocio')
     .addItem('Actualizar todos los negocios', 'promptActualizarTodos')
+    .addSeparator()
+    .addItem('Generar token de la API', 'promptGenerarToken')
+    .addItem('Actualizar la tasa cada 2 horas', 'instalarDisparadorTasa')
     .addToUi();
 }
 
@@ -390,6 +408,66 @@ function promptActualizarTodos() {
     ui.ButtonSet.OK_CANCEL);
   if (r !== ui.Button.OK) return;
   ui.alert(actualizarTodos());
+}
+
+/**
+ * Crea un token nuevo y lo guarda en las propiedades del script. El anterior vale
+ * 24 h más: en ese plazo hay que ponerlo en Render (VITE_API_TOKEN) y redesplegar,
+ * y ejecutar "Actualizar todos los negocios" para que llegue a sus barras laterales.
+ */
+function promptGenerarToken() {
+  const ui = SpreadsheetApp.getUi();
+  const r = ui.alert('Generar token de la API',
+    'El token actual seguirá funcionando 24 horas; en ese plazo pon el nuevo en Render (VITE_API_TOKEN) y redespliega. ¿Seguir?',
+    ui.ButtonSet.OK_CANCEL);
+  if (r !== ui.Button.OK) return;
+  const token = generarTokenApi();
+  ui.alert('Token nuevo',
+    token + '\n\n1. Cópialo en Render > Environment > VITE_API_TOKEN y redespliega.\n' +
+    '2. Ejecuta "Actualizar todos los negocios" para que llegue a cada barra lateral.',
+    ui.ButtonSet.OK);
+}
+
+function generarTokenApi() {
+  const props = PropertiesService.getScriptProperties();
+  const token = 'bk_' + Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').slice(0, 8);
+  // El anterior sigue valiendo 24 h: mientras Render redespliega con el nuevo, la
+  // página publicada todavía manda el viejo y no debe quedarse sin servicio.
+  const anterior = props.getProperty(PROPIEDAD_TOKEN);
+  if (anterior) {
+    props.setProperty(PROPIEDAD_TOKEN + '_anterior', anterior);
+    props.setProperty(PROPIEDAD_TOKEN + '_anterior_hasta', String(Date.now() + 24 * 60 * 60 * 1000));
+  }
+  props.setProperty(PROPIEDAD_TOKEN, token);
+  try { CacheService.getScriptCache().remove(PROPIEDAD_TOKEN); } catch (_) {}
+  return token;
+}
+
+/**
+ * Los tokens que se aceptan: el vigente y, por 24 h después de cambiarlo, el
+ * anterior. Se cachean 10 min para no leer propiedades en cada petición.
+ */
+function tokensValidos_() {
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get(PROPIEDAD_TOKEN);
+  if (hit) return JSON.parse(hit);
+  const props = PropertiesService.getScriptProperties();
+  const validos = [String(props.getProperty(PROPIEDAD_TOKEN) || '').trim()].filter(Boolean);
+  const anterior = String(props.getProperty(PROPIEDAD_TOKEN + '_anterior') || '').trim();
+  if (anterior && Number(props.getProperty(PROPIEDAD_TOKEN + '_anterior_hasta') || 0) > Date.now()) validos.push(anterior);
+  if (validos.length) cache.put(PROPIEDAD_TOKEN, JSON.stringify(validos), 10 * 60);
+  return validos;
+}
+
+/** El token vigente ('' si no se generó). Es el que se escribe en cada hoja. */
+function tokenApi_() {
+  return tokensValidos_()[0] || '';
+}
+
+/** Sin token configurado no se atiende a nadie: mejor cerrado que abierto por error. */
+function tokenValido_(recibido) {
+  const t = String(recibido || '');
+  return t.length >= 16 && tokensValidos_().indexOf(t) !== -1;
 }
 
 function promptDiagnostico() {
@@ -614,7 +692,7 @@ function actualizarTodos() {
 }
 
 /**
- * Escribe slug y api_url en la Configuracion del negocio si faltan. La barra lateral
+ * Escribe slug, api_url y api_token en la Configuracion del negocio si faltan o cambiaron. La barra lateral
  * los usa para pedir la página fresca después de guardar (fresh=1). Devuelve qué escribió.
  */
 function escribirEnlaces_(ss, slug) {
@@ -631,6 +709,13 @@ function escribirEnlaces_(ss, slug) {
   if (url && /\/exec$/.test(url) && cfg.api_url !== url) {
     setConfigKey_(cfgSheet, 'api_url', url);
     escritos.push('api_url');
+  }
+  // Token para que la barra lateral pida la página fresca. Es el mismo que ya viaja
+  // en cada petición del navegador, así que no expone nada nuevo.
+  const token = tokenApi_();
+  if (token && cfg.api_token !== token) {
+    setConfigKey_(cfgSheet, 'api_token', token);
+    escritos.push('api_token');
   }
   // Enlace público: propiedad del script "sitio_url" (ej. https://bookea.onrender.com).
   const sitio = String(PropertiesService.getScriptProperties().getProperty('sitio_url') || '').replace(/\/+$/, '');
@@ -775,16 +860,14 @@ function getCalendarioTenant_(tenant) {
 function doGet(e) {
   try {
     const p = (e && e.parameter) || {};
-    if (p.token !== TOKEN) return json_({ error: 'no_autorizado' });
-
-    if (p.action === 'directorio') return json_({ directorio: directorio_() });
+    if (!tokenValido_(p.token)) return json_({ error: 'no_autorizado' });
 
     const tenant = getTenantPorParametro_(p);
     if (!tenant) return json_({ error: 'no_tenant', mensaje: 'Este negocio no existe o está desactivado.' });
 
     // Catálogo: de la caché si se puede, antes de tocar una sola hoja.
     // fresh=1 salta la lectura pero vuelve a llenar la caché: lo usa la pantalla de
-    // agenda para ver la ocupación real sin esperar los 5 minutos de TTL.
+    // agenda para ver la ocupación real sin esperar los 15 minutos de TTL.
     // Solo el catálogo (GET sin action) se cachea; cupon y demás van directo a la hoja.
     if (!p.action && p.fresh !== '1') {
       const hit = leerCacheCatalogo_(tenant.slug);
@@ -794,7 +877,11 @@ function doGet(e) {
     const ss = openTenant_(tenant);
 
     if (p.action === 'cupon') {
-      const cupon = buscarCupon_(ss, p.codigo);
+      // Sin tope, los códigos se podrían adivinar probando miles.
+      if (limite_('cupon_' + tenant.slug, MAX_CUPONES_10_MIN, 600)) {
+        return json_({ valido: false, mensaje: 'Demasiados intentos. Espera unos minutos.' });
+      }
+      const cupon = buscarCupon_(ss, String(p.codigo || '').slice(0, LARGO.cupon));
       if (!cupon) return json_({ valido: false, mensaje: 'Este cupón no existe o ya se agotó.' });
       return json_({ valido: true, codigo: cupon.codigo, porcentaje: cupon.porcentaje, monto: cupon.monto });
     }
@@ -808,7 +895,7 @@ function doGet(e) {
       negocio: tenant.nombre,
       servicios: servicios,
       promociones: getPromociones_(ss, servicios),
-      config: config, // la lista de cupones NO se envía al navegador
+      config: configPublica_(config), // la lista de cupones NO se envía al navegador
       horarios: getHorarios_(ss, config),
       sedes: getSedes_(ss, config),
       mensajes: getMensajes_(ss),
@@ -829,10 +916,13 @@ function doGet(e) {
   }
 }
 
-function directorio_() {
-  return getTenants_()
-    .filter(tenantActivo_)
-    .map(function (t) { return { slug: t.slug, nombre: t.nombre }; });
+/** Configuracion sin las claves internas (las que usa la barra lateral). */
+function configPublica_(config) {
+  const out = {};
+  Object.keys(config).forEach(function (k) {
+    if (k !== 'api_token' && k !== 'api_url') out[k] = config[k];
+  });
+  return out;
 }
 
 // ============================================================================
@@ -846,10 +936,16 @@ function doPost(e) {
   } catch (err) {
     return json_({ error: 'datos_invalidos', mensaje: 'Solicitud inválida.' });
   }
-  if (data.token !== TOKEN) return json_({ error: 'no_autorizado' });
+  if (!tokenValido_(data.token)) return json_({ error: 'no_autorizado' });
 
   const tenant = getTenantPorParametro_(data);
   if (!tenant) return json_({ error: 'no_tenant', mensaje: 'Este negocio no existe o está desactivado.' });
+
+  // Anti-inundación, antes de esperar el lock: alguien mandando reservas en bucle
+  // no debe poder tapar la fila de todos los negocios.
+  if (limite_('post_' + tenant.slug, MAX_RESERVAS_POR_MINUTO, 60)) {
+    return json_({ error: 'servidor', mensaje: 'Hay mucha demanda en este momento. Intenta en un minuto.' });
+  }
 
   // Un solo POST a la vez. Sin esto, dos peticiones pueden pasar la comprobación de
   // disponibilidad al mismo tiempo y las dos creerse dueñas de la misma hora, o la
@@ -860,6 +956,7 @@ function doPost(e) {
     return json_({ error: 'servidor', mensaje: 'Hay mucha demanda en este momento. Intenta de nuevo.' });
   }
 
+  let hecha = null; // la reserva guardada; lo que sigue al lock se hace con esto
   try {
     const ss = openTenant_(tenant);
     const config = getConfig_(ss);
@@ -873,8 +970,8 @@ function doPost(e) {
     // afuera, sin asignar, y `orden.total` reventaba con un TypeError fuera de
     // todo try/catch: la reserva quedaba guardada y el cliente recibía un error 500
     // sin poder ni ver la fila ni el resumen de WhatsApp.
-    const cliente = String(data.cliente || '').trim();
-    const telefono = String(data.telefono || '').trim();
+    const cliente = limpiarTexto_(data.cliente, LARGO.cliente);
+    const telefono = limpiarTexto_(data.telefono, LARGO.telefono);
     const fechaCita = String(data.fechaCita || '');
     const horaCita = String(data.horaCita || '');
     const metodoPago = String(data.metodoPago || '');
@@ -882,7 +979,7 @@ function doPost(e) {
     // 'spa' era el nombre viejo de 'local': un navegador con la versión anterior en caché lo sigue mandando.
     const modalidad = data.modalidad === 'spa' ? 'local' : String(data.modalidad || '');
     // A domicilio la clienta envía su ubicación por WhatsApp; el campo es opcional.
-    const direccion = String(data.direccion || '').trim() || (data.modalidad === 'domicilio' ? 'Ubicación por WhatsApp' : '');
+    const direccion = limpiarTexto_(data.direccion, LARGO.direccion) || (data.modalidad === 'domicilio' ? 'Ubicación por WhatsApp' : '');
     const comprobante = data.comprobante && data.comprobante.base64 ? data.comprobante : null;
 
     if (cliente.length < 2 || telefono.replace(/\D/g, '').length < 10 ||
@@ -903,7 +1000,7 @@ function doPost(e) {
     const sedes = getSedes_(ss, config);
     let sede = null;
     if (modalidad === 'local') {
-      const pedida = normKey_(data.sede || '');
+      const pedida = normKey_(limpiarTexto_(data.sede, LARGO.sede));
       sede = sedes.filter(function (x) { return normKey_(x.nombre) === pedida; })[0] ||
         (sedes.length === 1 ? sedes[0] : null);
       if (!sede) return json_({ error: 'datos_invalidos', mensaje: 'Elige dónde será tu cita.' });
@@ -917,21 +1014,32 @@ function doPost(e) {
     if (comprobante && (String(comprobante.base64).length * 3) / 4 > MAX_COMPROBANTE_BYTES) {
       return json_({ error: 'datos_invalidos', mensaje: 'La imagen del capture es demasiado grande.' });
     }
+    if (comprobante && !esImagen_(bytesDe_(comprobante.base64))) {
+      return json_({ error: 'datos_invalidos', mensaje: 'El capture tiene que ser una foto o una captura de pantalla.' });
+    }
+    // Tope por teléfono: nadie reserva más de 3 veces al día en el mismo negocio.
+    // Se cuenta solo lo que se guardó (más abajo), así un "horario ocupado" no gasta cupo.
+    const claveTelefono = 'tel_' + tenant.slug + '_' + telefono.replace(/\D/g, '');
+    if (contador_(claveTelefono) >= MAX_RESERVAS_POR_TELEFONO_DIA) {
+      return json_({ error: 'datos_invalidos', mensaje: 'Ya tienes varias reservas hoy en este negocio. Escríbele por WhatsApp si necesitas otra.' });
+    }
+    const reservaIdPedida = /^[\w-]{8,64}$/.test(String(data.reservaId || '')) ? String(data.reservaId) : '';
 
     // --- Reintento de una reserva que ya se guardó ---
     // Si esta misma reservaId ya tiene fila, el cliente se quedó sin respuesta la
     // primera vez y está reintentando. Se devuelve el éxito tal cual: seguir a la
     // comprobación de disponibilidad daría "ocupado" por el evento que él mismo
     // acaba de crear, y la reserva se perdería sin dejar rastro en la hoja.
-    const previa = data.reservaId ? buscarReservaPorId_(ss, data.reservaId, fechaCita, horaCita) : null;
+    const previa = reservaIdPedida ? buscarReservaPorId_(ss, reservaIdPedida, fechaCita, horaCita) : null;
     if (previa) return json_(previa);
 
     // --- El total se recalcula aquí; no se confía en el que manda el navegador ---
-    const orden = calcularOrden_(ss, data.items, data.cupon, modalidad, config);
+    const cuponPedido = data.cupon ? String(data.cupon).slice(0, LARGO.cupon) : '';
+    const orden = calcularOrden_(ss, data.items, cuponPedido, modalidad, config);
     if (orden.lineas.length === 0 || !orden.hasBase) {
       return json_({ error: 'datos_invalidos', mensaje: 'Tu orden necesita al menos un servicio base.' });
     }
-    if (data.cupon && !orden.cupon) {
+    if (cuponPedido && !orden.cupon) {
       return json_({ error: 'cupon_invalido', mensaje: 'El cupón ya no es válido.' });
     }
 
@@ -973,7 +1081,7 @@ function doPost(e) {
     let tasa = moneda === 'BS' ? null : tasaCache_(moneda, ss);
     let totalBs = moneda === 'BS' ? orden.total : tasa ? round2_(orden.total * tasa.valor) : null;
 
-    const id = String(data.reservaId || '') || Utilities.getUuid();
+    const id = reservaIdPedida || Utilities.getUuid();
     const serviciosTexto = orden.lineas.map(function (l) { return l.nombre; }).join(', ');
 
     // === A partir de acá se escribe: capture, fila, evento ===
@@ -1064,36 +1172,117 @@ function doPost(e) {
     }
 
     limpiarCacheCatalogo_(tenant.slug); // la ocupación cambió: la próxima carga recalcula
+    sumar_(claveTelefono, 86400);
 
-    // === La reserva ya está a salvo: lo que sigue es extra ===
-    // La tasa fresca se pide con calma, cuando la cita ya no depende de esto. Ni
-    // esto ni nada posterior puede hacer que la reserva se pierda.
-    if (moneda !== 'BS') {
-      try {
-        const fresca = getTasa(moneda, ss);
-        if (fresca && (!tasa || fresca.valor !== tasa.valor)) {
-          tasa = fresca;
-          totalBs = round2_(orden.total * tasa.valor);
-          actualizarReserva_(ss, id, { Tasa_BCV: fresca.valor, Total_Bs: totalBs });
-        }
-      } catch (err) {
-        console.warn('No se pudo actualizar la tasa: ' + err);
-      }
-    }
-
-    return json_({
-      success: true,
-      id: id,
-      total: orden.total,
-      totalBs: totalBs,
-      tasa: tasa ? tasa.valor : null,
-      comprobanteUrl: comprobanteUrl || null,
-    });
+    hecha = { ss: ss, id: id, orden: orden, moneda: moneda, tasa: tasa, totalBs: totalBs, comprobanteUrl: comprobanteUrl };
   } catch (err) {
     console.error(err);
     return json_({ error: 'servidor', mensaje: 'No se pudo guardar la reserva. Intenta de nuevo.' });
   } finally {
     lock.releaseLock();
+  }
+
+  // === La reserva ya está a salvo y el lock liberado: lo que sigue es extra ===
+  // La tasa fresca se pide fuera del lock, para no hacer esperar a las reservas de
+  // los demás negocios por un sitio externo lento. Nada de esto puede perder la reserva.
+  let tasa = hecha.tasa;
+  let totalBs = hecha.totalBs;
+  if (hecha.moneda !== 'BS') {
+    try {
+      const fresca = getTasa(hecha.moneda, hecha.ss);
+      if (fresca && (!tasa || fresca.valor !== tasa.valor)) {
+        tasa = fresca;
+        totalBs = round2_(hecha.orden.total * tasa.valor);
+        actualizarReserva_(hecha.ss, hecha.id, { Tasa_BCV: fresca.valor, Total_Bs: totalBs });
+      }
+    } catch (err) {
+      console.warn('No se pudo actualizar la tasa: ' + err);
+    }
+  }
+
+  return json_({
+    success: true,
+    id: hecha.id,
+    total: hecha.orden.total,
+    totalBs: totalBs,
+    tasa: tasa ? tasa.valor : null,
+    comprobanteUrl: hecha.comprobanteUrl || null,
+  });
+}
+
+// ============================================================================
+// Seguridad: textos, imágenes y topes
+// ============================================================================
+
+/** Un renglón de texto: sin caracteres de control, espacios simples y con largo máximo. */
+function limpiarTexto_(valor, max) {
+  return String(valor == null ? '' : valor)
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max);
+}
+
+/**
+ * Lo que se escribe en una celda. Un texto que empieza con = + - @ Sheets lo toma
+ * como fórmula: alguien que reserve como "=IMPORTXML(…)" metería una fórmula en la
+ * hoja del negocio. El apóstrofo inicial lo fuerza a texto (Sheets no lo muestra).
+ */
+function paraCelda_(valor) {
+  return typeof valor === 'string' && /^[=+\-@]/.test(valor) ? "'" + valor : valor;
+}
+
+function bytesDe_(base64) {
+  try {
+    return Utilities.base64Decode(String(base64));
+  } catch (_) {
+    return [];
+  }
+}
+
+/** JPEG, PNG, WEBP o HEIC/HEIF según los primeros bytes, no según lo que diga el navegador. */
+function esImagen_(bytes) {
+  if (!bytes || bytes.length < 12) return false;
+  const b = function (i) { return bytes[i] & 0xff; }; // Apps Script da bytes con signo
+  const ascii = function (i, n) {
+    let t = '';
+    for (let k = i; k < i + n; k++) t += String.fromCharCode(b(k));
+    return t;
+  };
+  if (b(0) === 0xff && b(1) === 0xd8 && b(2) === 0xff) return true; // JPEG
+  if (b(0) === 0x89 && ascii(1, 3) === 'PNG') return true; // PNG
+  if (ascii(0, 4) === 'RIFF' && ascii(8, 4) === 'WEBP') return true; // WEBP
+  if (ascii(4, 4) === 'ftyp' && /^(heic|heix|hevc|mif1|msf1|heif)$/.test(ascii(8, 4))) return true; // HEIC
+  return false;
+}
+
+/**
+ * Tope por ventana fija de tiempo: cuenta este intento y dice si ya pasó de `max`
+ * en los últimos `seg` segundos. CacheService no es atómico, así que con mucha
+ * concurrencia puede dejar pasar uno o dos de más: para frenar abuso alcanza.
+ */
+function limite_(clave, max, seg) {
+  const ventana = clave + '_' + Math.floor(Date.now() / (seg * 1000));
+  return sumar_(ventana, seg) > max;
+}
+
+function contador_(clave) {
+  try {
+    return Number(CacheService.getScriptCache().get(clave.slice(0, 240)) || 0);
+  } catch (_) {
+    return 0;
+  }
+}
+
+/** Suma 1 al contador y lo devuelve. Si la caché falla, no bloquea a nadie. */
+function sumar_(clave, seg) {
+  try {
+    const k = clave.slice(0, 240);
+    const n = contador_(k) + 1;
+    CacheService.getScriptCache().put(k, String(n), seg);
+    return n;
+  } catch (_) {
+    return 0;
   }
 }
 
@@ -1143,14 +1332,8 @@ function getTasa(moneda, ss) {
   if (cached) return JSON.parse(cached);
 
   const props = PropertiesService.getScriptProperties();
-  // DolarApi primero: responde rápido y es el que suele funcionar. El scrape del BCV
-  // queda de respaldo porque bcv.org.ve tarda mucho y no tiene timeout configurable.
-  const tasa = tasaDolarApi_(moneda) || tasaBCV_(moneda);
-  if (tasa) {
-    props.setProperty(cacheKey + '_ultima', JSON.stringify(tasa));
-    cache.put(cacheKey, JSON.stringify(tasa), 3 * 60 * 60);
-    return tasa;
-  }
+  const tasa = buscarTasaFresca_(moneda);
+  if (tasa) return tasa;
 
   const ultima = props.getProperty(cacheKey + '_ultima');
   if (ultima) {
@@ -1160,6 +1343,7 @@ function getTasa(moneda, ss) {
     return t;
   }
 
+  if (!ss) return null;
   const manual = toNumber_(getConfig_(ss)['tasa_' + sufijo + '_manual']);
   return manual > 0 ? { valor: round2_(manual), fecha: null, fuente: 'Manual' } : null;
 }
@@ -1170,6 +1354,44 @@ function getTasa(moneda, ss) {
  * bcv.org.ve no tiene timeout configurable. La versión en fresco se pide después
  * de guardar la fila y solo para mostrarla.
  */
+/**
+ * Pide la tasa a la red y la deja en caché (3 h) y como "último valor bueno".
+ * DolarApi primero: responde rápido y es el que suele funcionar. El scrape del BCV
+ * queda de respaldo porque bcv.org.ve tarda mucho y no tiene timeout configurable.
+ */
+function buscarTasaFresca_(moneda) {
+  const cacheKey = 'tasa_' + (moneda === 'USD' ? 'usd' : 'eur');
+  const tasa = tasaDolarApi_(moneda) || tasaBCV_(moneda);
+  if (tasa) {
+    PropertiesService.getScriptProperties().setProperty(cacheKey + '_ultima', JSON.stringify(tasa));
+    CacheService.getScriptCache().put(cacheKey, JSON.stringify(tasa), 3 * 60 * 60);
+  }
+  return tasa;
+}
+
+/**
+ * Lo corre el disparador cada 2 horas: así la tasa siempre está en caché y ningún
+ * cliente espera a DolarApi o al BCV mientras carga la página.
+ */
+function refrescarTasas() {
+  ['USD', 'EUR'].forEach(function (m) {
+    try {
+      buscarTasaFresca_(m);
+    } catch (err) {
+      console.warn('No se pudo refrescar la tasa ' + m + ': ' + err);
+    }
+  });
+}
+
+/** Instala (una sola vez) el disparador de refrescarTasas. */
+function instalarDisparadorTasa() {
+  const existe = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'refrescarTasas'; });
+  if (!existe) ScriptApp.newTrigger('refrescarTasas').timeBased().everyHours(2).create();
+  refrescarTasas();
+  const msg = existe ? 'El disparador ya estaba instalado. Tasa actualizada.' : 'Listo: la tasa se actualiza sola cada 2 horas.';
+  try { SpreadsheetApp.getUi().alert(msg); } catch (_) { Logger.log(msg); }
+}
+
 function tasaCache_(moneda, ss) {
   moneda = normalizarMoneda_(moneda);
   const sufijo = moneda === 'USD' ? 'usd' : 'eur';
@@ -1253,8 +1475,9 @@ function jsonDeTexto_(texto) {
 
 // ---------- Caché del catálogo ----------
 
-/** 5 minutos: rápido en visitas repetidas y la ocupación nunca se va tan lejos. */
-const CACHE_CATALOGO_SEG = 5 * 60;
+// 15 min: cada reserva la borra, la pantalla de horarios pide fresh=1 y doPost
+// revisa choques igual. Lo que tarda en verse es un cambio hecho a mano en la hoja.
+const CACHE_CATALOGO_SEG = 15 * 60;
 /** CacheService tira excepción por encima de 100 KB por clave; cortamos antes. */
 const CACHE_MAX_BYTES = 90 * 1000;
 /** El directorio cambia muy poco: 5 min de caché sacan una lectura de hoja por petición. */
@@ -1729,7 +1952,7 @@ function descontarCupon_(ss, cupon) {
 
 function appendByHeaders_(sheet, record) {
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
-  sheet.appendRow(headers.map(function (h) { return h in record ? record[h] : ''; }));
+  sheet.appendRow(headers.map(function (h) { return h in record ? paraCelda_(record[h]) : ''; }));
 }
 
 /** Índice (base 0) de una columna por su encabezado, o -1 si no existe. */

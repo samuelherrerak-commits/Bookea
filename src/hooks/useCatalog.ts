@@ -37,7 +37,7 @@ export function useCatalog() {
 
   /**
    * Vuelve a pedir la ocupación sin sacar lo que ya se ve.
-   * `fresh` salta la caché de 5 min del servidor: entra al elegir hora, que es
+   * `fresh` salta la caché de 15 min del servidor: entra al elegir hora, que es
    * donde un cupo obsoleto sí haría daño.
    */
   const refresh = useCallback(async (options: { fresh?: boolean } = {}) => {

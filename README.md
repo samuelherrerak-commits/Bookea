@@ -44,7 +44,7 @@ Si no defines `VITE_API_URL`, la app corre en **modo demo**: usa datos de ejempl
 | Variable | Descripción |
 | --- | --- |
 | `VITE_API_URL` | URL de la aplicación web de Apps Script (termina en `/exec`). |
-| `VITE_API_TOKEN` | Token que exige el script. Debe coincidir con `const TOKEN` en `Code.gs`. |
+| `VITE_API_TOKEN` | Token que exige el script. Se genera con el menú **SaaS Reservas → Generar token de la API** y no se sube al repo. |
 | `VITE_WHATSAPP` | Número de respaldo, solo dígitos. Por defecto: `584122516390`. La clave `whatsapp` de la hoja tiene prioridad. |
 | `VITE_BOOKEAA_WHATSAPP` | WhatsApp de bookeaa al que llevan los botones de la landing. Por defecto: `584120298203`. |
 
@@ -101,7 +101,7 @@ Si no defines `VITE_API_URL`, la app corre en **modo demo**: usa datos de ejempl
 
 **Apartar la hora:** no se aparta. La hora queda bloqueada para los demás solo cuando la clienta confirma la reserva: antes de crearla, el script vuelve a comprobar el calendario y los bloqueos, y si alguien se adelantó devuelve `cupo_ocupado` y la clienta elige otra hora. La agenda se lee una vez al entrar, así que un horario ocupado puede verse libre unos segundos; la comprobación final es la que manda.
 
-**Cambiar el token:** edita `const TOKEN` en `Code.gs` y `VITE_API_TOKEN` en `.env.local` y `render.yaml`, y vuelve a implementar. Si no coinciden, todo responde `no_autorizado`.
+**Cambiar el token:** menú **SaaS Reservas → Generar token de la API** en la hoja maestra (lo guarda en las propiedades del script, clave `api_token`). Pon el mismo valor en `VITE_API_TOKEN` (en `.env.local` y en Render) y redespliega, y ejecuta **Actualizar todos los negocios** para que llegue a la barra lateral de cada hoja. Si no coinciden, todo responde `no_autorizado`. Sin token generado, el script no atiende a nadie.
 
 **Después de cambiar el código del script** entra en **Implementar → Gestionar implementaciones → ✏️ → Versión: Nueva versión → Implementar**. Si en cambio creas una implementación nueva, la URL cambia y hay que actualizarla en `render.yaml`. Los cambios en la hoja (servicios, horarios, bloqueos) se ven al instante, sin volver a implementar.
 
@@ -149,11 +149,20 @@ El monto en Bs se calcula en el servidor y se guarda en `Total_Bs` junto con la 
 - Se quitó `.setHeaders()`: ese método no existe en `ContentService` y hacía fallar toda petición autorizada. Apps Script ya envía CORS por su cuenta, y el front manda el POST como `text/plain` para evitar el preflight.
 - La lista de **cupones ya no se envía al navegador**. Se validan con `?action=cupon&codigo=…` y otra vez en el POST.
 - El **total se recalcula en el servidor** a partir de los IDs de la orden.
-- Cada negocio comprueba la disponibilidad y revisa el calendario antes de guardar, para evitar la doble reserva de un mismo cupo. **No hay lock**: se probó un `LockService` por negocio y se descartó porque `LockService` no tiene lock con clave (solo global, de usuario y del "documento actual", que en un script web no existe), y el global con 100 negocios hacía que el salón de Caracas frenara a los otros 99. Tampoco hay reservas temporales: la hora solo se ocupa al confirmar. El precio es que dos clientas pueden ver la misma hora libre y solo la primera que confirme la gana; la segunda recibe `cupo_ocupado` y vuelve a la agenda. Con varios negocios, la agenda ya se lee al entrar con `fresh=1`, así que el catálogo cacheado 5 minutos no oculta un cupo recién tomado.
+- Cada reserva comprueba la disponibilidad y revisa el calendario antes de guardar, dentro de un `LockService.getScriptLock()`. Ese lock es uno solo para todos los negocios (`LockService` no tiene lock por clave), así que las reservas se guardan de a una: cada una tarda 3–6 s, lo que da ~600 por hora, muy por encima del pico esperado. Para no alargarlo, la tasa fresca se pide **después** de soltar el lock. No hay reservas temporales: la hora solo se ocupa al confirmar, y si dos clientas eligen la misma, la segunda recibe `cupo_ocupado` y vuelve a la agenda. La agenda se lee al entrar con `fresh=1`, así que el catálogo cacheado 15 minutos no oculta un cupo recién tomado.
 - El método de pago es obligatorio también en el servidor. Pago Móvil exige referencia.
 - `Configuracion` se envía como texto (`getDisplayValues`) y las fechas se interpretan en `America/Caracas`.
 
 > El token viaja dentro del JavaScript público, así que funciona como filtro básico, no como secreto. Por eso las reglas importantes (precios, cupones, cupos) se validan en el servidor.
+
+### Seguridad del backend
+
+- **Token fuera del código:** vive en las propiedades del script (`api_token`) y en Render; ni `Code.gs`, ni `Configurador.gs`, ni `render.yaml` lo tienen escrito (un test lo comprueba).
+- **Textos limpios:** nombre, teléfono, dirección, sede y cupón se cortan a un largo máximo y pierden los caracteres de control. Lo que empieza con `= + - @` se guarda como texto, para que nadie meta una fórmula en la hoja del negocio.
+- **Topes anti-spam** (con `CacheService`, por negocio): 30 reservas por minuto, 3 reservas por teléfono al día y 30 consultas de cupón cada 10 minutos.
+- **Capture:** máximo 3 MB y se revisa por sus primeros bytes que sea JPEG, PNG, WEBP o HEIC.
+- **Configuracion pública:** el catálogo no envía `api_token` ni `api_url`. Ya no existe la acción `directorio`, que listaba todos los negocios.
+- **Sitio:** la app lleva un CSP (lo arma `vite.config.ts` con el hash del único script en línea) y Render agrega `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` y HSTS.
 
 ## Publicar en Render
 
@@ -163,10 +172,35 @@ El monto en Bs se calcula en el servidor y se guarda en `Total_Bs` junto con la 
 
 - Build command: `npm ci && npm run build`
 - Publish directory: `dist`
-- Environment: `VITE_API_URL=<URL /exec>`, `VITE_DEFAULT_SHOP=<slug>`. Opcionalmente, `VITE_API_TOKEN` y `VITE_WHATSAPP`.
+- Environment: `VITE_API_URL=<URL /exec>`, `VITE_API_TOKEN=<token del menú>`, `VITE_DEFAULT_SHOP=<slug>`. Opcionalmente, `VITE_WHATSAPP`.
 - En **Routes** agrega `/*` → `/index.html` (rewrite), o la raíz y cada `/u/<slug>` dan 404.
 
 Las variables `VITE_*` se incrustan al compilar. Si cambias alguna, haz **Manual Deploy → Clear build cache & deploy**.
+
+### Antes de publicar
+
+1. Pega el `Code.gs` nuevo en la hoja maestra (todavía sin publicar versión) y recarga la hoja. Luego **SaaS Reservas → Generar token de la API** y copia el token.
+2. En Render → **Environment**: pon ese valor en `VITE_API_TOKEN` (el Blueprint ya no lo trae) y haz **Manual Deploy → Clear build cache & deploy**.
+3. Mientras Render compila, publica una **versión nueva** de la implementación del script (la URL no cambia). Esta primera vez las páginas fallan un par de minutos, entre que publicas el script y termina el deploy: hazlo en una hora tranquila. En los cambios de token siguientes no hay corte, porque el token anterior sigue valiendo 24 h.
+4. **SaaS Reservas → Actualizar todos los negocios**, para que cada barra lateral reciba el token nuevo. Pega también el `Configurador.gs` nuevo en la hoja plantilla y en las hojas ya creadas.
+5. **SaaS Reservas → Actualizar la tasa cada 2 horas** (instala el disparador; una sola vez).
+6. Haz una reserva de prueba. Después prueba una 4.ª reserva con el mismo teléfono ese día: tiene que rechazarla.
+7. Activa la **verificación en 2 pasos** en la cuenta de Google dueña del script, en GitHub y en Render.
+8. Si pasas el repo a **privado**, revisa en Render → **Settings → Repository** que siga conectado y haz un Manual Deploy de prueba. Render sigue desplegando mientras su app de GitHub tenga acceso al repo.
+
+### Capacidad (cuenta de Gmail)
+
+Con 100 negocios de ~70 clientes que reservan cada 21 días son ~333 reservas al día. El plan de 100 GB de Google One solo da espacio: **no cambia las cuotas de Apps Script**, que dependen del tipo de cuenta.
+
+| Recurso | Uso estimado | Límite Gmail |
+| --- | --- | --- |
+| Eventos de Calendar creados | ~333/día | 5.000/día |
+| Ejecuciones de la web app | ~3–5 mil/día | sin tope diario (30 a la vez, 6 min c/u) |
+| UrlFetch (tasa) | ~24/día con el disparador | 20.000/día |
+| Disparadores | ~12 corridas cortas/día | 90 min/día |
+| Hojas | ~1.200 filas/año por negocio | 10 M de celdas |
+
+El espacio que sí crece es el de los captures de Pago Móvil en el Drive del dueño del script: ~100–250 KB cada uno (el front los comprime a 1280 px). Con la mitad de las reservas por Pago Móvil son ~0,6–1,2 GB al mes.
 
 ### Por qué el rewrite y el `VITE_DEFAULT_SHOP`
 

@@ -54,13 +54,25 @@ function toErrorCode(error: unknown): ApiErrorCode {
   return 'desconocido'
 }
 
-async function request(input: URL, init?: RequestInit): Promise<Row> {
+/**
+ * El pedido que index.html lanzó antes de que cargara la app, si es para esta misma
+ * URL. Se entrega una sola vez: una respuesta no se puede leer dos veces.
+ */
+function respuestaTemprana(url: URL): Promise<Response> | null {
+  const w = globalThis as { __catalogoTemprano?: { url: string; respuesta: Promise<Response> } }
+  const temprano = w.__catalogoTemprano
+  if (!temprano) return null
+  delete w.__catalogoTemprano
+  return temprano.url === url.toString() ? temprano.respuesta : null
+}
+
+async function request(input: URL, init?: RequestInit, temprana?: Promise<Response> | null): Promise<Row> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
   let response: Response
   try {
-    response = await fetch(input.toString(), { ...init, signal: controller.signal, redirect: 'follow' })
+    response = await (temprana ?? fetch(input.toString(), { ...init, signal: controller.signal, redirect: 'follow' }))
   } catch {
     throw new ApiError('red', 'No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.')
   } finally {
@@ -97,12 +109,22 @@ async function request(input: URL, init?: RequestInit): Promise<Row> {
 /**
  * Catálogo, promociones, configuración, tasa BCV y ocupación del calendario.
  *
- * `fresh: true` salta la caché de 5 min del servidor y le vuelve a preguntar al
+ * `fresh: true` salta la caché del servidor y le vuelve a preguntar al
  * calendario. Es lo que usa la pantalla de agenda para no mostrar cupos viejos.
+ * El primer pedido normal aprovecha el que ya lanzó index.html; si ese falló por
+ * la red, se vuelve a pedir una vez.
  */
 export async function fetchData(options: { fresh?: boolean } = {}): Promise<Catalog> {
   if (DEMO_MODE) return mockFetchData()
-  const raw = await request(apiUrl(options.fresh ? { fresh: '1' } : {}))
+  const url = apiUrl(options.fresh ? { fresh: '1' } : {})
+  const temprana = options.fresh ? null : respuestaTemprana(url)
+  let raw: Row
+  try {
+    raw = await request(url, undefined, temprana)
+  } catch (e) {
+    if (!temprana || !(e instanceof ApiError) || e.code !== 'red') throw e
+    raw = await request(url)
+  }
   writeCatalogCache(getShopSlug(), raw)
   return normalizeCatalog(raw)
 }

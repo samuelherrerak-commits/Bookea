@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CartBar } from './components/CartBar'
 import { CartSheet } from './components/CartSheet'
 import { useCatalog } from './hooks/useCatalog'
@@ -9,10 +9,17 @@ import { summarize } from './lib/pricing'
 import { applyBranding } from './lib/theme'
 import { useOrder } from './state/order'
 import type { Modalidad } from './types'
-import { AgendaView } from './views/AgendaView'
 import { CatalogView } from './views/CatalogView'
-import { PaymentView } from './views/PaymentView'
-import { SuccessView } from './views/SuccessView'
+
+// Agenda, pago y confirmación van en su propio JS: la primera pantalla (el catálogo)
+// baja menos y pinta antes. Se precargan en cuanto el catálogo está listo, así que
+// al avanzar ya están en el navegador.
+const cargarAgenda = () => import('./views/AgendaView')
+const cargarPago = () => import('./views/PaymentView')
+const cargarListo = () => import('./views/SuccessView')
+const AgendaView = lazy(() => cargarAgenda().then((m) => ({ default: m.AgendaView })))
+const PaymentView = lazy(() => cargarPago().then((m) => ({ default: m.PaymentView })))
+const SuccessView = lazy(() => cargarListo().then((m) => ({ default: m.SuccessView })))
 
 type View = 'catalogo' | 'agenda' | 'pago' | 'listo'
 const STEP: Record<View, number> = { catalogo: 0, agenda: 1, pago: 2, listo: 3 }
@@ -21,6 +28,17 @@ const EMPTY_CATALOG = { servicios: [], promociones: [], tasa: null }
 
 export default function App() {
   const { status, catalog, error, retry, refresh } = useCatalog()
+
+  // Con el catálogo en pantalla, se bajan los pasos siguientes sin apuro.
+  useEffect(() => {
+    if (status !== 'ready') return
+    const t = setTimeout(() => {
+      void cargarAgenda()
+      void cargarPago()
+      void cargarListo()
+    }, 800)
+    return () => clearTimeout(t)
+  }, [status])
   const { state, dispatch } = useOrder()
   const [view, setView] = useState<View>('catalogo')
   const [direction, setDirection] = useState(1)
@@ -78,7 +96,7 @@ export default function App() {
   }, [catalog, state.modalidad, state.sedeId, dispatch])
 
   // Al entrar a la agenda la ocupación tiene que ser real: el catálogo se cachea
-  // 5 min para que el arranque sea instantáneo, así que acá se salta esa caché
+  // 15 min para que el arranque sea instantáneo, así que acá se salta esa caché
   // (fresh=1) y se le vuelve a preguntar al calendario. Una vez por entrada.
   const agendaRefrescada = useRef(false)
   useEffect(() => {
@@ -160,7 +178,7 @@ export default function App() {
     <div className="mx-auto min-h-dvh max-w-lg overflow-x-clip">
       <AnimatePresence mode="wait" initial={false} custom={direction}>
         <Page key={view} direction={direction} scrollTo={view === 'catalogo' ? catalogScroll.current : 0}>
-          {page}
+          <Suspense fallback={null}>{page}</Suspense>
         </Page>
       </AnimatePresence>
 
