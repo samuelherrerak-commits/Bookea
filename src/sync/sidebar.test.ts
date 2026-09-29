@@ -35,6 +35,10 @@ interface LogicaSidebar {
   textoSobre: (hex: string) => string
   renderMensaje: typeof renderMensaje
   etiquetaLugar: (tipo: string, nombre?: string) => string
+  contrast: (a: string, b: string) => number
+  PLANTILLAS_QR: { id: string; ancho: number; alto: number }[]
+  MODOS_QR: [string, string][]
+  coloresQr: (config: Record<string, string>, modo: string) => Record<string, string>
 }
 
 /** El <script id="logica"> de la barra lateral, evaluado tal cual. */
@@ -128,3 +132,48 @@ describe('Configurador.gs', () => {
     for (const k of Object.values(servidor).flat()) expect(defaults, k).toContain(k)
   })
 })
+
+describe('Ventana de configuración y código QR', () => {
+  const qrLib = readFileSync(resolve(process.cwd(), 'node_modules/qrcode-generator/dist/qrcode.js'), 'utf8')
+
+  it('se abre como ventana grande (no barra lateral) y tiene su entrada para el QR', () => {
+    expect(configurador).toMatch(/showModalDialog/)
+    expect(configurador).not.toMatch(/showSidebar/)
+    expect(configurador).toMatch(/addItem\('Generar código QR', 'abrirQr'\)/)
+    expect(html).toMatch(/data-inicio="<\?= inicio \?>"/)
+  })
+
+  it('la librería de QR es la de npm, copiada tal cual', () => {
+    const m = /<script id="qr-lib">\n([\s\S]*?)\n<\/script>/.exec(html)
+    expect(m?.[1]).toBe(qrLib.trimEnd())
+  })
+
+  it('ningún otro "<?" en la ventana: Apps Script lo tomaría como código', () => {
+    expect(html.match(/<\?/g)).toHaveLength(1)
+  })
+
+  it('5 formatos con su tamaño real', () => {
+    expect(Logica.PLANTILLAS_QR.map((p) => [p.id, p.ancho, p.alto])).toEqual([
+      ['mostrador', 1240, 1748],
+      ['historia', 1080, 1920],
+      ['post', 1080, 1350],
+      ['tarjeta', 1050, 600],
+      ['solo', 1024, 1024],
+    ])
+  })
+
+  it('el código siempre se lee: módulos oscuros sobre tarjeta blanca, con cualquier color y modo', () => {
+    const principales = ['', ...PALETAS.map((p) => p.base), '#FFFFFF', '#FFFF00', '#000000', '#1F6F5C']
+    const fondos = ['', '#FFFFFF', '#FDFBF7', '#111111', '#1F6F5C', '#FFE4EC']
+    for (const color_principal of principales) {
+      for (const color_fondo of fondos) {
+        for (const [modo] of Logica.MODOS_QR) {
+          const c = Logica.coloresQr({ color_principal, color_fondo }, modo)
+          expect(c.tarjeta).toBe('#FFFFFF')
+          expect(Logica.contrast(c.modulos, c.tarjeta), `${color_principal} / ${color_fondo} / ${modo}`).toBeGreaterThanOrEqual(4.5)
+        }
+      }
+    }
+  })
+})
+
