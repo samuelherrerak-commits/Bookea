@@ -118,7 +118,8 @@
   nav.meses { display: flex; gap: 8px; flex-wrap: wrap; }
   nav.meses a { font: 700 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; padding: 9px 14px; border-radius: 99px; border: 2px solid var(--line); }
   nav.meses a[aria-current] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-  .tipo.historia { border-style: dashed; }
+  .tipo.reel { background: var(--fg); color: var(--bg); }
+  .tipo.hist { border-style: dashed; }
 
   /* Historias */
   .semana { padding-block: 28px; border-top: 2px solid var(--line); display: flex; flex-direction: column; gap: 16px; }
@@ -381,8 +382,8 @@
     cuerpo.append(el('tr', {},
       i === 0 ? el('td', { class: 'sem', rowspan: String(dias.length), text: sem }) : null,
       el('td', { text: fecha }),
-      el('td', {}, post ? [el('span', { class: 'tipo' + (post[2] ? ' video' : ''), text: post[0] }), ' ' + post[1]] : el('span', { class: 'muted', text: '—' })),
-      el('td', {}, el('span', { class: 'tipo historia', text: `Historia ${h[0]}` }), ' ' + h[2]),
+      el('td', {}, post ? [el('span', { class: 'tipo' + (post[2] ? ' reel' : ''), text: post[0] }), ' ' + post[1]] : el('span', { class: 'muted', text: '—' })),
+      el('td', {}, el('span', { class: 'tipo hist', text: `Historia ${h[0]}` }), ' ' + h[2]),
     ))
   }))
 
@@ -392,7 +393,7 @@
     listaV.append(el('article', { class: 'video', id: `reel-${v.n}` },
       video,
       el('div', { class: 'info' },
-        el('p', { class: 'kicker', text: `Reel ${v.n - 4}` }),
+        el('p', { class: 'kicker', text: `Reel ${v.n}` }),
         el('h3', { text: v.titulo }),
         el('div', { class: 'meta' }, el('span', { text: v.fecha }), el('span', { text: v.dur }), el('span', { text: '9:16 · con sonido' })),
         el('p', { text: v.objetivo }),
