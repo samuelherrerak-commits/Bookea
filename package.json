@@ -17,7 +17,8 @@
     "marketing:videos": "node marketing/scripts/render-video.mjs",
     "marketing:carruseles": "node marketing/scripts/render-carruseles.mjs",
     "marketing:historias": "node marketing/scripts/render-historias.mjs",
-    "marketing:publicar": "node marketing/scripts/publicar-campana.mjs"
+    "marketing:publicar": "node marketing/scripts/publicar-campana.mjs",
+    "personal:editar": "node marketing/personal/scripts/editar.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

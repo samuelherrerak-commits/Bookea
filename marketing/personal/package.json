@@ -1,0 +1,19 @@
+{
+  "name": "bookeaa-vlog",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "editar": "node scripts/editar.mjs"
+  },
+  "dependencies": {
+    "@remotion/captions": "^4.0.530",
+    "@remotion/cli": "^4.0.530",
+    "@remotion/google-fonts": "^4.0.530",
+    "@remotion/media-utils": "^4.0.530",
+    "@remotion/transitions": "^4.0.530",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "^4.0.530"
+  }
+}
