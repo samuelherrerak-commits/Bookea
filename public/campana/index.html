@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<!-- Página interna de la campaña: accesible con el enlace, pero fuera de los buscadores. -->
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" type="image/svg+xml" href="/bookeaa.svg" />
+<title>Lanzamiento bookeaa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700;800&display=swap" />
+<style>
+  /* Una columna de lectura; videos y láminas en bloques anchos. Blanco y negro como la marca. */
+  :root {
+    --bg: #ffffff;
+    --fg: #0f0f0e;
+    --muted: #5b5b57;
+    --line: #e3e3df;
+    --surface: #f4f4f2;
+    --inv-bg: #0f0f0e;
+    --inv-fg: #ffffff;
+    --ok: #1f7a4d;
+    --display: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+    --body: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #0f0f0e; --fg: #f4f4f2; --muted: #a3a39e; --line: #2c2c2a; --surface: #1a1a19;
+      --inv-bg: #f4f4f2; --inv-fg: #0f0f0e; --ok: #5cc98f; color-scheme: dark;
+    }
+  }
+  :root[data-theme='dark'] {
+    --bg: #0f0f0e; --fg: #f4f4f2; --muted: #a3a39e; --line: #2c2c2a; --surface: #1a1a19;
+    --inv-bg: #f4f4f2; --inv-fg: #0f0f0e; --ok: #5cc98f; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font: 17px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 90px; }
+  h1, h2, h3, .cond { font-family: var(--display); text-transform: uppercase; letter-spacing: -0.005em; text-wrap: balance; margin: 0; }
+  h1 { font-weight: 800; font-size: clamp(44px, 10vw, 118px); line-height: 0.88; overflow-wrap: break-word; }
+  h2 { font-weight: 800; font-size: clamp(38px, 6vw, 60px); line-height: 0.92; }
+  h3 { font-weight: 700; font-size: 28px; line-height: 1; }
+  p { margin: 0; max-width: 66ch; }
+  .kicker { font: 600 14px/1 var(--display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .regla { display: block; width: 44px; height: 4px; background: var(--fg); }
+  .muted { color: var(--muted); }
+  section { display: flex; flex-direction: column; gap: 22px; padding-top: 70px; }
+  a { color: inherit; }
+
+  /* Portada */
+  header { display: flex; flex-direction: column; gap: 22px; }
+  .marca { display: flex; align-items: center; gap: 10px; font: 800 30px/1 var(--display); }
+  .marca svg { width: 30px; height: 30px; }
+  .resumen { display: flex; flex-wrap: wrap; gap: 10px 26px; font: 700 20px/1.2 var(--display); text-transform: uppercase; letter-spacing: 0.04em; }
+  .resumen span { display: inline-flex; gap: 8px; align-items: baseline; }
+  .resumen b { font-size: 34px; }
+  .lead { font-size: 21px; line-height: 1.45; }
+
+  /* Bloques */
+  .dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .caja { border: 2px solid var(--line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .caja.inv { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+  .caja.inv .kicker { color: inherit; opacity: 0.65; }
+  ul.lista { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  ul.lista li { display: flex; gap: 10px; }
+  ul.lista li::before { content: '→'; font-weight: 700; }
+
+  /* Calendario */
+  .tabla { overflow-x: auto; border: 2px solid var(--line); border-radius: 14px; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 700 14px/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); background: var(--surface); }
+  tr:last-child td { border-bottom: 0; }
+  td.sem { font: 800 18px/1.1 var(--display); text-transform: uppercase; }
+  .tipo { display: inline-block; font: 700 12px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 8px; border-radius: 99px; border: 1.5px solid var(--fg); white-space: nowrap; }
+  .tipo.video { background: var(--fg); color: var(--bg); }
+
+  /* Videos */
+  .video { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 28px; padding-block: 28px; border-top: 2px solid var(--line); }
+  .video video { width: 100%; max-width: 100%; aspect-ratio: 9 / 16; border-radius: 18px; background: #0f0f0e; display: block; }
+  .video .info { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font: 600 15px/1.3 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  ol.guion { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-variant-numeric: tabular-nums; }
+  ol.guion li { display: grid; grid-template-columns: 76px 1fr; gap: 10px; }
+  ol.guion b { font: 700 16px/1.5 var(--display); color: var(--muted); }
+  @media (max-width: 700px) { .video { grid-template-columns: 1fr; } .video video { max-width: 320px; } }
+
+  /* Texto para copiar */
+  .copia { background: var(--surface); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .copia pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 15.5px/1.5 var(--body); }
+  .copia .pie { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  button.copiar {
+    font: 700 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; background: var(--fg); color: var(--bg);
+    border: 0; border-radius: 99px; padding: 10px 16px; cursor: pointer; transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  button.copiar:active { transform: scale(0.97); }
+  button.copiar:focus-visible, a:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+  .hecho { color: var(--ok); font-weight: 600; font-size: 14px; }
+
+  /* Carruseles */
+  .carrusel { padding-block: 28px; border-top: 2px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+  .tira { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
+  .tira img { width: 216px; max-width: 70vw; height: auto; aspect-ratio: 4 / 5; border-radius: 10px; flex: none; scroll-snap-align: start; border: 1px solid var(--line); }
+
+  a.descargar {
+    display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; text-decoration: none;
+    font: 700 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase;
+    border: 2px solid var(--fg); border-radius: 99px; padding: 10px 16px; transition: background-color 150ms, color 150ms;
+  }
+  a.descargar:hover { background: var(--fg); color: var(--bg); }
+  .descargas { display: flex; flex-wrap: wrap; gap: 10px; }
+  footer { padding-top: 70px; color: var(--muted); font-size: 15px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="marca" aria-label="bookeaa">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="28" height="26" rx="7" fill="currentColor"/><path d="M10 2.5v5M22 2.5v5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="var(--bg)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>
+      bookeaa
+    </div>
+    <p class="kicker">Instagram · 5 al 29 de octubre de 2026</p>
+    <h1>Campaña de lanzamiento</h1>
+    <span class="regla"></span>
+    <div class="resumen">
+      <span><b>4</b> reels</span><span><b>7</b> carruseles</span><span><b>4</b> semanas</span><span><b>1</b> oferta: 1 mes gratis</span>
+    </div>
+    <div class="descargas">
+      <a class="descargar" href="#reels">Ver los reels ↓</a>
+      <a class="descargar" href="/campana/media/bookeaa-carruseles.zip" download>Descargar los 7 carruseles (ZIP)</a>
+    </div>
+    <p class="lead">Presentar bookeaa a negocios que trabajan con cita y convertir el interés en conversaciones por WhatsApp para empezar la prueba gratis. Todo está listo para subir: videos en 1080×1920, carruseles en 1080×1350 y los textos de cada publicación.</p>
+  </header>
+
+  <section id="estrategia" aria-labelledby="t-estrategia">
+    <p class="kicker">Estrategia</p>
+    <h2 id="t-estrategia">A quién le hablamos</h2>
+    <div class="dos">
+      <div class="caja">
+        <p class="kicker">Público</p>
+        <p>Dueños de negocios de servicios con cita, de 22 a 45 años: barberías, uñas y pestañas, estética, consultorios y terapias. Hoy agendan por WhatsApp, en una libreta o de memoria.</p>
+      </div>
+      <div class="caja">
+        <p class="kicker">Objetivo</p>
+        <p>20 negocios en prueba gratis al cierre de la campaña. Se mide por chats de WhatsApp iniciados desde el link de la bio, pruebas activadas, guardados y compartidos.</p>
+      </div>
+      <div class="caja inv">
+        <p class="kicker">Idea central</p>
+        <h3>Tu agenda, sin libreta.</h3>
+        <p>Tus clientes reservan solos y la cita cae en tu Google Calendar. Tú solo atiendes.</p>
+      </div>
+    </div>
+    <div class="dos">
+      <div class="caja">
+        <p class="kicker">Mensajes que repetimos</p>
+        <ul class="lista">
+          <li>Deja de responder "¿tienes hora?" todo el día.</li>
+          <li>Las reservas llegan solas, las 24 horas.</li>
+          <li>Todo queda en tu Google Calendar, sin choques.</li>
+          <li>Tu página se ve como tu negocio: 8 estilos y tus colores.</li>
+          <li>1 mes gratis, luego $15 al mes con todo incluido.</li>
+        </ul>
+      </div>
+      <div class="caja">
+        <p class="kicker">Antes de publicar</p>
+        <ul class="lista">
+          <li>Bio: "Tu agenda online, sin libreta. Reservas 24/7 + Google Calendar. 1 mes gratis 👇"</li>
+          <li>Link de la bio: WhatsApp +58 412 029 8203 con el mensaje de la prueba (el mismo del botón de la landing).</li>
+          <li>Fijar arriba en el perfil: carrusel 1, video 1 y carrusel 7.</li>
+          <li>Publicar a las 7:00 p. m. y responder comentarios en la primera hora.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="calendario" aria-labelledby="t-calendario">
+    <p class="kicker">Calendario</p>
+    <h2 id="t-calendario">Qué sale cada día</h2>
+    <p class="muted">Tres publicaciones por semana. Cada semana tiene un tema, y el video va en el medio para que los carruseles lo preparen y lo refuercen.</p>
+    <div class="tabla">
+      <table>
+        <thead><tr><th>Semana</th><th>Fecha</th><th>Pieza</th><th>Qué busca</th></tr></thead>
+        <tbody>
+          <tr><td class="sem" rowspan="3">1 · Lanzamiento</td><td>Lun 5 oct</td><td><span class="tipo">Carrusel 1</span> Presentamos bookeaa</td><td>Presentar la marca</td></tr>
+          <tr><td>Mié 7 oct</td><td><span class="tipo video">Reel 1</span> ¿Qué es bookeaa?</td><td>Alcance y seguidores</td></tr>
+          <tr><td>Vie 9 oct</td><td><span class="tipo">Carrusel 2</span> 5 señales de que tu agenda necesita ayuda</td><td>Guardados y compartidos</td></tr>
+          <tr><td class="sem" rowspan="3">2 · Cómo funciona</td><td>Lun 12 oct</td><td><span class="tipo">Carrusel 3</span> Cómo funciona en 3 pasos</td><td>Entender el producto</td></tr>
+          <tr><td>Mié 14 oct</td><td><span class="tipo video">Reel 2</span> Así reserva tu cliente</td><td>Mostrar la app real</td></tr>
+          <tr><td>Vie 16 oct</td><td><span class="tipo">Carrusel 4</span> Conectado a Google Calendar</td><td>La función estrella</td></tr>
+          <tr><td class="sem" rowspan="3">3 · Tu marca</td><td>Lun 19 oct</td><td><span class="tipo">Carrusel 5</span> 8 estilos para tu página</td><td>Deseo: "yo quiero la mía"</td></tr>
+          <tr><td>Mié 21 oct</td><td><span class="tipo video">Reel 3</span> Tu marca, tu estilo</td><td>Alcance con lo visual</td></tr>
+          <tr><td>Vie 23 oct</td><td><span class="tipo">Carrusel 6</span> Hecho para tu tipo de negocio</td><td>Que cada rubro se vea</td></tr>
+          <tr><td class="sem" rowspan="2">4 · Conversión</td><td>Mar 27 oct</td><td><span class="tipo video">Reel 4</span> Para quién es y cuánto cuesta</td><td>Pedir la prueba</td></tr>
+          <tr><td>Jue 29 oct</td><td><span class="tipo">Carrusel 7</span> Precio y preguntas</td><td>Resolver dudas y cerrar</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">Historias: el mismo día de cada post, compártelo en historias con una encuesta ("¿Cómo agendas hoy? Libreta / WhatsApp / App") o una caja de preguntas, y el sticker de enlace a WhatsApp.</p>
+  </section>
+
+  <section id="reels" aria-labelledby="t-reels">
+    <p class="kicker">Reels · 1080×1920 · 30 fps</p>
+    <h2 id="t-reels">Los 4 videos</h2>
+    <p class="muted">Sin voz en off: todo el mensaje va en pantalla, así funcionan con el sonido apagado. En Instagram agrégales un audio en tendencia de ritmo marcado (110–125 bpm); los cortes caen cada 3 a 5 segundos.</p>
+    <div id="lista-videos"></div>
+  </section>
+
+  <section id="carruseles" aria-labelledby="t-carruseles">
+    <p class="kicker">Carruseles · 1080×1350 (4:5)</p>
+    <h2 id="t-carruseles">Las 7 publicaciones</h2>
+    <p class="muted">Desliza cada tira para ver las láminas en orden. Aquí se ven reducidas; el botón de cada carrusel descarga las láminas originales en 1080×1350.</p>
+    <div id="lista-carruseles"></div>
+  </section>
+
+  <section id="leads" aria-labelledby="t-leads">
+    <p class="kicker">Cuando escriben</p>
+    <h2 id="t-leads">Respuesta por WhatsApp</h2>
+    <p class="muted">Para contestar rápido y siempre igual a quien escribe desde la campaña.</p>
+    <div class="copia">
+      <pre id="lead-1">¡Hola! 👋 Gracias por escribir a bookeaa.
+
+Para dejarte tu página lista necesito 4 cosas:
+1. Nombre de tu negocio y tu logo (si tienes).
+2. Tus servicios con precio y duración.
+3. Tu horario de atención.
+4. Dónde atiendes (tu local, varias sedes o a domicilio).
+
+Con eso te dejo tu página lista. El primer mes es gratis y no necesitas tarjeta.</pre>
+      <div class="pie"><span class="hecho" aria-live="polite"></span><button class="copiar" type="button" data-copiar="lead-1">Copiar mensaje</button></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Las piezas se generan desde el repositorio con <b>npm run marketing:videos</b> y <b>npm run marketing:carruseles</b>. Las pantallas de la app son capturas reales en modo demo.</p>
+  </footer>
+</div>
+
+<script>
+  const TAGS_BASE = '#agendaonline #reservasonline #citasonline #emprendedores #negociosvenezuela'
+
+  const VIDEOS = [
+    {
+      n: 1, titulo: '¿Qué es bookeaa?', fecha: 'Mié 7 oct', dur: '35 s',
+      objetivo: 'Alcance. Presenta el problema y la solución completa en 35 segundos.',
+      guion: [
+        ['0:00', 'Gancho: "¿Todavía agendas en una libreta?" La palabra LIBRETA se tacha.'],
+        ['0:03', 'Problema: chat de ida y vuelta ("¿Tienes hora mañana?", "¿Y a las 4?") y remate: 10 mensajes para una cita.'],
+        ['0:07', 'Entra la marca: bookeaa, tu agenda online. "Tus clientes reservan solos. Tú solo atiendes."'],
+        ['0:10', 'Comparte tu link: se escribe bookeaa.com/u/barberia-norte y sube la página real.'],
+        ['0:15', 'Tu cliente elige servicio y hora: dos pantallas reales del flujo.'],
+        ['0:20', 'Y cae en tu Google Calendar: aparece el evento de la cita.'],
+        ['0:25', 'Tu marca, tus colores: tres plantillas en abanico.'],
+        ['0:29', 'Cierre: 1 mes gratis, luego $15 al mes. Escríbenos, link en la bio.'],
+      ],
+      caption: 'Si tu agenda es una libreta y diez chats abiertos, esto es para ti 👇\n\nbookeaa es tu página de reservas: compartes tu link, tus clientes eligen servicio, día y hora, y la cita cae sola en tu Google Calendar.\n\nSin mensajes de ida y vuelta. Sin citas cruzadas.\n\nPrueba 1 mes gratis. Escríbenos por WhatsApp desde el link de la bio.',
+      tags: '#bookeaa #agendadigital #googlecalendar #barberia #uñas',
+    },
+    {
+      n: 2, titulo: 'Así reserva tu cliente', fecha: 'Mié 14 oct', dur: '35 s',
+      objetivo: 'Mostrar la app real, paso a paso, para que se vea lo fácil que es.',
+      guion: [
+        ['0:00', 'Gancho: "Así reservan tus clientes. En menos de un minuto."'],
+        ['0:03', '01 Abre tu link: la página de Barbería Norte.'],
+        ['0:07', '02 Elige servicios: con precio y duración a la vista.'],
+        ['0:10', '03 Elige dónde: tu local, una sede o a domicilio.'],
+        ['0:14', '04 Día y hora: solo ve las horas libres.'],
+        ['0:17', '05 Confirma: nombre, teléfono y cómo paga.'],
+        ['0:21', 'Te llega por WhatsApp: el mensaje de la reserva con todo el detalle.'],
+        ['0:26', 'Y queda en tu calendario: el evento ya creado.'],
+        ['0:30', 'Cierre: 1 mes gratis.'],
+      ],
+      caption: 'Así de simple reserva un cliente en tu página de bookeaa 👇\n\n1. Abre tu link\n2. Elige el servicio\n3. Elige dónde (tu local, una sede o a domicilio)\n4. Escoge día y hora libres\n5. Confirma\n\nA ti te llega la reserva por WhatsApp y ya está en tu Google Calendar.\n\n¿Lo quieres para tu negocio? El primer mes es gratis. Link en la bio.',
+      tags: '#bookeaa #reservas #agendadecitas #barberos #esteticistas',
+    },
+    {
+      n: 3, titulo: 'Tu marca, tu estilo', fecha: 'Mié 21 oct', dur: '27 s',
+      objetivo: 'Deseo. Que el negocio se imagine su propia página.',
+      guion: [
+        ['0:00', 'Gancho: "Una página que se ve como tu negocio."'],
+        ['0:03', 'Los 8 estilos, uno cada 1,2 s: nombre, fuentes y captura real.'],
+        ['0:13', 'Tu color, tu fondo: la misma página en azul, coral y lima sobre negro.'],
+        ['0:19', 'Resumen: 8 estilos, tus colores, tu logo, tu nombre.'],
+        ['0:22', 'Cierre: 1 mes gratis.'],
+      ],
+      caption: 'Tu página de reservas no tiene por qué verse como la de todos 🎨\n\nEn bookeaa eliges entre 8 estilos (elegante, moderno, editorial, amable, audaz, clásico, minimal y retro), tu color principal y tu fondo, claro u oscuro. Pones tu nombre y tu logo, y listo.\n\n¿Cuál va con tu negocio? Cuéntanos en los comentarios 👇',
+      tags: '#bookeaa #branding #emprendedoras #salondebelleza #spa',
+    },
+    {
+      n: 4, titulo: 'Para quién es y cuánto cuesta', fecha: 'Mar 27 oct', dur: '26 s',
+      objetivo: 'Conversión. Que cada rubro se sienta incluido y vea el precio.',
+      guion: [
+        ['0:00', 'Gancho: "¿Atiendes con cita?"'],
+        ['0:03', 'Para quién: barberías, uñas, consultorios, estética, spas, tatuajes, entrenadores.'],
+        ['0:07', 'Una o varias sedes, o a domicilio: pantalla real del selector de lugar.'],
+        ['0:12', 'Tu mensaje de WhatsApp: cálido, formal o breve.'],
+        ['0:16', 'Precio: $0 por 30 días, luego $15 al mes con todo incluido.'],
+        ['0:21', 'Cierre: 1 mes gratis. Escríbenos.'],
+      ],
+      caption: 'Barberías, uñas, consultorios, estética, spas, tatuajes, entrenadores… si trabajas con cita, bookeaa es para ti.\n\n✓ Una o varias sedes, o a domicilio\n✓ Todo en tu Google Calendar\n✓ Tu mensaje de WhatsApp, a tu manera\n\n30 días gratis. Luego $15 al mes con todo incluido. Sin tarjeta.\n\nEscríbenos por WhatsApp desde el link de la bio y te dejamos tu página lista.',
+      tags: '#bookeaa #consultorio #tatuajes #entrenadorpersonal #agendaonline',
+    },
+  ]
+
+  const CARRUSELES = [
+    { n: 1, titulo: 'Presentamos bookeaa', fecha: 'Lun 5 oct', laminas: 6,
+      caption: 'Te presentamos bookeaa 📅\n\nUna página de reservas con tu nombre: compartes tu link, tus clientes reservan solos y la cita queda en tu Google Calendar.\n\nDesliza para ver cómo funciona 👉\n\n1 mes gratis. Link en la bio.', tags: '#bookeaa #nuevo #agendaonline' },
+    { n: 2, titulo: '5 señales de que tu agenda necesita ayuda', fecha: 'Vie 9 oct', laminas: 8,
+      caption: '¿Cuántas de estas te pasan? 👀\n\n1. Respondes "¿tienes hora?" 20 veces al día\n2. Tu agenda vive en una libreta\n3. Se te cruzan dos citas\n4. Tus clientes se olvidan de la cita\n5. Pierdes reservas mientras trabajas\n\nGuárdalo y compártelo con alguien que agenda en una libreta.', tags: '#bookeaa #tips #negocios' },
+    { n: 3, titulo: 'Cómo funciona en 3 pasos', fecha: 'Lun 12 oct', laminas: 5,
+      caption: 'bookeaa en 3 pasos:\n\n1. Compartes tu link\n2. Tu cliente elige servicio, día y hora\n3. Te llega la reserva por WhatsApp y queda en tu Google Calendar\n\nLo configuras una vez y tu agenda se llena sola. ¿Lo probamos? 1 mes gratis, link en la bio.', tags: '#bookeaa #comofunciona #reservas' },
+    { n: 4, titulo: 'Conectado a Google Calendar', fecha: 'Vie 16 oct', laminas: 5,
+      caption: 'Tu Google Calendar, lleno solo 🗓️\n\nCada reserva se crea como evento con el servicio, el nombre y el teléfono del cliente. Y si agregas algo por tu cuenta, esa hora deja de estar libre en tu página.\n\nTu cliente también la guarda en su calendario, así llega a tiempo.', tags: '#bookeaa #googlecalendar #productividad' },
+    { n: 5, titulo: '8 estilos para tu página', fecha: 'Lun 19 oct', laminas: 6,
+      caption: '8 estilos para tu página de reservas ✨\n\nElegante, moderno, editorial, amable, audaz, clásico, minimal y retro. Con tu color, tu fondo, tu logo y tu nombre.\n\n¿Cuál elegirías? Déjalo en los comentarios 👇', tags: '#bookeaa #diseño #branding' },
+    { n: 6, titulo: 'Hecho para tu tipo de negocio', fecha: 'Vie 23 oct', laminas: 6,
+      caption: '¿Consultorio? ¿Barbería? ¿Spa? bookeaa se adapta a cómo trabajas:\n\n→ Tu página dice el nombre de tu lugar\n→ Una o varias sedes, con una sola agenda\n→ Domicilio con recargo y minutos de traslado\n→ Tu mensaje de WhatsApp: cálido, formal o breve\n\nEtiqueta a alguien que necesita esto 👇', tags: '#bookeaa #barberia #consultorio #spa' },
+    { n: 7, titulo: 'Precio y preguntas', fecha: 'Jue 29 oct', laminas: 5,
+      caption: '¿Cuánto cuesta bookeaa?\n\nEl primer mes, nada: 30 días gratis con todo incluido y sin tarjeta.\nDespués, $15 al mes. Reservas ilimitadas, Google Calendar, tu página con tu marca, los 8 estilos, sedes, domicilio y soporte por WhatsApp.\n\nEscríbenos desde el link de la bio y te dejamos tu página lista.', tags: '#bookeaa #precios #emprendimiento' },
+  ]
+
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag)
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'text') n.textContent = v
+      else n.setAttribute(k, v)
+    }
+    kids.flat().forEach((c) => c && n.append(c))
+    return n
+  }
+
+  function bloqueCopia(id, texto) {
+    const pre = el('pre', { id, text: texto })
+    const aviso = el('span', { class: 'hecho', 'aria-live': 'polite' })
+    const btn = el('button', { class: 'copiar', type: 'button', 'data-copiar': id, text: 'Copiar texto' })
+    return el('div', { class: 'copia' }, pre, el('div', { class: 'pie' }, aviso, btn))
+  }
+
+  const listaV = document.getElementById('lista-videos')
+  VIDEOS.forEach((v) => {
+    const video = el('video', { src: `/campana/media/video-${v.n}.mp4`, poster: `/campana/media/video-${v.n}-portada.jpg`, controls: '', playsinline: '', muted: '', preload: 'none' })
+    video.muted = true
+    listaV.append(el('article', { class: 'video', id: `reel-${v.n}` },
+      video,
+      el('div', { class: 'info' },
+        el('p', { class: 'kicker', text: `Reel ${v.n}` }),
+        el('h3', { text: v.titulo }),
+        el('div', { class: 'meta' }, el('span', { text: v.fecha }), el('span', { text: v.dur }), el('span', { text: '9:16' })),
+        el('p', { text: v.objetivo }),
+        el('ol', { class: 'guion' }, v.guion.map(([t, d]) => el('li', {}, el('b', { text: t }), el('span', { text: d })))),
+        el('a', { class: 'descargar', href: `/campana/media/video-${v.n}.mp4`, download: `bookeaa-reel-${v.n}.mp4`, text: 'Descargar MP4 (1080×1920)' }),
+        bloqueCopia(`cap-v${v.n}`, `${v.caption}\n\n${v.tags} ${TAGS_BASE}`),
+      )))
+  })
+
+  const listaC = document.getElementById('lista-carruseles')
+  CARRUSELES.forEach((c) => {
+    const imgs = Array.from({ length: c.laminas }, (_, i) =>
+      el('img', { src: `/campana/media/c${c.n}/${String(i + 1).padStart(2, '0')}.jpg`, alt: `${c.titulo}, lámina ${i + 1} de ${c.laminas}`, loading: 'lazy', width: '540', height: '675' }))
+    listaC.append(el('article', { class: 'carrusel', id: `carrusel-${c.n}` },
+      el('div', { class: 'meta' }, el('span', { text: `Carrusel ${c.n}` }), el('span', { text: c.fecha }), el('span', { text: `${c.laminas} láminas` })),
+      el('h3', { text: c.titulo }),
+      el('div', { class: 'tira', tabindex: '0', 'aria-label': `Láminas de ${c.titulo}` }, imgs),
+      el('a', { class: 'descargar', href: `/campana/media/bookeaa-carrusel-${c.n}.zip`, download: '', text: `Descargar carrusel ${c.n} (ZIP, 1080×1350)` }),
+      bloqueCopia(`cap-c${c.n}`, `${c.caption}\n\n${c.tags} ${TAGS_BASE}`),
+    ))
+  })
+
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-copiar]')
+    if (!btn) return
+    const pre = document.getElementById(btn.dataset.copiar)
+    const aviso = btn.parentElement.querySelector('.hecho')
+    try {
+      await navigator.clipboard.writeText(pre.textContent)
+      aviso.textContent = 'Copiado'
+    } catch {
+      const r = document.createRange()
+      r.selectNodeContents(pre)
+      const sel = getSelection()
+      sel.removeAllRanges()
+      sel.addRange(r)
+      aviso.textContent = 'Texto seleccionado: cópialo con Ctrl+C'
+    }
+    setTimeout(() => (aviso.textContent = ''), 2500)
+  })
+</script>
+</body>
+</html>

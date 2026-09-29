@@ -1,6 +1,6 @@
 # Campaña de lanzamiento · bookeaa
 
-Primera campaña de Instagram: **4 reels (1080×1920)** y **7 carruseles (1080×1350)**, del 5 al 29 de octubre de 2026, con el estilo audaz de la marca. El plan completo (público, calendario, guiones, textos para publicar y respuesta por WhatsApp) está en la página de la campaña: https://claude.ai/artifact/Xe277eKioQ6inCAF1G75Eu
+Primera campaña de Instagram: **4 reels (1080×1920)** y **7 carruseles (1080×1350)**, del 5 al 29 de octubre de 2026, con el estilo audaz de la marca. El plan completo (público, calendario, guiones, textos para publicar, respuesta por WhatsApp y descargas) está en el sitio, en **/campana/** (por ejemplo https://bookea-bkga.onrender.com/campana/). Es la página `public/campana/index.html`; los medios están en `public/campana/media/`. No aparece en buscadores (`noindex`), pero cualquiera con el enlace la puede abrir.
 
 ## Calendario
 

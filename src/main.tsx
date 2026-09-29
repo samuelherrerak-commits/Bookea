@@ -13,6 +13,10 @@ import { applyBranding } from './lib/theme'
 import { slugFromLocation } from './lib/tenant'
 import { OrderProvider } from './state/order'
 
+// /campana es una página estática (public/campana/index.html). Si el servidor cae en
+// la app (por ejemplo /campana sin la barra final), se manda al archivo real.
+if (/^\/campana\/?$/.test(window.location.pathname)) window.location.replace('/campana/index.html')
+
 const slug = slugFromLocation()
 const root = createRoot(document.getElementById('root')!)
 
