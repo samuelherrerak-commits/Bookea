@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>bookeaa · videos</title>
+<link rel="stylesheet" href="estilos.css" />
+<style>
+  /* Vista previa en el navegador: el escenario se escala para caber en la ventana. */
+  body.preview { display: grid; place-items: center; min-height: 100vh; overflow: hidden; }
+  body.preview #marco { transform-origin: center; }
+  #controles { position: fixed; left: 16px; right: 16px; bottom: 12px; display: none; gap: 10px; align-items: center; font: 14px system-ui; color: #ddd; }
+  body.preview #controles { display: flex; }
+  #controles input { flex: 1; }
+</style>
+</head>
+<body>
+<div id="marco"><div id="stage"></div></div>
+<div id="controles">
+  <select id="cual"></select>
+  <button id="play" type="button">▶︎</button>
+  <input id="barra" type="range" min="0" max="1000" value="0" />
+  <span id="tiempo"></span>
+</div>
+<script src="motor.js"></script>
+<script src="videos.js"></script>
+<script>
+  // ?v=1..4 elige el video. ?render=1 lo deja quieto para que render-video.mjs pida cuadros.
+  const q = new URLSearchParams(location.search)
+  const n = Number(q.get('v') || 1)
+  const video = VIDEOS[n]
+  const player = Motor.montar(video)
+  window.seek = player.seek
+  window.duracion = player.duracion
+
+  // Listo = fuentes cargadas + todas las imágenes decodificadas.
+  window.listo = Promise.all([
+    document.fonts.ready,
+    ...[...document.images].map((img) => (img.complete ? img.decode().catch(() => {}) : new Promise((r) => (img.onload = img.onerror = r)))),
+  ]).then(() => player.seek(0))
+
+  if (!q.has('render')) {
+    document.body.classList.add('preview')
+    const marco = document.getElementById('marco')
+    const escala = () => (marco.style.transform = `scale(${Math.min((innerHeight - 60) / 1920, innerWidth / 1080)})`)
+    escala()
+    addEventListener('resize', escala)
+    const sel = document.getElementById('cual')
+    Object.values(VIDEOS).forEach((v) => sel.append(new Option(`${v.id}. ${v.titulo}`, v.id)))
+    sel.value = n
+    sel.onchange = () => (location.search = '?v=' + sel.value)
+    const barra = document.getElementById('barra')
+    const tiempo = document.getElementById('tiempo')
+    let t = 0, corriendo = false, previo = 0
+    const pintar = () => {
+      player.seek(t)
+      barra.value = (t / player.duracion) * 1000
+      tiempo.textContent = t.toFixed(1) + ' / ' + player.duracion.toFixed(1) + ' s'
+    }
+    const loop = (ahora) => {
+      if (!corriendo) return
+      t += (ahora - previo) / 1000
+      previo = ahora
+      if (t >= player.duracion) t = 0
+      pintar()
+      requestAnimationFrame(loop)
+    }
+    document.getElementById('play').onclick = () => {
+      corriendo = !corriendo
+      previo = performance.now()
+      if (corriendo) requestAnimationFrame(loop)
+    }
+    barra.oninput = () => { t = (barra.value / 1000) * player.duracion; pintar() }
+    window.listo.then(pintar)
+  }
+</script>
+</body>
+</html>

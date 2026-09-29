@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>bookeaa · carruseles</title>
+<link rel="stylesheet" href="../video/estilos.css" />
+<style>
+  body { background: #222; }
+  body.preview { padding: 30px; display: flex; flex-direction: column; gap: 40px; }
+  body.preview .fila { display: flex; gap: 20px; overflow-x: auto; }
+  body.preview .fila h2 { color: #ddd; font: 600 18px system-ui; }
+  body.preview .lamina { transform: scale(0.3); transform-origin: top left; margin: 0 -756px -945px 0; flex: none; }
+
+  .lamina { position: relative; width: 1080px; height: 1350px; overflow: hidden; padding: 110px 90px; }
+  .lamina.blanca { background: var(--paper); color: var(--coal); }
+  .lamina.negra { background: var(--coal); color: var(--paper); }
+  .lamina .grande { font-size: 124px; }
+  .lamina .mega { font-size: 168px; }
+  .lamina .texto { font-size: 40px; margin-top: 34px; }
+  .lamina .kicker { margin-bottom: 26px; font-size: 34px; }
+  .pag { position: absolute; top: 56px; right: 90px; font: 700 30px/1 'Barlow Condensed', sans-serif; letter-spacing: 0.12em; opacity: 0.55; }
+  .marca { position: absolute; left: 90px; bottom: 56px; display: flex; align-items: center; gap: 14px; font: 800 44px/1 'Barlow Condensed', sans-serif; }
+  .marca svg { width: 46px; height: 46px; }
+  .desliza { position: absolute; right: 90px; bottom: 56px; font: 700 34px/1 'Barlow Condensed', sans-serif; letter-spacing: 0.12em; }
+  .lamina .cruces { top: 110px; right: 50px; }
+  .lamina .regla { margin-top: 36px; }
+
+  .lamina .tel { position: absolute; }
+  .num-grande { font: 800 330px/0.8 'Barlow Condensed', sans-serif; -webkit-text-stroke: 5px currentColor; color: transparent; }
+  .items { margin-top: 50px; display: flex; flex-direction: column; gap: 26px; }
+  .items p { font-size: 44px; display: flex; gap: 22px; align-items: baseline; font-weight: 500; }
+  .items p b { font: 800 46px/1 'Barlow Condensed', sans-serif; flex: none; width: 44px; }
+  .dia { margin-top: 60px; border-top: 3px solid rgb(127 127 127 / 0.35); }
+  .dia p { display: flex; gap: 34px; align-items: baseline; padding: 30px 0; border-bottom: 3px solid rgb(127 127 127 / 0.35); font-size: 40px; }
+  .dia p b { font: 800 58px/1 'Barlow Condensed', sans-serif; width: 150px; flex: none; }
+  .dia p span { opacity: 0.55; margin-left: auto; font: 600 30px/1 'Barlow Condensed', sans-serif; letter-spacing: 0.1em; text-transform: uppercase; }
+  .grilla { position: absolute; left: 60px; right: 60px; top: 360px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+  .grilla figure { display: flex; flex-direction: column; gap: 16px; }
+  .grilla .mini { border-radius: 38px; border: 8px solid var(--coal); overflow: hidden; aspect-ratio: 390 / 844; }
+  .grilla .mini img { width: 100%; display: block; }
+  .grilla figcaption { font: 800 40px/1 'Barlow Condensed', sans-serif; text-transform: uppercase; text-align: center; }
+  .monto { font: 800 400px/0.82 'Barlow Condensed', sans-serif; letter-spacing: -0.02em; }
+  .faq { margin-top: 56px; display: flex; flex-direction: column; gap: 38px; }
+  .faq div { border-top: 4px solid currentColor; padding-top: 26px; }
+  .faq b { display: block; font: 800 54px/1.05 'Barlow Condensed', sans-serif; text-transform: uppercase; }
+  .faq span { display: block; font-size: 40px; margin-top: 12px; opacity: 0.75; }
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<script src="../video/motor.js"></script>
+<script src="carruseles.js"></script>
+<script>
+  const { h, telefono, eventoCalendario } = Motor
+
+  const logoSvg = (claro) => {
+    const fg = claro ? '#ffffff' : '#0f0f0e', bg = claro ? '#0f0f0e' : '#ffffff'
+    return `<svg viewBox="0 0 32 32"><rect x="2" y="4" width="28" height="26" rx="7" fill="${fg}"/><path d="M10 2.5v5M22 2.5v5" stroke="${fg}" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="${bg}" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>`
+  }
+  const titulo = (lineas, clase = 'grande') => h('div', { class: clase, html: lineas.join('<br>') })
+  const abs = (el, estilo) => (Object.assign(el.style, { position: 'absolute', ...estilo }), el)
+  const esquinado = (el, claro) => Motor.esquinas(el, claro)
+
+  /** Cada tipo de lámina devuelve sus hijos. `negra` = fondo oscuro. */
+  const TIPOS = {
+    portada: (l, negra) => [
+      h('p', { class: 'kicker', text: l.kicker }),
+      esquinado(titulo(l.titulo, l.clase || 'mega'), negra),
+      h('i', { class: 'regla' }),
+      h('p', { class: 'texto', text: l.texto }),
+      Motor.cruces(negra),
+    ],
+    texto: (l) => [
+      h('p', { class: 'kicker', text: l.kicker }),
+      titulo(l.titulo),
+      h('i', { class: 'regla' }),
+      h('p', { class: 'texto', text: l.texto }),
+      l.pastilla ? h('span', { class: 'pill', style: { marginTop: '50px' }, text: l.pastilla }) : null,
+    ],
+    senal: (l) => [
+      h('div', { class: 'num-grande', text: l.num }),
+      h('div', { style: { height: '50px' } }),
+      titulo(l.titulo),
+      h('p', { class: 'texto', text: l.texto }),
+    ],
+    lista: (l) => [
+      titulo(l.titulo),
+      h('i', { class: 'regla' }),
+      h('div', { class: 'items' }, l.items.map((i) => h('p', {}, h('b', { text: l.marca }), i))),
+    ],
+    telefono: (l) => [
+      h('p', { class: 'kicker', text: l.kicker }),
+      titulo(l.titulo),
+      h('p', { class: 'texto', style: { maxWidth: '440px' }, text: l.texto }),
+      // Debajo del título y a la derecha del texto, para no taparlos.
+      abs(telefono(l.img, 450), { right: '60px', top: '600px', transform: 'rotate(4deg)' }),
+    ],
+    evento: (l) => [
+      h('p', { class: 'kicker', text: l.kicker }),
+      titulo(l.titulo),
+      abs(eventoCalendario(l.evento), { left: '150px', top: '640px' }),
+      abs(h('p', { class: 'texto', text: l.texto }), { left: '90px', top: '1130px' }),
+    ],
+    whatsapp: (l) => [
+      h('p', { class: 'kicker', text: l.kicker }),
+      titulo(l.titulo),
+      abs(h('div', { class: 'wa', style: { padding: '34px' } }, h('div', { class: 'cab' }, h('i'), 'Carlos Méndez'), h('div', { class: 'burbuja', style: { fontSize: '34px' }, text: l.mensaje })), { left: '90px', right: '90px', top: '520px' }),
+      abs(h('p', { class: 'texto', text: l.texto }), { left: '90px', bottom: '140px' }),
+    ],
+    dia: (l) => [
+      titulo(l.titulo),
+      h('div', { class: 'dia' }, l.eventos.map(([hora, que, quien]) => h('p', {}, h('b', { text: hora }), que, quien ? h('span', { text: quien }) : null))),
+      h('p', { class: 'texto', text: l.texto }),
+    ],
+    grilla: (l) => [
+      titulo(l.titulo, 'medio'),
+      h('div', { class: 'grilla' }, l.imgs.map((src, i) => h('figure', {}, h('div', { class: 'mini' }, h('img', { src })), h('figcaption', { text: l.nombres[i] })))),
+    ],
+    colores: (l) => [
+      titulo(l.titulo, 'mega'),
+      h('p', { class: 'texto', text: l.texto }),
+      ...l.imgs.map((src, i) => abs(telefono(src, 330), { left: `${60 + i * 330}px`, top: '640px', transform: `rotate(${[-5, 0, 5][i]}deg)` })),
+    ],
+    tonos: (l) => [
+      titulo(l.titulo),
+      h('p', { class: 'texto', text: l.texto }),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '22px', marginTop: '46px' } },
+        l.tonos.map(([n, m]) => h('div', { class: 'wa', style: { padding: '26px 30px' } },
+          h('p', { class: 'kicker', style: { color: '#111b21', fontSize: '28px', marginBottom: '14px' }, text: n }),
+          h('div', { class: 'burbuja', style: { fontSize: '34px' }, text: m })))),
+    ],
+    precio: (l) => [
+      h('div', { class: 'monto', text: l.monto }),
+      h('p', { class: 'medio', style: { marginTop: '20px' }, text: l.detalle }),
+      h('div', { class: 'items' }, l.items.map((i) => h('p', {}, h('b', { text: '✓' }), i))),
+    ],
+    faq: (l) => [
+      titulo(l.titulo),
+      h('div', { class: 'faq' }, l.items.map(([q, a]) => h('div', {}, h('b', { text: q }), h('span', { text: a })))),
+    ],
+    cta: (l, negra) => [
+      h('p', { class: 'kicker', text: 'Empieza hoy' }),
+      esquinado(titulo(l.titulo, 'mega'), negra),
+      h('p', { class: 'texto', html: l.texto }),
+      h('span', { class: 'pill', style: { marginTop: '60px' }, text: l.boton }),
+      Motor.cruces(negra),
+    ],
+  }
+
+  function lamina(car, i) {
+    const l = car.laminas[i]
+    const negra = l.fondo === 'negro'
+    const el = h('div', { class: 'lamina ' + (negra ? 'negra' : 'blanca'), 'data-id': `${car.id}-${i + 1}` })
+    TIPOS[l.tipo](l, negra).forEach((c) => c && el.appendChild(c))
+    el.appendChild(h('span', { class: 'pag', text: `${String(i + 1).padStart(2, '0')} / ${String(car.laminas.length).padStart(2, '0')}` }))
+    el.appendChild(h('div', { class: 'marca', html: logoSvg(negra) + 'bookeaa' }))
+    if (i === 0) el.appendChild(h('span', { class: 'desliza', text: 'DESLIZA →' }))
+    return el
+  }
+
+  // ?c=3&s=2 dibuja una sola lámina (para el render). Sin parámetros, todas en miniatura.
+  const q = new URLSearchParams(location.search)
+  const raiz = document.getElementById('raiz')
+  if (q.has('c')) {
+    const car = CARRUSELES.find((c) => c.id === Number(q.get('c')))
+    raiz.appendChild(lamina(car, Number(q.get('s')) - 1))
+  } else {
+    document.body.classList.add('preview')
+    CARRUSELES.forEach((car) => {
+      raiz.appendChild(h('h2', { style: { color: '#ddd', font: '600 18px system-ui' }, text: `${car.id}. ${car.nombre}` }))
+      raiz.appendChild(h('div', { class: 'fila' }, car.laminas.map((_, i) => lamina(car, i))))
+    })
+  }
+  window.listo = Promise.all([document.fonts.ready, ...[...document.images].map((img) => img.decode().catch(() => {}))])
+</script>
+</body>
+</html>
