@@ -4,7 +4,8 @@ import { Enfasis } from './Enfasis'
 import { GANCHO_S, Gancho } from './Gancho'
 import { PERSIANA_S, Persiana } from './Persiana'
 import { Subtitulos } from './Subtitulos'
-import { duracionSegmento, inicios, remapearCaptions } from './tiempo'
+import { Escena } from './Escena'
+import { aSalida, duracionSegmento, inicios, remapearCaptions } from './tiempo'
 import { CIERRE_S, type Edicion, type Segmento } from './tipos'
 
 /** Un tramo de cámara. Los cortes alternan un zoom leve para disimular el salto (jump cut). */
@@ -30,9 +31,13 @@ const Tramo: React.FC<{ video: string; s: Segmento; indice: number }> = ({ video
 export const Vlog: React.FC<Edicion> = (e) => {
   const { fps } = useVideoConfig()
   const ini = inicios(e.segmentos)
-  const captions = remapearCaptions(e.captions, e.segmentos)
+  const escenas = e.escenas ?? []
+  // Durante las escenas de marca los titulares reemplazan a los subtítulos.
+  const bajoEscena = (ms: number) => escenas.some((x) => ms / 1000 >= x.desde && ms / 1000 < x.hasta)
+  const captions = remapearCaptions(e.captions.filter((c) => !bajoEscena((c.startMs + c.endMs) / 2)), e.segmentos)
   const finCortes = e.segmentos.reduce((a, s) => a + duracionSegmento(s), 0)
   const f = (s: number) => Math.round(s * fps)
+  const salida = (t: number) => aSalida(t, e.segmentos)
 
   return (
     <AbsoluteFill style={{ background: '#0f0f0e' }}>
@@ -50,10 +55,19 @@ export const Vlog: React.FC<Edicion> = (e) => {
       </Sequence>
 
       {(e.enfasis ?? []).map((x, i) => (
-        <Sequence key={i} from={f(x.t)} durationInFrames={f(x.dur ?? 1.6)}>
+        <Sequence key={i} from={f(x.ts != null ? salida(x.ts) : x.t ?? 0)} durationInFrames={f(x.dur ?? 1.6)}>
           <Enfasis texto={x.texto} kicker={x.kicker} />
         </Sequence>
       ))}
+
+      {escenas.map((x, i) => {
+        const desde = salida(x.desde)
+        return (
+          <Sequence key={`e${i}`} from={f(desde)} durationInFrames={Math.max(1, f(salida(x.hasta)) - f(desde))}>
+            <Escena e={x} rel={(t) => salida(t) - desde} />
+          </Sequence>
+        )
+      })}
 
       {e.segmentos.map((s, i) =>
         s.bloque && i > 0 ? (

@@ -46,3 +46,14 @@ export function remapearCaptions(captions: Caption[], segmentos: Segmento[]): Ca
   }
   return salida
 }
+
+/** Segundo del video original → segundo del video final (si cae en un corte, el inicio del tramo siguiente). */
+export function aSalida(t: number, segmentos: Segmento[]) {
+  const ini = inicios(segmentos)
+  for (let i = 0; i < segmentos.length; i++) {
+    const s = segmentos[i]
+    if (t < s.desde) return ini[i]
+    if (t < s.hasta) return ini[i] + t - s.desde
+  }
+  return ini.length ? ini[ini.length - 1] + duracionSegmento(segmentos[segmentos.length - 1]) : 0
+}

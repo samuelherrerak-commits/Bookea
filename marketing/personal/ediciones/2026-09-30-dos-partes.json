@@ -1,0 +1,189 @@
+{
+  "fuente": "public/entrada/2026-09-30-dos-partes-original",
+  "motorWhisper": "faster",
+  "modeloWhisper": "turbo",
+  "conMusica": true,
+  "volumenMusica": 0.1,
+  "cierre": true,
+  "video": "entrada/2026-09-30-dos-partes.mp4",
+  "efectos": "tmp/2026-09-30-dos-partes-efectos.wav",
+  "musica": "tmp/2026-09-30-dos-partes-musica.wav",
+  "segmentos": [
+    {
+      "desde": 2.59,
+      "hasta": 7.25
+    },
+    {
+      "desde": 9.33,
+      "hasta": 16.95
+    },
+    {
+      "desde": 17.61,
+      "hasta": 19.15
+    },
+    {
+      "desde": 19.67,
+      "hasta": 28.49
+    },
+    {
+      "desde": 28.93,
+      "hasta": 38.97
+    },
+    {
+      "desde": 39.87,
+      "hasta": 45.15,
+      "bloque": true
+    },
+    {
+      "desde": 45.49,
+      "hasta": 51.59
+    },
+    {
+      "desde": 52.25,
+      "hasta": 54.45
+    },
+    {
+      "desde": 59.58,
+      "hasta": 67.3
+    },
+    {
+      "desde": 75,
+      "hasta": 77.4
+    }
+  ],
+  "serie": "Diario del fundador",
+  "gancho": "¿Estás perdiendo plata?",
+  "enfasis": [
+    {
+      "ts": 4.7,
+      "texto": "Un WhatsApp.",
+      "kicker": "Por no responder",
+      "dur": 1.9
+    },
+    {
+      "ts": 25.83,
+      "texto": "Dos citas. Una hora.",
+      "dur": 2.4
+    },
+    {
+      "ts": 37.59,
+      "texto": "bookeaa.",
+      "kicker": "Por eso creé",
+      "dur": 1.4
+    }
+  ],
+  "escenas": [
+    {
+      "desde": 39.87,
+      "hasta": 45.4,
+      "fondo": "negro",
+      "entrada": "corte",
+      "kicker": "Tu agenda online",
+      "titulo": [
+        "SÚPER",
+        "SENCILLO."
+      ],
+      "texto": "Para cualquier persona que trabaje con agenda.",
+      "textoEn": 42.39
+    },
+    {
+      "desde": 45.4,
+      "hasta": 48.3,
+      "fondo": "blanco",
+      "kicker": "01 · Tu link",
+      "titulo": [
+        "COMPARTE",
+        "TU LINK."
+      ],
+      "link": "barberia-norte",
+      "telefonos": [
+        {
+          "img": "flujo/1-inicio.jpg",
+          "ancho": 600,
+          "x": 240,
+          "y": 930,
+          "en": 47.15
+        }
+      ]
+    },
+    {
+      "desde": 48.3,
+      "hasta": 52.2,
+      "fondo": "negro",
+      "entrada": "lado",
+      "kicker": "02 · Tu cliente reserva",
+      "titulo": [
+        "VE TUS HORAS",
+        "LIBRES."
+      ],
+      "estilo": "grande",
+      "telefonos": [
+        {
+          "img": "flujo/2-servicios.jpg",
+          "ancho": 500,
+          "x": 40,
+          "y": 760,
+          "rot": -5,
+          "en": 48.45
+        },
+        {
+          "img": "flujo/4-agenda.jpg",
+          "ancho": 500,
+          "x": 540,
+          "y": 820,
+          "rot": 5,
+          "en": 48.9
+        }
+      ]
+    },
+    {
+      "desde": 52.2,
+      "hasta": 54.45,
+      "fondo": "blanco",
+      "kicker": "03 · Listo",
+      "titulo": [
+        "RESERVA EN",
+        "SEGUNDOS."
+      ],
+      "estilo": "grande",
+      "telefonos": [
+        {
+          "img": "flujo/6-listo.jpg",
+          "ancho": 560,
+          "x": 260,
+          "y": 760,
+          "en": 52.45
+        }
+      ]
+    },
+    {
+      "desde": 59.58,
+      "hasta": 63.95,
+      "fondo": "negro",
+      "titulo": [
+        "SIN CRUCES.",
+        "SIN ESPERAS.",
+        "SIN INTERRUPCIONES."
+      ],
+      "tiempos": [
+        59.7,
+        61.22,
+        62.88
+      ],
+      "estilo": "grande",
+      "tamano": 116
+    },
+    {
+      "desde": 63.95,
+      "hasta": 77.4,
+      "fondo": "blanco",
+      "kicker": "¿Trabajas por citas?",
+      "titulo": [
+        "SIMPLIFÍCATE",
+        "LA VIDA."
+      ],
+      "estilo": "grande",
+      "pastilla": "Pruébalo · Link en mi perfil"
+    }
+  ]
+}

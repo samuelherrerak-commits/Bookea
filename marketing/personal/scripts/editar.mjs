@@ -108,8 +108,26 @@ function transcribir() {
 }
 
 // 3. Cortar silencios (y lo que no sea voz) dejando un respiro natural.
-function cortar(total) {
+function cortar(total, captions) {
   if (e.segmentos?.length) return
+  // Con tiempos por palabra (faster-whisper) se corta por las pausas entre palabras:
+  // funciona aunque haya ruido de fondo, donde silencedetect no encuentra nada.
+  if (e.motorWhisper === 'faster' && captions.length) {
+    const pausa = e.silencioMin ?? 0.45
+    const segs = []
+    for (const c of captions) {
+      const a = c.startMs / 1000
+      const b = c.endMs / 1000
+      const ult = segs[segs.length - 1]
+      if (ult && a - ult.hasta <= pausa) ult.hasta = b
+      else segs.push({ desde: a, hasta: b })
+    }
+    e.segmentos = segs.map((x) => ({ desde: +Math.max(0, x.desde - 0.12).toFixed(2), hasta: +Math.min(total, x.hasta + 0.2).toFixed(2) }))
+    const quedan = e.segmentos.reduce((s, x) => s + x.hasta - x.desde, 0)
+    console.log(`✂ ${e.segmentos.length} tramos (por palabras) · ${total.toFixed(1)} s → ${quedan.toFixed(1)} s`)
+    guardar()
+    return
+  }
   const r = correr(FFMPEG, ['-hide_banner', '-i', join(PUBLIC, e.video), '-af', `silencedetect=noise=${e.umbralSilencio ?? '-32dB'}:d=${e.silencioMin ?? 0.45}`, '-f', 'null', '-'], { capturar: true })
   const silencios = []
   let desde = null
@@ -134,6 +152,17 @@ function cortar(total) {
   guardar()
 }
 
+/** Segundo del original → segundo del video final (igual que aSalida de src/tiempo.ts). */
+function aSalida(t) {
+  let ini = 0
+  for (const s of e.segmentos) {
+    if (t < s.desde) return ini
+    if (t < s.hasta) return ini + t - s.desde
+    ini += s.hasta - s.desde
+  }
+  return ini
+}
+
 // 4. Música de bookeaa y efectos sincronizados.
 async function sonido() {
   const cortes = e.segmentos.reduce((s, x) => s + x.hasta - x.desde, 0)
@@ -146,7 +175,19 @@ async function sonido() {
   })
   // Mismos efectos que los reels de la marca: texto al entrar un titular, whoosh en la ola.
   if (e.gancho) cues.push({ t: 0.08, tipo: 'texto' }, { t: GANCHO_S - 0.45, tipo: 'whoosh' })
-  for (const x of e.enfasis ?? []) cues.push({ t: x.t + 0.04, tipo: 'texto' })
+  for (const x of e.enfasis ?? []) cues.push({ t: (x.ts != null ? aSalida(x.ts) : x.t) + 0.04, tipo: 'texto' })
+  // Escenas de marca: whoosh en la ola/lado, texto al entrar el titular, desliza con cada
+  // teléfono y teclas mientras se escribe el link (igual que los reels de la campaña).
+  for (const x of e.escenas ?? []) {
+    const a = aSalida(x.desde)
+    const entrada = x.entrada ?? 'ola'
+    const base = entrada === 'corte' ? 0.05 : 0.3
+    if (entrada !== 'corte') cues.push({ t: a, tipo: 'whoosh' })
+    if (x.tiempos) x.tiempos.forEach((ts) => cues.push({ t: Math.max(a + base, aSalida(ts)) + 0.05, tipo: 'texto' }))
+    else cues.push({ t: a + base + 0.05, tipo: 'texto' })
+    ;(x.telefonos ?? []).forEach((tel, i) => cues.push({ t: tel.en != null ? Math.max(a + base, aSalida(tel.en)) : a + base + 0.5 + i * 0.3, tipo: 'desliza' }))
+    if (x.link) for (let i = 0; i < x.link.length; i++) cues.push({ t: a + base + 0.75 + (1.0 * i) / x.link.length, tipo: 'tecla' })
+  }
   if (e.cierre) cues.push({ t: cortes + 0.1, tipo: 'final' })
 
   mkdirSync(join(PUBLIC, 'tmp'), { recursive: true })
@@ -181,7 +222,7 @@ function renderizar(captions) {
   correr(FFMPEG, [
     '-y', '-hide_banner', '-loglevel', 'error', '-i', crudo,
     '-af', 'highpass=f=70,acompressor=threshold=-20dB:ratio=3:attack=5:release=120,loudnorm=I=-14:TP=-1.5:LRA=9',
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-pix_fmt', 'yuv420p', '-color_range', 'tv',
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '22', '-maxrate', '3.8M', '-bufsize', '7.6M', '-pix_fmt', 'yuv420p', '-color_range', 'tv',
     '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', final,
   ])
   console.log('✔', final)
@@ -190,7 +231,7 @@ function renderizar(captions) {
 traer()
 const total = duracionDe(join(PUBLIC, e.video))
 const captions = transcribir()
-cortar(total)
+cortar(total, captions)
 await sonido()
 guardar()
 if (!args.includes('--sin-render')) renderizar(captions)

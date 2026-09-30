@@ -17,6 +17,14 @@ El proyecto está en `marketing/personal/` (Remotion). Lee su `README.md` y, par
 6. **Cuadros de prueba**: `--cuadros 0.5,<medio>,<final-1>`. Míralos con Read. Revisa que el subtítulo se lea, que no tape la cara y que esté en la zona segura.
 7. **Render completo**, verificar `-14 LUFS ±1` (`ffmpeg -af ebur128`) y enviar `salida/<nombre>.mp4` con SendUserFile. Propón también el texto del post (2 o 3 líneas en primera persona y una pregunta) y 3 a 5 hashtags.
 
+## Videos en dos partes (a cámara + explicando la app)
+
+Cuando Samuel habla mirando la pantalla o explica cómo funciona bookeaa, usa `escenas`:
+- Pantallas de marca en negro o blanco, alternando, con kicker numerado ("01 · Tu link", "02 · Tu cliente reserva"), titulares cortos terminados en punto y la persiana (`bloque: true`) al pasar de la parte 1 a la 2.
+- Pon teléfonos (`public/flujo/`: 1-inicio, 2-servicios, 3-lugar, 4-agenda, 5-pago, 6-listo) **solo cuando lo que dice se ve en la app**. Si no, solo titulares. `en` sincroniza cada teléfono con la palabra.
+- Referencia: `ediciones/2026-09-30-dos-partes.json`.
+- Los tiempos salen de `<edición>.captions.json`. Quita las tomas repetidas desde `segmentos`.
+
 ## Estilo (identidad de bookeaa; no cambiar sin que Samuel lo pida)
 
 Sale de `marketing/video/estilos.css` y `motor.js`, y está implementado en `marketing/personal/src/marca.ts`.

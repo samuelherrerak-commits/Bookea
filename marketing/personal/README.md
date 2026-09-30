@@ -20,13 +20,14 @@ Copia `ediciones/ejemplo.json`. Solo hace falta `fuente`; lo demás es opcional.
 | `fuente` | Link de Google Drive (compartido con cualquiera), URL o ruta local |
 | `gancho` | Titular de la tarjeta negra inicial (1,6 s), corto y terminado en punto |
 | `serie` | Kicker encima del gancho, p. ej. "Diario del fundador" |
-| `enfasis` | `[{ t, texto, dur?, kicker? }]`: titular arriba sobre degradado, en segundos del video final |
+| `enfasis` | `[{ ts, texto, dur?, kicker? }]`: titular arriba sobre degradado. `ts` va en segundos del original (o `t` en segundos del video final) |
 | `conMusica`, `volumenMusica` | Música de bookeaa (la de `marketing/scripts/audio.mjs`) bajo la voz. El volumen por defecto es 0.1 |
 | `sonidos` | Efectos extra `[{ t, tipo }]`: `whoosh`, `pop`, `ding`, `check`, `golpe`, `desliza`, `texto`, `tecla`, `final` |
+| `escenas` | Escenas de marca a pantalla completa (tapan la cámara y la voz sigue), para explicar la app como en los reels: `{ desde, hasta, fondo: "negro"\|"blanco", entrada?: "ola"\|"lado"\|"corte", kicker?, titulo: [líneas], tiempos?, estilo?, tamano?, texto?, textoEn?, link?, pastilla?, telefonos?: [{ img: "flujo/4-agenda.jpg", ancho?, x, y, rot?, en? }] }`. Los tiempos van en segundos del ORIGINAL. Durante una escena no se muestran subtítulos |
 | `cierre` | Cierre de marca de 2,5 s (logo + bookeaa, @bookeaa) |
 | `segmentos` | Los salen solos al cortar silencios. Edítalos para quitar tomas malas. `bloque: true` agrega la persiana negra + golpe y `broll: "entrada/x.mp4"` tapa la cámara con un clip |
 | `umbralSilencio`, `silencioMin` | Ajuste del corte (por defecto `-32dB` y `0.45` s) |
-| `modeloWhisper` | `small` por defecto; `medium` si la transcripción falla |
+| `motorWhisper`, `modeloWhisper` | `"faster"` + `"turbo"` da tiempos exactos por palabra (necesita huggingface.co) y corta por las pausas entre palabras. Sin eso se usa sherpa-onnx |
 
 El script guarda cada paso en la edición: `video`, `segmentos` y `<edición>.captions.json`. Si corriges algo a mano (una palabra de los subtítulos, un corte), al volver a correrlo solo se rehace lo que falta. Los videos (`public/entrada/`, `public/tmp/`, `salida/`) no se versionan.
 
