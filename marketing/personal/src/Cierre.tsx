@@ -1,41 +1,31 @@
-import { AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig, Easing } from 'remotion'
-import { LETRA } from './fuentes'
+import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig } from 'remotion'
+import { TEXTO } from './fuentes'
+import { Lineas } from './Lineas'
+import { COLOR, MARGEN, TIPO, clamp, tw } from './marca'
 
-/** Tarjeta final: logo + @bookeaa sobre negro. */
+/** Cierre como el de los reels de la marca: logo + "bookeaa" gigante, kicker, regla y @. */
 export const Cierre: React.FC = () => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
-  const fondo = interpolate(frame, [0, 6], [0, 1], { extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })
-  const logo = spring({ frame: frame - 3, fps, config: { damping: 12, stiffness: 180 } })
-  const texto = spring({ frame: frame - 9, fps, config: { damping: 14, stiffness: 180 } })
+  const t = frame / fps
+  const fondo = clamp(tw(t, 0, 0.25, 0, 1))
+  const logo = clamp(tw(t, 0.12, 0.5, 0, 1))
+  const regla = clamp(tw(t, 0.55, 0.45, 0, 1))
+  const texto = clamp(tw(t, 0.7, 0.45, 0, 1))
   return (
-    <AbsoluteFill style={{ background: `rgba(15,15,14,${fondo})`, justifyContent: 'center', alignItems: 'center', gap: 36 }}>
-      <div
-        style={{
-          width: 260,
-          height: 260,
-          borderRadius: 60,
-          background: '#fff',
-          display: 'grid',
-          placeItems: 'center',
-          opacity: logo,
-          transform: `scale(${0.6 + logo * 0.4}) rotate(${(1 - logo) * -12}deg)`,
-        }}
-      >
-        <Img src={staticFile('bookeaa.svg')} style={{ width: 190, height: 190 }} />
+    <AbsoluteFill style={{ background: COLOR.carbon, opacity: fondo, color: COLOR.papel, padding: `0 ${MARGEN}px`, justifyContent: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 26, marginTop: -80 }}>
+        <div style={{ width: 150, height: 150, opacity: logo, transform: `scale(${0.7 + logo * 0.3})`, filter: 'invert(1)' }}>
+          <Img src={staticFile('bookeaa.svg')} style={{ width: '100%', height: '100%' }} />
+        </div>
+        <Lineas lineas={['bookeaa']} estilo={{ ...TIPO.mega, fontSize: 210, lineHeight: 0.8, textTransform: 'none', letterSpacing: '-0.02em' }} a={0.15} />
       </div>
-      <div
-        style={{
-          fontFamily: LETRA,
-          fontWeight: 800,
-          fontSize: 96,
-          color: '#fff',
-          letterSpacing: '-0.01em',
-          opacity: texto,
-          transform: `translateY(${(1 - texto) * 30}px)`,
-        }}
-      >
-        @bookeaa
+      <div style={{ ...TIPO.kicker, marginTop: 70, opacity: 0.6 * texto }}>Tu agenda online</div>
+      <i style={{ display: 'block', width: 90, height: 8, background: COLOR.papel, marginTop: 30, transform: `scaleX(${regla})`, transformOrigin: 'left' }} />
+      <div style={{ fontFamily: TEXTO, fontSize: 44, lineHeight: 1.35, marginTop: 40, opacity: texto, transform: `translateY(${(1 - texto) * 30}px)` }}>
+        Tus clientes reservan solos.
+        <br />
+        <b style={{ fontWeight: 600 }}>@bookeaa</b>
       </div>
     </AbsoluteFill>
   )

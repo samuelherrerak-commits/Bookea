@@ -1,7 +1,8 @@
-import { AbsoluteFill, Audio, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig, interpolate, Easing } from 'remotion'
+import { AbsoluteFill, Audio, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig, interpolate } from 'remotion'
 import { Cierre } from './Cierre'
 import { Enfasis } from './Enfasis'
-import { Gancho } from './Gancho'
+import { GANCHO_S, Gancho } from './Gancho'
+import { PERSIANA_S, Persiana } from './Persiana'
 import { Subtitulos } from './Subtitulos'
 import { duracionSegmento, inicios, remapearCaptions } from './tiempo'
 import { CIERRE_S, type Edicion, type Segmento } from './tipos'
@@ -26,13 +27,6 @@ const Tramo: React.FC<{ video: string; s: Segmento; indice: number }> = ({ video
   )
 }
 
-/** Destello blanco corto al cambiar de bloque (acompaña al whoosh). */
-const Destello: React.FC = () => {
-  const frame = useCurrentFrame()
-  const o = interpolate(frame, [0, 2, 9], [0.85, 0.6, 0], { extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })
-  return <AbsoluteFill style={{ background: '#fff', opacity: o }} />
-}
-
 export const Vlog: React.FC<Edicion> = (e) => {
   const { fps } = useVideoConfig()
   const ini = inicios(e.segmentos)
@@ -45,7 +39,6 @@ export const Vlog: React.FC<Edicion> = (e) => {
       {e.segmentos.map((s, i) => (
         <Sequence key={i} from={f(ini[i])} durationInFrames={Math.max(1, f(ini[i] + duracionSegmento(s)) - f(ini[i]))}>
           <Tramo video={e.video} s={s} indice={i} />
-          {s.bloque && i > 0 ? <Destello /> : null}
         </Sequence>
       ))}
 
@@ -56,17 +49,25 @@ export const Vlog: React.FC<Edicion> = (e) => {
         <Subtitulos captions={captions} />
       </Sequence>
 
-      {e.gancho ? (
-        <Sequence durationInFrames={f(Math.min(2.6, finCortes))}>
-          <Gancho texto={e.gancho} />
-        </Sequence>
-      ) : null}
-
       {(e.enfasis ?? []).map((x, i) => (
-        <Sequence key={i} from={f(x.t)} durationInFrames={f(x.dur ?? 1.4)}>
-          <Enfasis texto={x.texto} />
+        <Sequence key={i} from={f(x.t)} durationInFrames={f(x.dur ?? 1.6)}>
+          <Enfasis texto={x.texto} kicker={x.kicker} />
         </Sequence>
       ))}
+
+      {e.segmentos.map((s, i) =>
+        s.bloque && i > 0 ? (
+          <Sequence key={`p${i}`} from={f(ini[i] - PERSIANA_S / 2)} durationInFrames={f(PERSIANA_S)}>
+            <Persiana />
+          </Sequence>
+        ) : null,
+      )}
+
+      {e.gancho ? (
+        <Sequence durationInFrames={f(Math.min(GANCHO_S, finCortes))}>
+          <Gancho texto={e.gancho} serie={e.serie} />
+        </Sequence>
+      ) : null}
 
       {e.cierre ? (
         <Sequence from={f(finCortes)} durationInFrames={f(CIERRE_S)}>

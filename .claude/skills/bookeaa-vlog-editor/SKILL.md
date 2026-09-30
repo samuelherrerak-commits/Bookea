@@ -17,10 +17,17 @@ El proyecto está en `marketing/personal/` (Remotion). Lee su `README.md` y, par
 6. **Cuadros de prueba**: `--cuadros 0.5,<medio>,<final-1>`. Míralos con Read. Revisa que el subtítulo se lea, que no tape la cara y que esté en la zona segura.
 7. **Render completo**, verificar `-14 LUFS ±1` (`ffmpeg -af ebur128`) y enviar `salida/<nombre>.mp4` con SendUserFile. Propón también el texto del post (2 o 3 líneas en primera persona y una pregunta) y 3 a 5 hashtags.
 
-## Estilo (no cambiar sin que Samuel lo pida)
+## Estilo (identidad de bookeaa; no cambiar sin que Samuel lo pida)
 
-- Crudo y personal: nada de plantillas de anuncio. Máximo 3 efectos de sonido más allá de los automáticos.
-- Música solo con `conMusica: true`, a 0.08–0.12, y siempre por debajo de la voz.
-- Subtítulos: Barlow Condensed 800 en mayúsculas, blanco con borde negro y la palabra activa en caja blanca. Grupos de 2 a 4 palabras.
-- Paleta de bookeaa: blanco `#fff` y carbón `#0f0f0e`. Sin colores extra.
-- Duración ideal 30–60 s. Si el material pasa de 75 s, propón qué cortar antes de renderizar.
+Sale de `marketing/video/estilos.css` y `motor.js`, y está implementado en `marketing/personal/src/marca.ts`.
+
+- **Solo carbón `#0f0f0e` y blanco.** Nada de colores de acento, cajas blancas, stickers ni giros.
+- **Titulares:** Barlow Condensed 800 en MAYÚSCULAS, **alineados a la izquierda** con margen de 90px. Terminan en punto ("TU LINK. TUS CLIENTES."); el punto corta la línea. Las líneas suben desde una máscara (`Lineas.tsx`).
+- **Gancho:** tarjeta negra de 1,6 s con la serie como kicker (`serie`), un titular corto (idealmente ≤ 22 caracteres para el tamaño mega), esquinas ⌐ ¬ y dos ×. Sale con la ola mientras la voz sigue sonando.
+- **Subtítulos:** Barlow Condensed 800 en mayúsculas a la izquierda, sin cajas. La palabra que se dice va en blanco pleno y las que faltan, atenuadas.
+- **Énfasis:** 1 a 3 por video, titular arriba sobre un degradado oscuro, con `kicker` opcional. Los números cortos ("12", "7:00") usan el tamaño reloj.
+- **Cambios de tema:** `bloque: true` pone la persiana negra con un golpe.
+- **Cierre:** logo + bookeaa, "TU AGENDA ONLINE" y @bookeaa.
+- **Sonidos:** `texto` al entrar un titular, `whoosh` en la ola y `golpe` en la persiana. Máximo 3 efectos extra.
+- **Música:** solo con `conMusica: true`, a 0.08–0.12, siempre por debajo de la voz.
+- **Duración** ideal: 30–60 s.

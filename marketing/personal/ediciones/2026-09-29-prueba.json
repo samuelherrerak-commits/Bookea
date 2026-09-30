@@ -17,17 +17,19 @@
   "video": "entrada/2026-09-29-prueba.mp4",
   "efectos": "tmp/2026-09-29-prueba-efectos.wav",
   "musica": "tmp/2026-09-29-prueba-musica.wav",
-  "gancho": "Te presento mi nuevo proyecto",
+  "gancho": "Te presento bookeaa.",
   "enfasis": [
     {
       "t": 8.4,
-      "texto": "bookeaa",
-      "dur": 1.3
+      "texto": "bookeaa.",
+      "dur": 1.5,
+      "kicker": "Mi nuevo proyecto"
     },
     {
-      "t": 22.8,
-      "texto": "Tu link personalizado",
-      "dur": 1.8
+      "t": 22.6,
+      "texto": "Tu link. Tus clientes.",
+      "dur": 2
     }
-  ]
+  ],
+  "serie": "Diario del fundador"
 }

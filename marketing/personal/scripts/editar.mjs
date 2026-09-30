@@ -21,7 +21,8 @@ import { generarAudio } from '../../scripts/audio.mjs'
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PUBLIC = join(RAIZ, 'public')
 const FFMPEG = process.env.FFMPEG_PATH || ffmpegConX264()
-const CIERRE_S = 2
+const CIERRE_S = 2.5
+const GANCHO_S = 1.6
 
 const args = process.argv.slice(2)
 const rutaEdicion = resolve(args.find((a) => a.endsWith('.json')) ?? '')
@@ -140,11 +141,12 @@ async function sonido() {
   const cues = [...(e.sonidos ?? [])]
   let t = 0
   e.segmentos.forEach((s, i) => {
-    if (s.bloque && i > 0) cues.push({ t: Math.max(0, t - 0.15), tipo: 'whoosh' })
+    if (s.bloque && i > 0) cues.push({ t: Math.max(0, t - 0.06), tipo: 'golpe' })
     t += s.hasta - s.desde
   })
-  if (e.gancho) cues.push({ t: 0.05, tipo: 'golpe' })
-  for (const x of e.enfasis ?? []) cues.push({ t: x.t, tipo: 'pop' })
+  // Mismos efectos que los reels de la marca: texto al entrar un titular, whoosh en la ola.
+  if (e.gancho) cues.push({ t: 0.08, tipo: 'texto' }, { t: GANCHO_S - 0.45, tipo: 'whoosh' })
+  for (const x of e.enfasis ?? []) cues.push({ t: x.t + 0.04, tipo: 'texto' })
   if (e.cierre) cues.push({ t: cortes + 0.1, tipo: 'final' })
 
   mkdirSync(join(PUBLIC, 'tmp'), { recursive: true })

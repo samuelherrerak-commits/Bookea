@@ -1,6 +1,6 @@
 # Cuenta personal · edición de vlogs
 
-Proyecto Remotion aparte (su propio `package.json`) para editar los videos de la cuenta personal del fundador. El estilo es vlog crudo: se cortan los silencios, subtítulos grandes palabra por palabra en blanco y negro con la Barlow Condensed de bookeaa, zoom leve en cada corte, frase gancho, textos de énfasis, efectos y, cuando se pide, la música de bookeaa baja. La salida es 1080×1920 a -14 LUFS, lista para Instagram Reels y TikTok. Las ideas y la guía de grabación están en [IDEAS.md](IDEAS.md).
+Proyecto Remotion aparte (su propio `package.json`) para editar los videos de la cuenta personal del fundador. Tiene la identidad visual de bookeaa (la misma de los reels de `marketing/video/`): solo blanco y negro, Barlow Condensed 800 en mayúsculas alineada a la izquierda y titulares que suben por línea. Incluye un gancho en tarjeta negra que sale con la ola, subtítulos palabra por palabra sin cajas, énfasis sobre degradado, persiana en los cambios de tema y el cierre de marca. Se cortan los silencios, hay un zoom leve en cada corte y, cuando se pide, suena la música de bookeaa baja. Los tokens están en `src/marca.ts`. La salida es 1080×1920 a -14 LUFS, lista para Instagram Reels y TikTok. Las ideas y la guía de grabación están en [IDEAS.md](IDEAS.md).
 
 ```bash
 cd marketing/personal
@@ -18,12 +18,13 @@ Copia `ediciones/ejemplo.json`. Solo hace falta `fuente`; lo demás es opcional.
 | Campo | Qué hace |
 | --- | --- |
 | `fuente` | Link de Google Drive (compartido con cualquiera), URL o ruta local |
-| `gancho` | Frase de los primeros 2,6 s, arriba |
-| `enfasis` | `[{ t, texto, dur? }]`: texto grande con un pop, en segundos del video final |
+| `gancho` | Titular de la tarjeta negra inicial (1,6 s), corto y terminado en punto |
+| `serie` | Kicker encima del gancho, p. ej. "Diario del fundador" |
+| `enfasis` | `[{ t, texto, dur?, kicker? }]`: titular arriba sobre degradado, en segundos del video final |
 | `conMusica`, `volumenMusica` | Música de bookeaa (la de `marketing/scripts/audio.mjs`) bajo la voz. El volumen por defecto es 0.1 |
 | `sonidos` | Efectos extra `[{ t, tipo }]`: `whoosh`, `pop`, `ding`, `check`, `golpe`, `desliza`, `texto`, `tecla`, `final` |
-| `cierre` | Tarjeta de 2 s con el logo y @bookeaa |
-| `segmentos` | Los salen solos al cortar silencios. Edítalos para quitar tomas malas. `bloque: true` agrega destello + whoosh y `broll: "entrada/x.mp4"` tapa la cámara con un clip |
+| `cierre` | Cierre de marca de 2,5 s (logo + bookeaa, @bookeaa) |
+| `segmentos` | Los salen solos al cortar silencios. Edítalos para quitar tomas malas. `bloque: true` agrega la persiana negra + golpe y `broll: "entrada/x.mp4"` tapa la cámara con un clip |
 | `umbralSilencio`, `silencioMin` | Ajuste del corte (por defecto `-32dB` y `0.45` s) |
 | `modeloWhisper` | `small` por defecto; `medium` si la transcripción falla |
 
