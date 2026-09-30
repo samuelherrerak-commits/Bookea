@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<!-- Página interna para presentar el proyecto: accesible con el enlace, fuera de los buscadores. -->
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<title>Proyección bookeaa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700;800&display=swap" />
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #ffffff;
+    --fg: #0f0f0e;
+    --muted: #5b5b57;
+    --line: #e3e3df;
+    --surface: #f4f4f2;
+    --inv-bg: #0f0f0e;
+    --inv-fg: #ffffff;
+    --good: #1f7a4d;
+    --bad: #b4371f;
+    /* Series de los gráficos (paleta validada, slots 1 y 2) */
+    --s-pago: #2a78d6;
+    --s-prueba: #eb6834;
+    --s-ingreso: #2a78d6;
+    --s-egreso: #eb6834;
+    --grid: #ebebe7;
+    --display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --body: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      color-scheme: dark;
+      --bg: #0f0f0e; --fg: #f4f4f2; --muted: #a3a39e; --line: #2c2c2a; --surface: #1a1a19;
+      --inv-bg: #f4f4f2; --inv-fg: #0f0f0e; --good: #5cc98f; --bad: #ef7a5f;
+      --s-pago: #3987e5; --s-prueba: #d95926; --s-ingreso: #3987e5; --s-egreso: #d95926; --grid: #262624;
+    }
+  }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --bg: #0f0f0e; --fg: #f4f4f2; --muted: #a3a39e; --line: #2c2c2a; --surface: #1a1a19;
+    --inv-bg: #f4f4f2; --inv-fg: #0f0f0e; --good: #5cc98f; --bad: #ef7a5f;
+    --s-pago: #3987e5; --s-prueba: #d95926; --s-ingreso: #3987e5; --s-egreso: #d95926; --grid: #262624;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 var(--body); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 36px 16px 90px; }
+  h1, h2, h3 { font-family: var(--display); text-transform: uppercase; margin: 0; line-height: 0.92; text-wrap: balance; }
+  h1 { font-weight: 800; font-size: clamp(42px, 8vw, 96px); }
+  h2 { font-weight: 800; font-size: clamp(30px, 4.5vw, 46px); }
+  h3 { font-weight: 700; font-size: 20px; letter-spacing: 0.02em; }
+  p { margin: 0; }
+  .kicker { font: 700 13px/1 var(--display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .muted { color: var(--muted); }
+  .regla { display: block; width: 44px; height: 4px; background: var(--fg); }
+  section { padding-top: 56px; display: flex; flex-direction: column; gap: 18px; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  header { display: flex; flex-direction: column; gap: 18px; }
+  .marca { display: flex; align-items: center; gap: 10px; font: 800 28px/1 var(--display); }
+  .marca svg { width: 28px; height: 28px; }
+  .lead { font-size: 19px; max-width: 70ch; }
+  .barra { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .seg { display: inline-flex; border: 2px solid var(--fg); border-radius: 99px; padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: none; color: var(--fg); font: 700 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 14px; border-radius: 99px; cursor: pointer; }
+  .seg button[aria-pressed='true'] { background: var(--fg); color: var(--bg); }
+  .btn { border: 2px solid var(--fg); background: none; color: var(--fg); font: 700 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 15px; border-radius: 99px; cursor: pointer; }
+  .btn:hover { background: var(--fg); color: var(--bg); }
+  .btn:focus-visible, .seg button:focus-visible, input:focus-visible { outline: 3px solid var(--s-pago); outline-offset: 2px; }
+  .aviso { font-size: 14px; color: var(--good); min-height: 20px; }
+
+  /* Indicadores */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .kpi { border: 2px solid var(--line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .kpi.inv { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+  .kpi.inv .kicker, .kpi.inv .muted { color: inherit; opacity: 0.7; }
+  .kpi b { font: 800 44px/0.95 var(--display); }
+  .kpi small { font-size: 14px; }
+  .meta-barra { height: 8px; border-radius: 99px; background: var(--surface); overflow: hidden; margin-top: 4px; }
+  .kpi.inv .meta-barra { background: rgb(255 255 255 / 0.18); }
+  .meta-barra i { display: block; height: 100%; background: currentColor; border-radius: 99px; }
+  .ok { color: var(--good); } .mal { color: var(--bad); }
+  .kpi.inv .ok, .kpi.inv .mal { color: inherit; }
+
+  /* Supuestos */
+  .grupos { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; align-items: start; }
+  details.grupo { border: 2px solid var(--line); border-radius: 14px; padding: 4px 18px 16px; }
+  details.grupo summary { cursor: pointer; list-style: none; padding: 14px 0 6px; display: flex; justify-content: space-between; align-items: center; }
+  details.grupo summary::-webkit-details-marker { display: none; }
+  details.grupo summary::after { content: '+'; font: 800 22px/1 var(--display); }
+  details.grupo[open] summary::after { content: '–'; }
+  .campo { display: grid; grid-template-columns: 1fr 118px; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); }
+  .campo:first-of-type { border-top: 0; }
+  .campo label { font-size: 15px; }
+  .campo label small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+  .entrada { display: flex; align-items: center; border: 1.5px solid var(--line); border-radius: 9px; padding: 0 8px; background: var(--bg); }
+  .entrada span { color: var(--muted); font-size: 14px; }
+  .entrada input { width: 100%; border: 0; background: none; color: var(--fg); font: 600 15px/1 var(--body); padding: 8px 2px; text-align: right; font-variant-numeric: tabular-nums; }
+  .entrada input:focus { outline: none; }
+  .entrada:focus-within { border-color: var(--fg); }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 15px; padding: 7px 0; border-top: 1px solid var(--line); }
+  .check input { width: 18px; height: 18px; accent-color: var(--fg); }
+  .meses-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding-top: 8px; }
+  .meses-grid label { font: 700 12px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; flex-direction: column; gap: 5px; }
+  .meses-grid .entrada input { text-align: center; }
+
+  /* Gráficos */
+  .graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+  @media (max-width: 480px) { .graficos { grid-template-columns: 1fr; } }
+  .grafico { border: 2px solid var(--line); border-radius: 14px; padding: 16px 16px 10px; position: relative; min-width: 0; }
+  .grafico svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13.5px; color: var(--muted); margin: 6px 0 4px; }
+  .leyenda i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .leyenda i.linea { height: 3px; border-radius: 2px; vertical-align: 3px; width: 16px; }
+  .tip {
+    position: absolute; pointer-events: none; background: var(--inv-bg); color: var(--inv-fg); border-radius: 10px;
+    padding: 9px 11px; font-size: 13px; line-height: 1.45; min-width: 150px; opacity: 0; transition: opacity 120ms; z-index: 2;
+    font-variant-numeric: tabular-nums;
+  }
+  .tip b { font: 700 13px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 4px; }
+  .tip div { display: flex; justify-content: space-between; gap: 12px; }
+  .tip i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
+
+  /* Tabla */
+  .tabla { overflow-x: auto; border: 2px solid var(--line); border-radius: 14px; }
+  table { border-collapse: collapse; width: 100%; min-width: 1080px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--bg); z-index: 1; min-width: 200px; }
+  thead th { font: 700 13px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--surface); }
+  thead th:first-child { background: var(--surface); }
+  tr.titulo td { font: 700 13px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: var(--surface); padding-top: 12px; }
+  tr.total td { font-weight: 600; border-top: 2px solid var(--fg); }
+  tr.clave td { font-weight: 700; }
+  td.neg { color: var(--bad); }
+  td.col-total, th.col-total { border-left: 2px solid var(--line); font-weight: 600; }
+
+  .notas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .nota { background: var(--surface); border-radius: 12px; padding: 14px 16px; font-size: 14.5px; display: flex; flex-direction: column; gap: 6px; }
+  footer { padding-top: 50px; color: var(--muted); font-size: 14px; }
+
+  @media print {
+    .no-print, details.grupo summary::after { display: none !important; }
+    details.grupo { break-inside: avoid; }
+    body { font-size: 12px; }
+    .wrap { padding: 0; }
+    section { padding-top: 26px; break-inside: avoid-page; }
+    .tabla { overflow: visible; }
+    table { min-width: 0; font-size: 9px; }
+    th, td { padding: 4px 5px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="marca" aria-label="bookeaa">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="28" height="26" rx="7" fill="currentColor"/><path d="M10 2.5v5M22 2.5v5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="var(--bg)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>
+      bookeaa
+    </div>
+    <p class="kicker" id="rango"></p>
+    <h1>Costos y proyección de ventas</h1>
+    <span class="regla"></span>
+    <p class="lead">Arrancamos desde cero con una meta: <b id="lead-meta">50 negocios</b> en el primer trimestre. Cada negocio tiene su primer mes gratis y después paga <b id="lead-precio">$15</b> al mes. Todos los números de esta página se pueden cambiar abajo, en <a href="#supuestos">Supuestos</a>, y todo se recalcula al instante.</p>
+    <div class="barra no-print">
+      <div class="seg" role="group" aria-label="Escenario">
+        <button type="button" data-escenario="conservador">Conservador</button>
+        <button type="button" data-escenario="base" aria-pressed="true">Base</button>
+        <button type="button" data-escenario="optimista">Optimista</button>
+      </div>
+      <button type="button" class="btn" id="compartir">Copiar enlace con estos números</button>
+      <button type="button" class="btn" id="imprimir">Imprimir o guardar PDF</button>
+      <button type="button" class="btn" id="reiniciar">Volver a los valores iniciales</button>
+    </div>
+    <p class="aviso no-print" id="aviso" role="status" aria-live="polite"></p>
+  </header>
+
+  <section aria-labelledby="t-resumen">
+    <p class="kicker">Resumen</p>
+    <h2 id="t-resumen">Lo que dicen los números</h2>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section aria-labelledby="t-graficos">
+    <p class="kicker">Mes a mes</p>
+    <h2 id="t-graficos">Clientes y dinero</h2>
+    <div class="graficos">
+      <figure class="grafico" style="margin:0">
+        <h3>Negocios activos</h3>
+        <div class="leyenda"><span><i style="background:var(--s-pago)"></i>Pagando</span><span><i style="background:var(--s-prueba)"></i>En su mes gratis</span></div>
+        <div id="g-clientes"></div>
+        <div class="tip" id="tip-clientes"></div>
+      </figure>
+      <figure class="grafico" style="margin:0">
+        <h3>Ingresos y egresos del mes</h3>
+        <div class="leyenda"><span><i style="background:var(--s-ingreso)"></i>Ingresos</span><span><i style="background:var(--s-egreso)"></i>Egresos</span></div>
+        <div id="g-dinero"></div>
+        <div class="tip" id="tip-dinero"></div>
+      </figure>
+      <figure class="grafico" style="margin:0">
+        <h3>Caja acumulada</h3>
+        <p class="muted" style="font-size:13.5px;margin:6px 0 4px">Lo que queda en la cuenta al cierre de cada mes. Debajo de $0 es dinero que tienes que poner.</p>
+        <div id="g-caja"></div>
+        <div class="tip" id="tip-caja"></div>
+      </figure>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-flujo">
+    <p class="kicker">Flujo de caja</p>
+    <h2 id="t-flujo">Mes por mes, en dólares</h2>
+    <p class="muted">Los negocios pueden salir con decimales porque son promedios (por ejemplo, el 70 % de 15 son 10,5). En la vida real serán números enteros.</p>
+    <div class="tabla" tabindex="0" aria-label="Tabla del flujo de caja"><table id="tabla"></table></div>
+  </section>
+
+  <section id="supuestos" aria-labelledby="t-supuestos">
+    <p class="kicker">Supuestos · todo es editable</p>
+    <h2 id="t-supuestos">De dónde salen los números</h2>
+    <p class="muted no-print">Cambia cualquier valor y todo se recalcula. Se guarda en este navegador; para mostrárselo a alguien más, usa "Copiar enlace con estos números".</p>
+    <div class="grupos" id="grupos"></div>
+  </section>
+
+  <section aria-labelledby="t-notas">
+    <p class="kicker">Para tener en cuenta</p>
+    <h2 id="t-notas">Qué hay detrás de cada costo</h2>
+    <div class="notas">
+      <div class="nota"><h3>Lo que hoy es gratis</h3><p>El sitio en Render (plan estático), Google Apps Script, Sheets y Calendar, y WhatsApp Business no cuestan nada con 50 a 100 negocios. Si algún día hace falta Google Workspace (más límites y correo @bookeaa.com), cuesta unos $7 al mes por usuario: ya está como costo opcional.</p></div>
+      <div class="nota"><h3>Google One</h3><p>El plan de 100 GB guarda los captures de Pago Móvil. El precio cambia según el país y si se paga mensual o anual (en EE. UU. es $1,99 al mes). Pon el que te cobren.</p></div>
+      <div class="nota"><h3>Dominio</h3><p>bookeaa.com costó $15 y se renueva cada año. Revisa el precio de renovación en GoDaddy: suele ser más alto que el del primer año.</p></div>
+      <div class="nota"><h3>Influencer</h3><p>El primer video es un regalo. Desde el mes que elijas se paga por video. Si no convierte, bájalo a 0 y mira cómo cambia la caja.</p></div>
+      <div class="nota"><h3>Cómo te pagan</h3><p>Si cobras por Pago Móvil, Zelle o Binance casi no hay comisión. Si usas PayPal o una pasarela, pon su porcentaje en "Comisión por cobro".</p></div>
+      <div class="nota"><h3>Tu tiempo</h3><p>La proyección no incluye tu sueldo. Para ver cuándo el negocio te puede pagar, pon un monto en "Tu sueldo".</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>bookeaa · Proyección hecha con los supuestos de arriba. No es una promesa de resultados: es una herramienta para decidir.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  // ---------- Valores iniciales ----------
+  const BASE = {
+    inicio: '2026-10',
+    meta: 50,
+    precio: 15,
+    mesesGratis: 1,
+    conversion: 70, // % de los que prueban y después pagan
+    churn: 5, // % de los que pagan que se van cada mes
+    cajaInicial: 0,
+    nuevos: [10, 15, 25, 12, 12, 15, 15, 15, 18, 18, 20, 20],
+    dominio: 15, // al año
+    tarjetas: 30, // 100 tarjetas
+    tarjetasCada: 3, // meses entre impresiones
+    googleOne: 1.99,
+    workspace: 0,
+    render: 0,
+    telefono: 10,
+    transporte: 20,
+    ads: 20,
+    adsDesde: 2,
+    videoGratis: true,
+    precioVideo: 40,
+    videosMes: 1,
+    videoDesde: 2,
+    otros: 0,
+    sueldo: 0,
+    comision: 0,
+    impuesto: 0,
+    imprevistos: 5,
+  }
+  const ESCENARIOS = {
+    conservador: { factor: 0.6, conversion: 55, churn: 8 },
+    base: { factor: 1, conversion: 70, churn: 5 },
+    optimista: { factor: 1.4, conversion: 80, churn: 3 },
+  }
+  const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+  const N = 12
+
+  const clonar = (o) => JSON.parse(JSON.stringify(o))
+  let S = clonar(BASE)
+  let escenario = 'base'
+
+  // ---------- Guardar y compartir ----------
+  const CLAVE = 'bookeaa-proyeccion-v1'
+  function cargar() {
+    try {
+      const h = location.hash.slice(1)
+      if (h) {
+        const d = JSON.parse(decodeURIComponent(escape(atob(h))))
+        S = Object.assign(clonar(BASE), d.s || {}); escenario = d.e || 'base'
+        return
+      }
+    } catch (e) { /* enlace dañado: valores iniciales */ }
+    try {
+      const g = localStorage.getItem(CLAVE)
+      if (g) { const d = JSON.parse(g); S = Object.assign(clonar(BASE), d.s || {}); escenario = d.e || 'base' }
+    } catch (e) { /* sin almacenamiento: valores iniciales */ }
+  }
+  function guardar() {
+    try { localStorage.setItem(CLAVE, JSON.stringify({ s: S, e: escenario })) } catch (e) { /* nada */ }
+  }
+  function enlace() {
+    const codigo = btoa(unescape(encodeURIComponent(JSON.stringify({ s: S, e: escenario }))))
+    return location.origin + location.pathname + '#' + codigo
+  }
+
+  // ---------- Modelo ----------
+  function calcular(s) {
+    const [anio, mes] = s.inicio.split('-').map(Number)
+    const etiquetas = Array.from({ length: N }, (_, i) => {
+      const m = (mes - 1 + i) % 12, a = anio + Math.floor((mes - 1 + i) / 12)
+      return MESES[m] + ' ' + String(a).slice(2)
+    })
+    const conv = s.conversion / 100, churn = s.churn / 100
+    const filas = []
+    let pagando = 0, caja = s.cajaInicial, cajaSinAporte = 0
+    for (let m = 0; m < N; m++) {
+      const nuevos = Number(s.nuevos[m]) || 0
+      const convertidos = s.mesesGratis > 0
+        ? (m - s.mesesGratis >= 0 ? (Number(s.nuevos[m - s.mesesGratis]) || 0) * conv : 0)
+        : nuevos * conv
+      const bajas = pagando * churn
+      pagando = pagando - bajas + convertidos
+      let prueba = 0
+      for (let k = Math.max(0, m - s.mesesGratis + 1); k <= m && s.mesesGratis > 0; k++) prueba += Number(s.nuevos[k]) || 0
+
+      const ingresos = pagando * s.precio
+      const comision = ingresos * s.comision / 100
+      const impuesto = ingresos * s.impuesto / 100
+
+      const dominio = m % 12 === 0 ? s.dominio : 0
+      const tarjetas = s.tarjetasCada > 0 && m % s.tarjetasCada === 0 ? s.tarjetas : 0
+      const infra = s.googleOne + s.workspace + s.render
+      const operacion = s.telefono + s.transporte + s.otros
+      const ads = m + 1 >= s.adsDesde ? s.ads : 0
+      const influencer = m === 0 && s.videoGratis ? 0 : (m + 1 >= s.videoDesde || !s.videoGratis ? s.precioVideo * s.videosMes : 0)
+      const sueldo = s.sueldo
+      const base = dominio + tarjetas + infra + operacion + ads + influencer + sueldo
+      const imprevistos = base * s.imprevistos / 100
+      const egresos = base + imprevistos + comision + impuesto
+      const flujo = ingresos - egresos
+      caja += flujo
+      cajaSinAporte += flujo
+      filas.push({ etiqueta: etiquetas[m], nuevos, convertidos, bajas, pagando, prueba, activos: pagando + prueba, ingresos,
+        dominio, tarjetas, googleOne: s.googleOne, workspace: s.workspace, render: s.render, telefono: s.telefono,
+        transporte: s.transporte, otros: s.otros, ads, influencer, sueldo, imprevistos, comision, impuesto, egresos, flujo, caja, cajaSinAporte,
+        marketing: tarjetas + ads + influencer })
+    }
+    const suma = (k) => filas.reduce((a, f) => a + f[k], 0)
+    const q1 = filas.slice(0, 3)
+    const captadosQ1 = q1.reduce((a, f) => a + f.nuevos, 0)
+    const equilibrio = filas.findIndex((f) => f.flujo >= 0 && f.pagando > 0)
+    const capital = Math.max(0, -Math.min(0, ...filas.map((f) => f.cajaSinAporte)))
+    const marketing = suma('marketing')
+    const captados = suma('nuevos')
+    const cac = captados ? marketing / captados : 0
+    const margen = s.precio * (1 - (s.comision + s.impuesto) / 100)
+    const ltvPagando = churn > 0 ? margen / churn : margen * 24
+    const ltvCaptado = ltvPagando * conv
+    return {
+      filas, etiquetas, captadosQ1, activosQ1: q1[2].activos, pagandoQ1: q1[2].pagando,
+      mrrFinal: filas[N - 1].ingresos, pagandoFinal: filas[N - 1].pagando, equilibrio, capital,
+      resultado: suma('flujo'), ingresosTotal: suma('ingresos'), egresosTotal: suma('egresos'),
+      cac, ltvCaptado, ltvPagando, marketing, captados, cajaFinal: filas[N - 1].caja,
+    }
+  }
+
+  // ---------- Formato ----------
+  const usd = (v, dec = 0) => (v < 0 ? '−' : '') + '$' + Math.abs(v).toLocaleString('es-VE', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+  const usd2 = (v) => usd(v, Math.abs(v) < 100 && Math.round(v) !== v ? 2 : 0)
+  const n1 = (v) => v.toLocaleString('es-VE', { maximumFractionDigits: 1 })
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+  // ---------- Supuestos (formulario) ----------
+  const GRUPOS = [
+    { titulo: 'Precio y clientes', abierto: true, campos: [
+      ['meta', 'Meta del primer trimestre', 'negocios captados en 3 meses', '', 'neg.'],
+      ['precio', 'Precio mensual', 'lo que paga cada negocio', '$', ''],
+      ['mesesGratis', 'Meses gratis', 'antes del primer cobro', '', 'meses'],
+      ['conversion', 'Pasan a pagar', 'de los que prueban gratis', '', '%'],
+      ['churn', 'Se van cada mes', 'de los que pagan (cancelación)', '', '%'],
+      ['inicio', 'Mes de inicio', 'año-mes, ej. 2026-10', '', '', 'month'],
+      ['cajaInicial', 'Dinero inicial', 'lo que pones al empezar', '$', ''],
+    ] },
+    { titulo: 'Negocios nuevos por mes', abierto: true, meses: true },
+    { titulo: 'Inversión inicial', campos: [
+      ['dominio', 'Dominio bookeaa.com', 'se renueva cada 12 meses', '$', ''],
+      ['tarjetas', '100 tarjetas de presentación', 'por impresión', '$', ''],
+      ['tarjetasCada', 'Reimprimir tarjetas cada', '0 = una sola vez', '', 'meses'],
+    ] },
+    { titulo: 'Herramientas (mensual)', campos: [
+      ['googleOne', 'Google One 100 GB', 'captures de Pago Móvil', '$', ''],
+      ['workspace', 'Google Workspace', 'opcional; 0 si no lo usas', '$', ''],
+      ['render', 'Render (hosting)', 'el plan estático es gratis', '$', ''],
+    ] },
+    { titulo: 'Operación (mensual)', campos: [
+      ['telefono', 'Teléfono e internet', 'la parte que usa el negocio', '$', ''],
+      ['transporte', 'Transporte', 'salir a visitar negocios', '$', ''],
+      ['otros', 'Otros gastos', 'lo que se te ocurra', '$', ''],
+      ['sueldo', 'Tu sueldo', '0 mientras reinviertes', '$', ''],
+    ] },
+    { titulo: 'Marketing', campos: [
+      ['ads', 'Publicidad en Instagram', 'por mes', '$', ''],
+      ['adsDesde', 'Publicidad desde el mes', '1 = desde el inicio', '', 'mes'],
+      ['videoGratis', 'El primer video de la influencer es regalo', '', '', '', 'check'],
+      ['precioVideo', 'Precio por video', 'lo que cobra después', '$', ''],
+      ['videosMes', 'Videos por mes', '', '', 'videos'],
+      ['videoDesde', 'Videos pagados desde el mes', '', '', 'mes'],
+    ] },
+    { titulo: 'Impuestos y comisiones', campos: [
+      ['comision', 'Comisión por cobro', 'PayPal, pasarela… 0 con Pago Móvil', '', '%'],
+      ['impuesto', 'Impuestos', 'sobre lo que cobras', '', '%'],
+      ['imprevistos', 'Imprevistos', 'colchón sobre los gastos', '', '%'],
+    ] },
+  ]
+
+  function campo([k, nombre, ayuda, pre, suf, tipo]) {
+    if (tipo === 'check') {
+      return `<label class="check"><input type="checkbox" data-k="${k}" ${S[k] ? 'checked' : ''} />${esc(nombre)}</label>`
+    }
+    const input = tipo === 'month'
+      ? `<input type="month" data-k="${k}" value="${esc(S[k])}" aria-label="${esc(nombre)}" style="text-align:left" />`
+      : `<input type="number" inputmode="decimal" min="0" step="any" data-k="${k}" value="${S[k]}" aria-label="${esc(nombre)}" />`
+    return `<div class="campo"${tipo === 'month' ? ' style="grid-template-columns:1fr 170px"' : ''}><label>${esc(nombre)}${ayuda ? `<small>${esc(ayuda)}</small>` : ''}</label>
+      <div class="entrada">${pre ? `<span>${pre}</span>` : ''}${input}${suf ? `<span>&nbsp;${suf}</span>` : ''}</div></div>`
+  }
+
+  function pintarSupuestos() {
+    const r = calcular(S)
+    document.getElementById('grupos').innerHTML = GRUPOS.map((g) => `
+      <details class="grupo" ${g.abierto ? 'open' : ''}><summary><h3>${esc(g.titulo)}</h3></summary>
+        ${g.meses
+          ? `<p class="muted" style="font-size:13.5px">Empiezan su mes gratis ese mes. Los 3 primeros son el trimestre de la meta.</p>
+             <div class="meses-grid">${r.etiquetas.map((e, i) => `<label>${esc(e)}<div class="entrada"><input type="number" min="0" step="1" data-mes="${i}" value="${S.nuevos[i]}" aria-label="Negocios nuevos en ${esc(e)}" /></div></label>`).join('')}</div>`
+          : g.campos.map(campo).join('')}
+      </details>`).join('')
+  }
+
+  document.getElementById('grupos').addEventListener('input', (e) => {
+    const t = e.target
+    if (t.dataset.mes !== undefined) S.nuevos[Number(t.dataset.mes)] = Math.max(0, Number(t.value) || 0)
+    else if (t.dataset.k) {
+      const k = t.dataset.k
+      if (t.type === 'checkbox') S[k] = t.checked
+      else if (t.type === 'month') { if (/^\d{4}-\d{2}$/.test(t.value)) S[k] = t.value; else return }
+      else S[k] = Math.max(0, Number(t.value) || 0)
+      if (k === 'inicio') { actualizar(); pintarSupuestos(); return }
+    }
+    escenario = ''
+    marcarEscenario()
+    actualizar()
+  })
+
+  // ---------- Escenarios ----------
+  function marcarEscenario() {
+    document.querySelectorAll('[data-escenario]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.escenario === escenario)))
+  }
+  document.querySelectorAll('[data-escenario]').forEach((b) => b.addEventListener('click', () => {
+    const e = ESCENARIOS[b.dataset.escenario]
+    escenario = b.dataset.escenario
+    S.nuevos = BASE.nuevos.map((v) => Math.round(v * e.factor))
+    S.conversion = e.conversion
+    S.churn = e.churn
+    marcarEscenario()
+    pintarSupuestos()
+    actualizar()
+  }))
+
+  // ---------- Indicadores ----------
+  function pintarKpis(r) {
+    const avance = Math.min(1, S.meta ? r.captadosQ1 / S.meta : 0)
+    const eq = r.equilibrio >= 0 ? r.etiquetas[r.equilibrio] : 'Aún no'
+    const ratio = r.cac > 0 ? r.ltvCaptado / r.cac : 0
+    document.getElementById('kpis').innerHTML = `
+      <div class="kpi inv"><span class="kicker">Meta del primer trimestre</span><b class="num">${n1(r.captadosQ1)} / ${n1(S.meta)}</b>
+        <small>${r.captadosQ1 >= S.meta ? '✓ Se cumple la meta' : 'Faltan ' + n1(S.meta - r.captadosQ1) + ' negocios'}</small>
+        <div class="meta-barra" role="img" aria-label="Avance ${Math.round(avance * 100)} %"><i style="width:${avance * 100}%"></i></div></div>
+      <div class="kpi"><span class="kicker">Pagando al mes 12</span><b class="num">${n1(r.pagandoFinal)}</b><small class="muted">Negocios que pagan</small></div>
+      <div class="kpi"><span class="kicker">Ingreso mensual al mes 12</span><b class="num">${usd(r.mrrFinal)}</b><small class="muted">${usd(r.mrrFinal * 12)} al año a ese ritmo</small></div>
+      <div class="kpi"><span class="kicker">Primer mes en positivo</span><b>${esc(eq)}</b><small class="muted">Ingresos ≥ egresos</small></div>
+      <div class="kpi"><span class="kicker">Capital que necesitas</span><b class="num">${usd(r.capital)}</b><small class="muted">Lo más bajo que llega la caja sin aporte inicial</small></div>
+      <div class="kpi"><span class="kicker">Resultado del año</span><b class="num ${r.resultado >= 0 ? 'ok' : 'mal'}">${usd(r.resultado)}</b><small class="muted">Entra ${usd(r.ingresosTotal)} · sale ${usd(r.egresosTotal)}</small></div>
+      <div class="kpi"><span class="kicker">Costo por negocio captado</span><b class="num">${usd2(r.cac)}</b><small class="muted">Marketing ÷ negocios nuevos</small></div>
+      <div class="kpi"><span class="kicker">Lo que deja cada negocio</span><b class="num">${usd(r.ltvCaptado)}</b><small class="muted">${ratio ? n1(ratio) + ' veces lo que cuesta captarlo' : 'Sin gasto de marketing'}</small></div>`
+    document.getElementById('lead-meta').textContent = n1(S.meta) + ' negocios'
+    document.getElementById('lead-precio').textContent = usd2(S.precio)
+    document.getElementById('rango').textContent = 'Proyección a 12 meses · ' + r.etiquetas[0] + ' a ' + r.etiquetas[N - 1]
+  }
+
+  // ---------- Tabla ----------
+  function pintarTabla(r) {
+    const f = r.filas
+    const fila = (nombre, k, opt = {}) => {
+      const vals = f.map((x) => x[k])
+      if (opt.omitirCeros && vals.every((v) => !v)) return ''
+      const total = opt.total === false ? '' : (opt.total === 'ultimo' ? vals[N - 1] : vals.reduce((a, b) => a + b, 0))
+      const fmt = opt.fmt || usd2
+      const celda = (v) => `<td class="${opt.neg && v < 0 ? 'neg' : ''}">${v ? fmt(v) : (opt.cero || '–')}</td>`
+      return `<tr class="${opt.clase || ''}"><td>${esc(nombre)}</td>${vals.map(celda).join('')}<td class="col-total ${opt.neg && total < 0 ? 'neg' : ''}">${total === '' ? '' : fmt(total)}</td></tr>`
+    }
+    const titulo = (t) => `<tr class="titulo"><td>${esc(t)}</td>${'<td></td>'.repeat(N + 1)}</tr>`
+    document.getElementById('tabla').innerHTML = `
+      <thead><tr><th>Concepto</th>${r.etiquetas.map((e) => `<th>${esc(e)}</th>`).join('')}<th class="col-total">Total</th></tr></thead>
+      <tbody>
+        ${titulo('Clientes')}
+        ${fila('Negocios nuevos (mes gratis)', 'nuevos', { fmt: n1 })}
+        ${fila('Pasan a pagar', 'convertidos', { fmt: n1 })}
+        ${fila('Cancelan', 'bajas', { fmt: n1 })}
+        ${fila('Pagando', 'pagando', { fmt: n1, total: 'ultimo', clase: 'clave' })}
+        ${titulo('Ingresos')}
+        ${fila('Suscripciones', 'ingresos', { clase: 'clave' })}
+        ${titulo('Egresos')}
+        ${fila('Dominio', 'dominio', { omitirCeros: true })}
+        ${fila('Tarjetas de presentación', 'tarjetas', { omitirCeros: true })}
+        ${fila('Google One', 'googleOne', { omitirCeros: true })}
+        ${fila('Google Workspace', 'workspace', { omitirCeros: true })}
+        ${fila('Render', 'render', { omitirCeros: true })}
+        ${fila('Teléfono e internet', 'telefono', { omitirCeros: true })}
+        ${fila('Transporte', 'transporte', { omitirCeros: true })}
+        ${fila('Otros gastos', 'otros', { omitirCeros: true })}
+        ${fila('Publicidad en Instagram', 'ads', { omitirCeros: true })}
+        ${fila('Influencer', 'influencer', { omitirCeros: true })}
+        ${fila('Tu sueldo', 'sueldo', { omitirCeros: true })}
+        ${fila('Comisiones de cobro', 'comision', { omitirCeros: true })}
+        ${fila('Impuestos', 'impuesto', { omitirCeros: true })}
+        ${fila('Imprevistos', 'imprevistos', { omitirCeros: true })}
+        ${fila('Total egresos', 'egresos', { clase: 'total' })}
+        ${titulo('Resultado')}
+        ${fila('Flujo del mes', 'flujo', { neg: true, clase: 'clave', cero: '$0' })}
+        ${fila('Caja acumulada', 'caja', { neg: true, total: 'ultimo', clase: 'clave', cero: '$0' })}
+      </tbody>`
+  }
+
+  // ---------- Gráficos (SVG) ----------
+  const W = 560, H = 300, M = { t: 14, r: 12, b: 30, l: 50 }
+  const iw = W - M.l - M.r, ih = H - M.t - M.b
+
+  function escalaY(min, max) {
+    const paso = (() => {
+      const bruto = (max - min) / 4 || 1
+      const p = Math.pow(10, Math.floor(Math.log10(bruto)))
+      return [1, 2, 2.5, 5, 10].map((k) => k * p).find((k) => k >= bruto)
+    })()
+    const lo = Math.floor(min / paso) * paso, hi = Math.ceil(max / paso) * paso || paso
+    const ticks = []
+    for (let v = lo; v <= hi + 1e-9; v += paso) ticks.push(v)
+    return { y: (v) => M.t + ih - ((v - lo) / (hi - lo)) * ih, ticks }
+  }
+  const rectRedondo = (x, y, w, h, r) => {
+    // redondeado solo arriba (el extremo del dato); el lado de la base queda recto
+    if (h <= 0) return ''
+    r = Math.min(r, w / 2, h)
+    return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`
+  }
+  function ejes(esc, fmt, etiquetas) {
+    const bw = iw / N
+    return esc.ticks.map((v) => `<line x1="${M.l}" x2="${W - M.r}" y1="${esc.y(v)}" y2="${esc.y(v)}" stroke="var(--grid)" stroke-width="1" ${v === 0 ? 'style="stroke:var(--muted)"' : ''}/>
+      <text x="${M.l - 8}" y="${esc.y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(v)}</text>`).join('') +
+      etiquetas.map((e, i) => i % 2 === 0 ? `<text x="${M.l + bw * i + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="11" fill="var(--muted)">${esc_(e)}</text>` : '').join('')
+  }
+  const esc_ = esc
+
+  function grafClientes(r) {
+    const max = Math.max(1, ...r.filas.map((f) => f.activos))
+    const e = escalaY(0, max)
+    const bw = iw / N, ancho = Math.min(26, bw * 0.62)
+    let barras = ''
+    r.filas.forEach((f, i) => {
+      const x = M.l + bw * i + (bw - ancho) / 2
+      const yP = e.y(f.pagando), hP = e.y(0) - yP
+      const yT = e.y(f.pagando + f.prueba), hT = yP - yT - (hP > 0 && f.prueba > 0 ? 2 : 0)
+      // pagando abajo; el mes gratis arriba, separados por 2 px de fondo
+      barras += f.prueba > 0
+        ? `<path d="${rectRedondo(x, yT, ancho, Math.max(0, hT), 4)}" fill="var(--s-prueba)"/>` + (hP > 0 ? `<rect x="${x}" y="${yP}" width="${ancho}" height="${hP}" fill="var(--s-pago)"/>` : '')
+        : `<path d="${rectRedondo(x, yP, ancho, hP, 4)}" fill="var(--s-pago)"/>`
+      barras += `<rect x="${M.l + bw * i}" y="${M.t}" width="${bw}" height="${ih}" fill="transparent" data-i="${i}"/>`
+    })
+    document.getElementById('g-clientes').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Negocios activos por mes: pagando y en su mes gratis">
+      ${ejes(e, (v) => n1(v), r.etiquetas)}${barras}<line class="cruz" x1="0" x2="0" y1="${M.t}" y2="${M.t + ih}" stroke="var(--muted)" stroke-dasharray="3 3" opacity="0"/></svg>`
+    tooltip('g-clientes', 'tip-clientes', r, (f) => `<b>${esc(f.etiqueta)}</b>
+      <div><span><i style="background:var(--s-pago)"></i>Pagando</span><span>${n1(f.pagando)}</span></div>
+      <div><span><i style="background:var(--s-prueba)"></i>Mes gratis</span><span>${n1(f.prueba)}</span></div>
+      <div><span>Nuevos</span><span>${n1(f.nuevos)}</span></div>`)
+  }
+
+  function grafDinero(r) {
+    const valores = r.filas.flatMap((f) => [f.ingresos, f.egresos])
+    const e = escalaY(Math.min(0, ...valores), Math.max(1, ...valores))
+    const bw = iw / N, ancho = Math.min(11, bw * 0.3)
+    let barras = ''
+    r.filas.forEach((f, i) => {
+      const cx = M.l + bw * i + bw / 2
+      const yI = e.y(f.ingresos), yE = e.y(f.egresos), y0 = e.y(0)
+      barras += `<path d="${rectRedondo(cx - ancho - 1, yI, ancho, y0 - yI, 4)}" fill="var(--s-ingreso)"/>`
+      barras += `<path d="${rectRedondo(cx + 1, yE, ancho, y0 - yE, 4)}" fill="var(--s-egreso)"/>`
+    })
+    const zonas = r.filas.map((f, i) => `<rect x="${M.l + bw * i}" y="${M.t}" width="${bw}" height="${ih}" fill="transparent" data-i="${i}"/>`).join('')
+    document.getElementById('g-dinero').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ingresos y egresos por mes, en dólares">
+      ${ejes(e, (v) => usd(v), r.etiquetas)}${barras}
+      ${zonas}<line class="cruz" x1="0" x2="0" y1="${M.t}" y2="${M.t + ih}" stroke="var(--muted)" stroke-dasharray="3 3" opacity="0"/></svg>`
+    tooltip('g-dinero', 'tip-dinero', r, (f) => `<b>${esc(f.etiqueta)}</b>
+      <div><span><i style="background:var(--s-ingreso)"></i>Ingresos</span><span>${usd2(f.ingresos)}</span></div>
+      <div><span><i style="background:var(--s-egreso)"></i>Egresos</span><span>${usd2(f.egresos)}</span></div>
+      <div><span>Flujo del mes</span><span>${usd2(f.flujo)}</span></div>`)
+  }
+
+  function grafCaja(r) {
+    const vals = r.filas.map((f) => f.caja)
+    const e = escalaY(Math.min(0, ...vals), Math.max(1, ...vals))
+    const bw = iw / N, x = (i) => M.l + bw * i + bw / 2
+    const linea = r.filas.map((f, i) => `${x(i)},${e.y(f.caja)}`).join(' ')
+    const area = `M${x(0)},${e.y(0)} L${linea.replace(/ /g, ' L')} L${x(N - 1)},${e.y(0)} Z`
+    const ult = r.filas[N - 1]
+    const zonas = r.filas.map((f, i) => `<rect x="${M.l + bw * i}" y="${M.t}" width="${bw}" height="${ih}" fill="transparent" data-i="${i}"/>`).join('')
+    document.getElementById('g-caja').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Caja acumulada al cierre de cada mes, en dólares">
+      ${ejes(e, (v) => usd(v), r.etiquetas)}
+      <path d="${area}" fill="var(--s-ingreso)" opacity="0.12"/>
+      <polyline points="${linea}" fill="none" stroke="var(--s-ingreso)" stroke-width="2" stroke-linejoin="round"/>
+      ${r.filas.map((f, i) => `<circle cx="${x(i)}" cy="${e.y(f.caja)}" r="4" fill="${f.caja < 0 ? 'var(--bad)' : 'var(--s-ingreso)'}" stroke="var(--bg)" stroke-width="2"/>`).join('')}
+      <text x="${W - M.r}" y="${e.y(ult.caja) - 12}" text-anchor="end" font-size="12" font-weight="600" fill="var(--fg)">${usd(ult.caja)}</text>
+      ${zonas}<line class="cruz" x1="0" x2="0" y1="${M.t}" y2="${M.t + ih}" stroke="var(--muted)" stroke-dasharray="3 3" opacity="0"/></svg>`
+    tooltip('g-caja', 'tip-caja', r, (f) => `<b>${esc(f.etiqueta)}</b>
+      <div><span>Flujo del mes</span><span>${usd2(f.flujo)}</span></div>
+      <div><span>Caja al cierre</span><span>${usd2(f.caja)}</span></div>`)
+  }
+
+  function tooltip(idG, idT, r, html) {
+    const cont = document.getElementById(idG), tip = document.getElementById(idT), svg = cont.querySelector('svg')
+    const cruz = svg.querySelector('.cruz'), bw = iw / N
+    const mover = (ev) => {
+      const z = ev.target.closest('[data-i]')
+      if (!z) return
+      const i = Number(z.dataset.i)
+      const x = M.l + bw * i + bw / 2
+      cruz.setAttribute('x1', x); cruz.setAttribute('x2', x); cruz.setAttribute('opacity', 1)
+      tip.innerHTML = html(r.filas[i])
+      const caja = cont.parentElement.getBoundingClientRect(), s = svg.getBoundingClientRect()
+      const px = s.left - caja.left + (x / W) * s.width
+      tip.style.opacity = 1
+      const izq = px + 14 + tip.offsetWidth > caja.width ? px - 14 - tip.offsetWidth : px + 14
+      tip.style.left = Math.max(4, izq) + 'px'
+      tip.style.top = (s.top - caja.top + 20) + 'px'
+    }
+    svg.addEventListener('pointermove', mover)
+    svg.addEventListener('pointerdown', mover)
+    svg.addEventListener('pointerleave', () => { tip.style.opacity = 0; cruz.setAttribute('opacity', 0) })
+  }
+
+  // ---------- Todo junto ----------
+  function actualizar() {
+    const r = calcular(S)
+    pintarKpis(r)
+    grafClientes(r)
+    grafDinero(r)
+    grafCaja(r)
+    pintarTabla(r)
+    guardar()
+  }
+
+  const aviso = (t) => { const a = document.getElementById('aviso'); a.textContent = t; setTimeout(() => (a.textContent = ''), 3000) }
+  document.getElementById('compartir').addEventListener('click', async () => {
+    const url = enlace()
+    try { await navigator.clipboard.writeText(url); aviso('Enlace copiado: quien lo abra verá estos mismos números.') }
+    catch (e) { history.replaceState(null, '', url); aviso('Copia el enlace de la barra del navegador.') }
+  })
+  document.getElementById('imprimir').addEventListener('click', () => {
+    document.querySelectorAll('details.grupo').forEach((d) => (d.open = true))
+    window.print()
+  })
+  document.getElementById('reiniciar').addEventListener('click', () => {
+    S = clonar(BASE); escenario = 'base'
+    history.replaceState(null, '', location.pathname)
+    marcarEscenario(); pintarSupuestos(); actualizar()
+    aviso('Listo: valores iniciales.')
+  })
+
+  cargar()
+  marcarEscenario()
+  pintarSupuestos()
+  actualizar()
+})()
+</script>
+</body>
+</html>
