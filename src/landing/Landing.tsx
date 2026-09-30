@@ -6,7 +6,7 @@ import '@fontsource/barlow/400.css'
 import '@fontsource/barlow/500.css'
 import '@fontsource/barlow/600.css'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { DEMO_PATH, trialWhatsappUrl } from './cta'
 import { Logo } from './icons'
 import { PhoneMockup } from './PhoneMockup'
@@ -139,6 +139,8 @@ export default function Landing() {
         <FinalCta trial={trial} />
       </main>
 
+      <AvisoDeslizar />
+
       <footer className="border-t border-rule">
         <div className="mx-auto grid max-w-[1200px] gap-10 px-4 py-14 md:grid-cols-[1.4fr_1fr_1fr] md:px-8">
           <div>
@@ -184,3 +186,41 @@ export default function Landing() {
     </div>
   )
 }
+
+/**
+ * En el celular el hero llena la pantalla y mucha gente no se da cuenta de que hay
+ * más abajo. Esta pastilla lo dice, baja una pantalla al tocarla y se va sola apenas
+ * la persona empieza a bajar.
+ */
+function AvisoDeslizar() {
+  const [arriba, setArriba] = useState(true)
+  useEffect(() => {
+    const revisar = () => setArriba(window.scrollY < 60)
+    revisar()
+    window.addEventListener('scroll', revisar, { passive: true })
+    return () => window.removeEventListener('scroll', revisar)
+  }, [])
+
+  return (
+    <a
+      href="#problema"
+      aria-hidden={!arriba}
+      tabIndex={arriba ? 0 : -1}
+      onClick={(e) => {
+        // Baja una pantalla: en el celular lo siguiente es el teléfono de ejemplo, no la sección negra.
+        e.preventDefault()
+        window.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' })
+      }}
+      className={`fixed left-1/2 z-30 inline-flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-coal py-2.5 pr-4 pl-5 font-condensed text-[15px] font-bold uppercase tracking-[0.1em] text-paper shadow-[0_8px_24px_rgb(0_0_0/0.25)] transition-[opacity,transform] duration-300 ease-out ${
+        arriba ? 'opacity-100' : 'pointer-events-none translate-y-4 opacity-0'
+      }`}
+      style={{ bottom: 'calc(env(safe-area-inset-bottom) + 18px)' }}
+    >
+      Desliza para ver más
+      <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="motion-safe:animate-bounce">
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </a>
+  )
+}
+

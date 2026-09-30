@@ -39,7 +39,7 @@ const AFTER = [
 
 export function Problem() {
   return (
-    <section className="relative bg-coal text-paper" aria-labelledby="problema-titulo">
+    <section id="problema" className="relative scroll-mt-16 bg-coal text-paper" aria-labelledby="problema-titulo">
       <Crosses tone="light" className="top-10 right-6" />
       <div className={`${WRAP} py-20 md:py-28`}>
         <Reveal>
