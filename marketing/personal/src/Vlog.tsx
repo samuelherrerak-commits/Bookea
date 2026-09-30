@@ -38,6 +38,7 @@ export const Vlog: React.FC<Edicion> = (e) => {
   const finCortes = e.segmentos.reduce((a, s) => a + duracionSegmento(s), 0)
   const f = (s: number) => Math.round(s * fps)
   const salida = (t: number) => aSalida(t, e.segmentos)
+  const sinCamara = e.sinCamaraDesde ?? escenas[0]?.desde
 
   return (
     <AbsoluteFill style={{ background: '#0f0f0e' }}>
@@ -60,10 +61,20 @@ export const Vlog: React.FC<Edicion> = (e) => {
         </Sequence>
       ))}
 
+      {/* Parte explicando la app: la cámara ya no se ve, fondo negro detrás de las escenas. */}
+      {sinCamara != null ? (
+        <Sequence from={f(salida(sinCamara))}>
+          <AbsoluteFill style={{ background: '#0f0f0e' }} />
+        </Sequence>
+      ) : null}
+
       {escenas.map((x, i) => {
         const desde = salida(x.desde)
+        // Cada escena sigue visible un poco más, para que la siguiente entre ENCIMA (ola/lado)
+        // y no se vea lo de abajo durante la transición.
+        const extra = i < escenas.length - 1 ? 0.5 : 0
         return (
-          <Sequence key={`e${i}`} from={f(desde)} durationInFrames={Math.max(1, f(salida(x.hasta)) - f(desde))}>
+          <Sequence key={`e${i}`} from={f(desde)} durationInFrames={Math.max(1, f(Math.min(finCortes, salida(x.hasta) + extra)) - f(desde))}>
             <Escena e={x} rel={(t) => salida(t) - desde} />
           </Sequence>
         )

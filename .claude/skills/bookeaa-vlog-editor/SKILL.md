@@ -22,6 +22,7 @@ El proyecto está en `marketing/personal/` (Remotion). Lee su `README.md` y, par
 Cuando Samuel habla mirando la pantalla o explica cómo funciona bookeaa, usa `escenas`:
 - Pantallas de marca en negro o blanco, alternando, con kicker numerado ("01 · Tu link", "02 · Tu cliente reserva"), titulares cortos terminados en punto y la persiana (`bloque: true`) al pasar de la parte 1 a la 2.
 - Pon teléfonos (`public/flujo/`: 1-inicio, 2-servicios, 3-lugar, 4-agenda, 5-pago, 6-listo) **solo cuando lo que dice se ve en la app**. Si no, solo titulares. `en` sincroniza cada teléfono con la palabra.
+- En la parte 2 **no debe verse la cámara**: desde la primera escena el fondo es negro (`sinCamaraDesde` lo cambia) y cada escena entra encima de la anterior.
 - Referencia: `ediciones/2026-09-30-dos-partes.json`.
 - Los tiempos salen de `<edición>.captions.json`. Quita las tomas repetidas desde `segmentos`.
 

@@ -52,6 +52,8 @@ export type Edicion = {
   serie?: string
   enfasis?: Enfasis[]
   escenas?: Escena[]
+  /** Desde este segundo (original) la cámara no se ve: fondo negro. Por defecto, el inicio de la primera escena. */
+  sinCamaraDesde?: number
   /** Pistas generadas por scripts/editar.mjs (rutas dentro de public/). */
   musica?: string
   efectos?: string
