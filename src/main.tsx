@@ -13,10 +13,10 @@ import { applyBranding } from './lib/theme'
 import { slugFromLocation } from './lib/tenant'
 import { OrderProvider } from './state/order'
 
-// /campana y /campana/noviembre son páginas estáticas (public/campana/). Si el servidor cae
-// en la app (por ejemplo sin la barra final), se manda al archivo real.
-const campana = window.location.pathname.match(/^\/campana(\/noviembre)?\/?$/)
-if (campana) window.location.replace(`/campana${campana[1] ?? ''}/index.html`)
+// /campana, /campana/noviembre y /proyeccion son páginas estáticas (public/). Si el
+// servidor cae en la app (por ejemplo sin la barra final), se manda al archivo real.
+const estatica = window.location.pathname.match(/^\/(campana(?:\/noviembre)?|proyeccion)\/?$/)
+if (estatica) window.location.replace(`/${estatica[1]}/index.html`)
 
 const slug = slugFromLocation()
 const root = createRoot(document.getElementById('root')!)

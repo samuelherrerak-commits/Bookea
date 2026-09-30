@@ -64,6 +64,7 @@ npm run marketing:videos       # los 8 MP4 con audio en marketing/salida/videos/
 npm run marketing:carruseles   # los JPG en marketing/salida/carruseles/carrusel-N/
 npm run marketing:historias    # los JPG en marketing/salida/historias/
 npm run marketing:publicar     # copia todo a public/campana/media/ y arma los ZIP
+npm run marketing:tarjetas     # tarjetas de presentación: PDF 96 × 56 mm (90 × 50 + 3 mm de sangrado) y PNG a 600 dpi
 ```
 
 Necesita Chromium (`CHROMIUM_PATH`, por defecto `/opt/pw-browsers/chromium`) y, para los videos, un **ffmpeg con libx264** (`FFMPEG_PATH` o `ffmpeg` en el PATH). Para revisar sin renderizar todo: `node marketing/scripts/render-video.mjs 2 --cuadros 1,4.5,9` guarda esos cuadros como PNG.
