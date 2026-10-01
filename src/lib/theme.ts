@@ -181,14 +181,20 @@ export function applyBranding(config: BusinessConfig): void {
   document.title = pageTitle(config)
   setMeta('meta[name="description"]', 'content', pageDescription(config))
   setMeta('meta[name="theme-color"]', 'content', config.tema.fondo ?? config.tema.soft)
-  if (config.logoUrl) {
-    let icon = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]')
-    if (!icon) {
-      icon = document.createElement('link')
-      icon.rel = 'icon'
-      document.head.appendChild(icon)
+  if (config.logoUrl && typeof Image !== 'undefined') {
+    // Solo si la imagen carga: un logo roto no debe dejar la pestaña sin ícono.
+    const prueba = new Image()
+    prueba.referrerPolicy = 'no-referrer'
+    prueba.onload = () => {
+      let icon = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]')
+      if (!icon) {
+        icon = document.createElement('link')
+        icon.rel = 'icon'
+        document.head.appendChild(icon)
+      }
+      icon.removeAttribute('type')
+      icon.href = config.logoUrl
     }
-    icon.type = 'image/png'
-    icon.href = config.logoUrl
+    prueba.src = config.logoUrl
   }
 }

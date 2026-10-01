@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_CONFIG, normalizeCatalog, normalizeConfig, normalizeHorarios, normalizeServices, slug, toNumber } from './normalize'
+import { DEFAULT_CONFIG, LOGO_MAX, logoDirecto, normalizeCatalog, normalizeConfig, normalizeHorarios, normalizeServices, slug, toNumber } from './normalize'
 
 describe('toNumber', () => {
   it('entiende formatos es-VE y en-US', () => {
@@ -200,5 +200,39 @@ describe('lugar, sedes, domicilio y mensaje', () => {
     expect(normalizeConfig({ mensaje_plantilla: 'formal' }, undefined, { mensajes }).mensaje.texto).toBe('B {nombre}')
     expect(normalizeConfig({}, undefined, { mensajes }).mensaje.texto).toBe('A {nombre}')
     expect(normalizeConfig({ mensaje_plantilla: 'Breve' }).mensaje.plantilla).toBe('Breve')
+  })
+})
+
+describe('logo del negocio', () => {
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+
+  it('el logo subido gana sobre el enlace', () => {
+    const c = normalizeConfig({ logo_url: 'https://ejemplo.com/logo.png' }, undefined, { logo: PNG })
+    expect(c.logoUrl).toBe(PNG)
+  })
+
+  it('un logo subido raro se ignora y queda el enlace', () => {
+    for (const malo of ['javascript:alert(1)', 'data:text/html;base64,PGgxPg==', 'data:image/svg+xml;base64,PHN2Zz4=', PNG + 'A'.repeat(LOGO_MAX)]) {
+      expect(normalizeConfig({ logo_url: 'https://ejemplo.com/l.png' }, undefined, { logo: malo }).logoUrl).toBe('https://ejemplo.com/l.png')
+    }
+  })
+
+  it('los enlaces de Drive pasan al enlace directo de la imagen', () => {
+    const id = '1AbCdEfGhIjKlMnOpQrStUvWxYz012345'
+    for (const u of [
+      `https://drive.google.com/file/d/${id}/view?usp=sharing`,
+      `https://drive.google.com/open?id=${id}`,
+      `https://drive.google.com/uc?export=view&id=${id}`,
+    ]) {
+      expect(logoDirecto(u)).toBe(`https://lh3.googleusercontent.com/d/${id}=w400`)
+    }
+  })
+
+  it('http pasa a https; Instagram y Facebook se descartan', () => {
+    expect(logoDirecto('http://ejemplo.com/logo.png')).toBe('https://ejemplo.com/logo.png')
+    expect(logoDirecto('https://scontent.cdninstagram.com/v/t51/logo.jpg?oe=1')).toBe('')
+    expect(logoDirecto('https://www.instagram.com/p/abc/')).toBe('')
+    expect(logoDirecto('ftp://x/logo.png')).toBe('')
+    expect(logoDirecto(undefined)).toBe('')
   })
 })
