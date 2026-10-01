@@ -53,7 +53,7 @@
       <li><a href="#firma">La firma personal</a></li>
       <li><a href="#impuestos">Impuestos</a></li>
       <li><a href="#facturar">Cómo facturar los $15</a></li>
-      <li><a href="#negocios">Facturación para los negocios</a></li>
+      <li><a href="#negocios">Comprobantes y facturación para los negocios</a></li>
       <li><a href="#otras">Otras obligaciones</a></li>
       <li><a href="#documentos">Términos y privacidad</a></li>
     </ol>
@@ -123,7 +123,26 @@
     <li>La registras en tu libro de ventas y declaras el IVA del mes si eres contribuyente.</li>
   </ol>
 
-  <h2 id="negocios">5. ¿Puede bookeaa dar facturación homologada a los negocios?</h2>
+  <h2 id="negocios">5. Comprobantes y facturación para los negocios</h2>
+  <p>Cada negocio elige en su ventana de configuración (sección <b>Comprobantes</b>) uno de dos modos:</p>
+  <div class="tabla"><table>
+    <thead><tr><th>Modo</th><th>Qué pasa al reservar</th><th>Para quién</th></tr></thead>
+    <tbody>
+      <tr><td><b>Control interno</b> (por defecto)</td><td>El cliente descarga un <b>Comprobante de cita</b> en PDF con número correlativo y después pasa a WhatsApp.</td><td>Barberos, estilistas, manicuristas y negocios informales o que no son contribuyentes ordinarios de IVA.</td></tr>
+      <tr><td><b>Facturación fiscal (SENIAT)</b></td><td>No se genera comprobante. El negocio factura con su imprenta digital autorizada (o su máquina fiscal).</td><td>Negocios formales, contribuyentes de IVA.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Reglas del comprobante no fiscal</h3>
+  <p>Para que el SENIAT no lo considere facturación paralela, el comprobante cumple estas pautas:</p>
+  <ul>
+    <li>Se llama "Comprobante de cita". Nunca dice "factura" ni "número de control".</li>
+    <li>Lleva arriba y abajo la leyenda: <b>"DOCUMENTO NO FISCAL - VÁLIDO ÚNICAMENTE COMO COMPROBANTE DE CONTROL INTERNO"</b>.</li>
+    <li>No desglosa IVA ni base imponible: el total va en bruto.</li>
+    <li>Con <b>pago en la cita</b> muestra solo el <b>valor de referencia</b> en euros o dólares, porque los bolívares dependen de la tasa del día de la cita. Lo mismo se guarda en la hoja y en el calendario.</li>
+    <li>Con <b>Pago Móvil</b> muestra la referencia y lo que se pagó ese día en bolívares, con su tasa.</li>
+  </ul>
+
+  <h3>¿Puede bookeaa dar facturación homologada a los negocios?</h3>
   <p><b>Sí, a través de una imprenta digital, pero bookeaa no puede emitir facturas en nombre del negocio por su cuenta.</b> Cada factura la debe emitir el propio negocio, con su RIF, mediante una imprenta digital autorizada o su máquina fiscal. bookeaa puede servir de puente:</p>
   <ol class="flujo">
     <li>El negocio contrata una imprenta digital autorizada que tenga API (puede ser la misma que use bookeaa, si ofrece cuentas para terceros).</li>

@@ -22,6 +22,7 @@ const config: BusinessConfig = {
   metodosPago: [],
   heroTitulo: '',
   heroSubtitulo: '',
+  facturacionModo: 'interno',
 }
 
 describe('zonedParts', () => {

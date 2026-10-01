@@ -48,7 +48,7 @@ const SHEETS = [
     name: 'Reservaciones',
     headers: ['ID', 'Fecha_Solicitud', 'Cliente', 'Telefono', 'Servicios', 'Total', 'Fecha_Cita', 'Hora_Cita',
       'Metodo_Pago', 'Referencia', 'Cupon', 'Estado', 'Tasa_BCV', 'Total_Bs',
-      'Modalidad', 'Direccion', 'Recargo', 'Comprobante'],
+      'Modalidad', 'Direccion', 'Recargo', 'Comprobante', 'Recibo_N'],
   },
   { name: 'Servicios', headers: ['ID', 'Nombre', 'Precio', 'Duracion_Min', 'Tipo'] },
   { name: 'Promociones', headers: ['ID', 'Nombre', 'Servicios_Incluidos', 'Precio_Promo'] },
@@ -196,6 +196,13 @@ const CONFIG_DEFAULTS = [
   ['slug', ''], // lo escribe crearTenant; la barra lateral lo usa para refrescar la página
   ['api_url', ''], // URL /exec de este script; idem
   ['pagina_url', ''], // enlace público del negocio (propiedad del script sitio_url + /u/slug)
+  // Comprobantes: "interno" = comprobante de cita NO fiscal en PDF al reservar (por defecto).
+  // "fiscal" = el negocio factura con su imprenta digital autorizada; bookeaa no emite comprobantes.
+  ['facturacion_modo', 'interno'],
+  ['facturacion_rif', ''],
+  ['facturacion_razon_social', ''],
+  ['facturacion_proveedor', ''], // imprenta digital autorizada por el SENIAT
+  ['recibo_ultimo', '0'], // último número de comprobante interno; lo lleva el script
 ];
 
 /**
@@ -625,6 +632,12 @@ function aplicarOpcionesConfig_(ss, configSheet) {
       celda.setNote('"si" agrega la opción "A domicilio" con el recargo y los minutos extra de más abajo.');
     } else if (clave === 'moneda') {
       celda.setDataValidation(lista(['EUR', 'USD', 'Bs']));
+    } else if (clave === 'facturacionmodo') {
+      celda.setDataValidation(lista(['interno', 'fiscal']));
+      celda.setNote('interno: al reservar, el cliente descarga un comprobante de cita NO fiscal (control interno). ' +
+        'fiscal: el negocio factura con su imprenta digital autorizada por el SENIAT y bookeaa no emite comprobantes.');
+    } else if (clave === 'reciboultimo') {
+      celda.setNote('Último número de comprobante de cita. Lo lleva el script: no lo cambies a mano.');
     } else if (clave === 'mensajeplantilla') {
       const mensajes = ss.getSheetByName('Mensajes');
       if (mensajes) {
@@ -920,7 +933,10 @@ function doGet(e) {
 function configPublica_(config) {
   const out = {};
   Object.keys(config).forEach(function (k) {
-    if (k !== 'api_token' && k !== 'api_url') out[k] = config[k];
+    // Lo interno no viaja al navegador. facturacion_modo sí: la página decide si da comprobante.
+    const interna = k === 'api_token' || k === 'api_url' || k === 'recibo_ultimo' ||
+      (k.indexOf('facturacion_') === 0 && k !== 'facturacion_modo');
+    if (!interna) out[k] = config[k];
   });
   return out;
 }
@@ -1078,8 +1094,15 @@ function doPost(e) {
     // ejecución. Acá solo se lee la caché o el último valor bueno: la tasa sirve
     // para mostrar el equivalente en bolívares, no para decidir nada. La versión
     // fresca se busca DESPUÉS de agendar la cita, y si sale se parchea la celda.
-    let tasa = moneda === 'BS' ? null : tasaCache_(moneda, ss);
-    let totalBs = moneda === 'BS' ? orden.total : tasa ? round2_(orden.total * tasa.valor) : null;
+    // Con "Pago en la cita" se guarda solo el valor de referencia (EUR/USD): el monto en
+    // bolívares depende de la tasa del día de la cita, no la de hoy. Con Pago Móvil sí
+    // se guarda lo que se pagó hoy en Bs y su tasa.
+    const conBs = moneda === 'BS' || esPagoMovil;
+    let tasa = moneda === 'BS' || !esPagoMovil ? null : tasaCache_(moneda, ss);
+    let totalBs = moneda === 'BS' ? orden.total : esPagoMovil && tasa ? round2_(orden.total * tasa.valor) : null;
+    const recibo = String(config.facturacion_modo || '').trim().toLowerCase() === 'fiscal'
+      ? null
+      : siguienteRecibo_(ss);
 
     const id = reservaIdPedida || Utilities.getUuid();
     const serviciosTexto = orden.lineas.map(function (l) { return l.nombre; }).join(', ');
@@ -1127,6 +1150,7 @@ function doPost(e) {
       Direccion: modalidad === 'domicilio' ? direccion : (sede.direccion || sede.nombre),
       Recargo: orden.recargo,
       Comprobante: comprobanteUrl || (comprobante ? 'no se pudo subir' : 'N/A'),
+      Recibo_N: recibo === null ? '' : recibo,
     });
     const fila = hoja.getLastRow();
 
@@ -1144,8 +1168,7 @@ function doPost(e) {
               modalidad === 'domicilio'
                 ? 'A domicilio: ' + direccion + ' (incluye ' + config_min_extra_(config) + ' min de traslado)'
                 : lugarTexto + (sede.direccion ? ' · ' + sede.direccion : ''),
-              'Total: ' + orden.total.toFixed(2) + ' ' + moneda + (totalBs !== null ? ' (Bs. ' + totalBs.toFixed(2) + ')' : '') +
-                (orden.recargo > 0 ? ' · recargo domicilio ' + orden.recargo.toFixed(2) + ' ' + moneda : ''),
+              lineaTotalEvento_(orden, moneda, esPagoMovil ? totalBs : null, esPagoMovil && tasa ? tasa.valor : null),
               'Pago: ' + metodoPago,
               'Capture: ' + (comprobanteUrl || 'N/A'),
               'Cupón: ' + (orden.cupon ? orden.cupon.codigo : 'N/A'),
@@ -1174,7 +1197,8 @@ function doPost(e) {
     limpiarCacheCatalogo_(tenant.slug); // la ocupación cambió: la próxima carga recalcula
     sumar_(claveTelefono, 86400);
 
-    hecha = { ss: ss, id: id, orden: orden, moneda: moneda, tasa: tasa, totalBs: totalBs, comprobanteUrl: comprobanteUrl };
+    hecha = { ss: ss, id: id, orden: orden, moneda: moneda, tasa: tasa, totalBs: totalBs, comprobanteUrl: comprobanteUrl,
+      conBs: conBs, esPagoMovil: esPagoMovil, recibo: recibo };
   } catch (err) {
     console.error(err);
     return json_({ error: 'servidor', mensaje: 'No se pudo guardar la reserva. Intenta de nuevo.' });
@@ -1187,7 +1211,8 @@ function doPost(e) {
   // los demás negocios por un sitio externo lento. Nada de esto puede perder la reserva.
   let tasa = hecha.tasa;
   let totalBs = hecha.totalBs;
-  if (hecha.moneda !== 'BS') {
+  // Solo Pago Móvil necesita la tasa: con pago en la cita no se guardan bolívares.
+  if (hecha.moneda !== 'BS' && hecha.esPagoMovil) {
     try {
       const fresca = getTasa(hecha.moneda, hecha.ss);
       if (fresca && (!tasa || fresca.valor !== tasa.valor)) {
@@ -1204,10 +1229,36 @@ function doPost(e) {
     success: true,
     id: hecha.id,
     total: hecha.orden.total,
-    totalBs: totalBs,
-    tasa: tasa ? tasa.valor : null,
+    totalBs: hecha.conBs ? totalBs : null,
+    tasa: hecha.esPagoMovil && tasa ? tasa.valor : null,
     comprobanteUrl: hecha.comprobanteUrl || null,
+    recibo: hecha.recibo,
   });
+}
+
+/**
+ * Siguiente número de comprobante de cita (interno, no fiscal) del negocio. Se llama
+ * dentro del lock de doPost, así dos reservas no se llevan el mismo número.
+ */
+function siguienteRecibo_(ss) {
+  const sheet = ss.getSheetByName('Configuracion');
+  const n = Math.max(0, Math.floor(toNumber_(getConfig_(ss).recibo_ultimo))) + 1;
+  setConfigKey_(sheet, 'recibo_ultimo', n);
+  return n;
+}
+
+/**
+ * Línea del total para el evento del calendario. Siempre el valor de referencia; los
+ * bolívares solo si ya se pagaron (Pago Móvil), con la tasa de ese día.
+ */
+function lineaTotalEvento_(orden, moneda, bsPagados, tasa) {
+  let linea = (moneda === 'BS' ? 'Total: Bs. ' + orden.total.toFixed(2)
+    : 'Total (referencia): ' + orden.total.toFixed(2) + ' ' + moneda);
+  if (moneda !== 'BS' && bsPagados !== null && bsPagados !== undefined) {
+    linea += ' · pagado Bs. ' + Number(bsPagados).toFixed(2) + (tasa ? ' (tasa BCV ' + Number(tasa).toFixed(2) + ')' : '');
+  }
+  if (orden.recargo > 0) linea += ' · recargo domicilio ' + orden.recargo.toFixed(2) + ' ' + moneda;
+  return linea;
 }
 
 // ============================================================================
@@ -2037,6 +2088,7 @@ function buscarReservaPorId_(ss, reservaId, fechaCita, horaCita) {
     const totalBs = leer('Total_Bs');
     const tasa = leer('Tasa_BCV');
     const comp = String(leer('Comprobante') || '');
+    const recibo = leer('Recibo_N');
     return {
       success: true,
       id: String(reservaId),
@@ -2046,6 +2098,7 @@ function buscarReservaPorId_(ss, reservaId, fechaCita, horaCita) {
       // Lo único que sirve de la columna es un enlace a Drive; el resto son
       // marcadores como "pendiente" o "no se pudo subir".
       comprobanteUrl: /^https:\/\//.test(comp) ? comp : null,
+      recibo: recibo === null || recibo === '' ? null : toNumber_(recibo),
     };
   }
   return null;

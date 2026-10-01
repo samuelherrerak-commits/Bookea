@@ -23,6 +23,7 @@ const CLAVES_POR_SECCION = {
   mensaje: ['mensaje_plantilla'],
   horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria'],
   pagos: ['whatsapp', 'moneda', 'metodos_pago', 'pm_banco', 'pm_telefono', 'pm_cedula', 'tasa_eur_manual', 'tasa_usd_manual'],
+  comprobantes: ['facturacion_modo', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
 };
 
 /** Mismo texto que Code.gs y src/lib/mensajes.ts: "Restaurar las originales" las vuelve a escribir. */
@@ -243,6 +244,16 @@ function validar_(seccion, datos) {
         errores.push(h.dia + ': revisa las horas (la de cierre va después de la de apertura).');
       }
     });
+  }
+  if (seccion === 'comprobantes') {
+    const modo = String(c.facturacion_modo || 'interno').trim().toLowerCase();
+    if (modo !== 'interno' && modo !== 'fiscal') errores.push('Elige un modo: control interno o facturación fiscal.');
+    if (modo === 'fiscal') {
+      if (!/^[VJEGP]-?\d{6,9}-?\d$/i.test(String(c.facturacion_rif || '').trim())) {
+        errores.push('Escribe tu RIF completo, por ejemplo J-12345678-9.');
+      }
+      if (!String(c.facturacion_razon_social || '').trim()) errores.push('Escribe tu nombre o razón social como sale en el RIF.');
+    }
   }
   if (seccion === 'pagos' && c.whatsapp && String(c.whatsapp).replace(/\D/g, '').length < 10) {
     errores.push('El WhatsApp necesita el código de país, por ejemplo 584121234567.');
