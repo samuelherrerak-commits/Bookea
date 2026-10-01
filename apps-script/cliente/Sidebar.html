@@ -2853,10 +2853,102 @@ var Logica = (function () {
       cabecera('Marca', 'Cómo te ven tus clientes en la parte de arriba de tu página.'),
       campo('Nombre del negocio', texto('marca', 'nombre_negocio')),
       campo('Nombre que se muestra', texto('marca', 'marca'), 'Si lo dejas vacío se usa el nombre del negocio.'),
-      campo('Logo (enlace a la imagen)', texto('marca', 'logo_url', { type: 'url', placeholder: 'https://…' }),
-        'Sube el logo a Drive o a tu Instagram y pega el enlace directo a la imagen.'),
+      vLogo(),
       campo('Título grande', texto('marca', 'hero_titulo', { placeholder: 'Reserva tu cita en minutos' })),
       campo('Texto debajo del título', texto('marca', 'hero_subtitulo', { placeholder: 'Elige tus servicios y confirma por WhatsApp.' })));
+  }
+
+  // ---------- Logo ----------
+  var LOGO_MAX = 45000;
+
+  /**
+   * Achica el logo en el navegador y lo devuelve como data URL que entre en una celda:
+   * 320 px de lado mayor (si no entra, 256 y 200), con transparencia (WebP o PNG).
+   */
+  function comprimirLogo(file) {
+    return new Promise(function (resolve, reject) {
+      if (!/^image\//.test(file.type)) return reject(new Error('El archivo tiene que ser una imagen (PNG o JPG).'));
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('No pudimos leer esa imagen. Prueba con otra.')); };
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var lados = [320, 256, 200, 160];
+        for (var i = 0; i < lados.length; i++) {
+          var k = Math.min(1, lados[i] / Math.max(img.naturalWidth, img.naturalHeight));
+          var c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(img.naturalWidth * k));
+          c.height = Math.max(1, Math.round(img.naturalHeight * k));
+          var ctx = c.getContext('2d');
+          ctx.clearRect(0, 0, c.width, c.height);
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          var dato = c.toDataURL('image/webp', 0.9);
+          if (dato.indexOf('data:image/webp') !== 0) dato = c.toDataURL('image/png');
+          if (dato.length <= LOGO_MAX) return resolve(dato);
+        }
+        reject(new Error('La imagen es muy pesada. Prueba con un PNG más simple o recórtala.'));
+      };
+      img.src = url;
+    });
+  }
+
+  function vLogo() {
+    var logo = S.datos.logoData || '';
+    var aviso = h('p', { class: 'hint', 'aria-live': 'polite' });
+    var archivo = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', style: { display: 'none' } });
+    var c = L.colores(S.datos.config);
+    var vista = h('div', {
+      style: { display: 'grid', placeItems: 'center', minHeight: '86px', borderRadius: '12px', padding: '12px',
+        background: c.bg, border: '1.5px solid var(--rule)' },
+    }, logo
+      ? h('img', { src: logo, alt: 'Tu logo', style: { maxHeight: '62px', maxWidth: '100%', objectFit: 'contain' } })
+      : h('span', { class: 'hint', text: 'Todavía no subiste tu logo: se muestra el nombre del negocio.' }));
+    function ocupado(si, msg) {
+      subir.disabled = si;
+      if (quitar) quitar.disabled = si;
+      aviso.textContent = msg || '';
+    }
+    archivo.addEventListener('change', function () {
+      var f = archivo.files && archivo.files[0];
+      archivo.value = '';
+      if (!f) return;
+      ocupado(true, 'Preparando tu logo…');
+      comprimirLogo(f).then(function (dato) {
+        ocupado(true, 'Guardando…');
+        google.script.run
+          .withSuccessHandler(function (r) {
+            if (!r.ok) { ocupado(false, r.errores.join(' ')); return; }
+            S.datos.logoData = dato;
+            pintar();
+            estado(r.refrescada ? 'Logo guardado. Tu página ya lo muestra.' : 'Logo guardado. Tu página lo mostrará en unos minutos.', 'ok');
+          })
+          .withFailureHandler(function (err) { ocupado(false, ''); fallo(err); })
+          .guardarLogo(dato);
+      }, function (err) { ocupado(false, err.message); });
+    });
+    var subir = h('button', { type: 'button', class: 'btn small', text: logo ? 'Cambiar logo' : 'Subir logo', on: { click: function () { archivo.click(); } } });
+    var quitar = logo ? h('button', {
+      type: 'button', class: 'btn ghost small', text: 'Quitar logo',
+      on: { click: function () {
+        ocupado(true, 'Quitando…');
+        google.script.run
+          .withSuccessHandler(function () { S.datos.logoData = ''; pintar(); estado('Logo quitado.', 'ok'); })
+          .withFailureHandler(function (err) { ocupado(false, ''); fallo(err); })
+          .quitarLogo();
+      } },
+    }) : null;
+    var enlace = h('details', { style: { marginTop: '10px' } },
+      h('summary', { class: 'hint', style: { cursor: 'pointer' }, text: 'Usar un enlace en vez de subir la imagen' }),
+      campo('Enlace a la imagen', texto('marca', 'logo_url', { type: 'url', placeholder: 'https://…' }),
+        'Si es de Drive: Compartir → "Cualquier persona con el enlace" y pega ese enlace. Los de Instagram no sirven: vencen. El logo subido tiene prioridad.'));
+    return h('div', { class: 'field', style: { marginTop: '12px' } },
+      h('span', { style: { display: 'block', fontWeight: 600, fontSize: '13px', marginBottom: '6px' }, text: 'Logo' }),
+      vista,
+      h('div', { style: { display: 'flex', gap: '8px', marginTop: '8px' } }, subir, quitar),
+      archivo,
+      h('p', { class: 'hint', text: 'PNG con fondo transparente se ve mejor. Lo achicamos solos para que la página cargue rápido.' }),
+      aviso,
+      enlace);
   }
 
   // ---------- Estilo ----------
@@ -2928,7 +3020,9 @@ var Logica = (function () {
     prev.style.color = c.ink;
     prev.style.fontFamily = "'" + e.sans + "', sans-serif";
     prev.appendChild(h('div', { class: 'top' },
-      h('div', { class: 'wm', style: display, text: marca }),
+      S.datos.logoData
+        ? h('img', { src: S.datos.logoData, alt: marca, style: { maxHeight: '28px', maxWidth: '60%', objectFit: 'contain', display: 'block' } })
+        : h('div', { class: 'wm', style: display, text: marca }),
       h('div', { class: 'kick', style: { color: c.deep }, text: '✦ Reserva en un minuto' }),
       h('div', { class: 'title', style: display, text: titulo })));
     prev.appendChild(h('div', {

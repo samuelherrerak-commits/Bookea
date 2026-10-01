@@ -884,7 +884,7 @@ function doGet(e) {
     // Solo el catálogo (GET sin action) se cachea; cupon y demás van directo a la hoja.
     if (!p.action && p.fresh !== '1') {
       const hit = leerCacheCatalogo_(tenant.slug);
-      if (hit) return jsonDeTexto_(hit);
+      if (hit) return jsonDeTexto_(conLogo_(hit, logoNegocio_(tenant, null)));
     }
 
     const ss = openTenant_(tenant);
@@ -922,7 +922,8 @@ function doGet(e) {
         })),
     });
     guardarCacheCatalogo_(tenant.slug, texto, CACHE_CATALOGO_SEG);
-    return jsonDeTexto_(texto);
+    // El logo va aparte de la caché del catálogo (puede pesar ~40 KB): se agrega al responder.
+    return jsonDeTexto_(conLogo_(texto, logoNegocio_(tenant, ss)));
   } catch (err) {
     console.error(err);
     return json_({ error: 'servidor', mensaje: 'Error del servidor. Intenta de nuevo.' });
@@ -1518,6 +1519,50 @@ function json_(obj) {
 
 function jsonTexto_(obj) {
   return JSON.stringify(obj);
+}
+
+// ---------- Logo subido desde la ventana de configuración ----------
+// Vive en la pestaña oculta "Logo" (A2) como data URL, comprimido en el navegador.
+const LOGO_MAX = 45000;
+
+/** Un data URL de imagen chico y con bytes de imagen de verdad. */
+function logoValido_(valor) {
+  const v = String(valor || '').trim();
+  const m = /^data:image\/(png|webp|jpeg);base64,([A-Za-z0-9+\/=]+)$/.exec(v);
+  return !!m && v.length <= LOGO_MAX && esImagen_(bytesDe_(m[2]));
+}
+
+function leerLogoHoja_(ss) {
+  const sheet = ss.getSheetByName('Logo');
+  if (!sheet) return '';
+  const v = String(sheet.getRange('A2').getValue() || '').trim();
+  return logoValido_(v) ? v : '';
+}
+
+/**
+ * El logo del negocio. Con `ss` (la hoja ya abierta) se relee y se refresca la caché;
+ * sin ella se usa la caché (6 h) y solo se abre la hoja si no está. "-" = sin logo.
+ */
+function logoNegocio_(tenant, ss) {
+  const cache = CacheService.getScriptCache();
+  const clave = 'logo_' + tenant.slug;
+  if (!ss) {
+    const hit = cache.get(clave);
+    if (hit !== null) return hit === '-' ? '' : hit;
+  }
+  let logo = '';
+  try {
+    logo = leerLogoHoja_(ss || openTenant_(tenant));
+  } catch (err) {
+    console.warn('No se pudo leer el logo de ' + tenant.slug + ': ' + err);
+  }
+  try { cache.put(clave, logo || '-', 6 * 60 * 60); } catch (_) {}
+  return logo;
+}
+
+/** Agrega "logo" al JSON del catálogo sin volver a parsearlo. */
+function conLogo_(texto, logo) {
+  return logo ? '{"logo":' + JSON.stringify(logo) + ',' + texto.slice(1) : texto;
 }
 
 function jsonDeTexto_(texto) {
