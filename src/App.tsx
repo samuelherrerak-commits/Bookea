@@ -8,6 +8,7 @@ import { spring } from './lib/motion'
 import { summarize } from './lib/pricing'
 import { applyBranding } from './lib/theme'
 import { useOrder } from './state/order'
+import type { DatosComprobante } from './lib/comprobante'
 import type { Modalidad } from './types'
 import { CatalogView } from './views/CatalogView'
 
@@ -43,7 +44,12 @@ export default function App() {
   const [view, setView] = useState<View>('catalogo')
   const [direction, setDirection] = useState(1)
   const [cartOpen, setCartOpen] = useState(false)
-  const [done, setDone] = useState<{ whatsappUrl: string; calendarUrl: string; modalidad: Modalidad } | null>(null)
+  const [done, setDone] = useState<{
+    whatsappUrl: string
+    calendarUrl: string
+    modalidad: Modalidad
+    comprobante: DatosComprobante | null
+  } | null>(null)
   const catalogScroll = useRef(0)
 
   const summary = useMemo(
@@ -125,7 +131,7 @@ export default function App() {
     dispatch({ type: 'setSchedule', schedule: { fecha: fechaCita, hora: horaCita } })
   }
 
-  const onSuccess = (result: { whatsappUrl: string; calendarUrl: string; modalidad: Modalidad }) => {
+  const onSuccess = (result: { whatsappUrl: string; calendarUrl: string; modalidad: Modalidad; comprobante: DatosComprobante | null }) => {
     setDone(result)
     dispatch({ type: 'reset' })
     window.history.replaceState({ view: 'listo' }, '')

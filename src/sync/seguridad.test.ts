@@ -102,3 +102,25 @@ describe('Code.gs · topes anti-spam', () => {
     expect(vencido.tokenValido_(viejo)).toBe(false)
   })
 })
+
+describe('Code.gs · montos en el calendario', () => {
+  const { lineaTotalEvento_ } = funcionesGs<{ lineaTotalEvento_: (o: object, m: string, bs: number | null, t: number | null) => string }>(
+    gs,
+    ['lineaTotalEvento_'],
+  )
+  const orden = { total: 18, recargo: 0 }
+
+  it('con pago en la cita guarda solo el valor de referencia', () => {
+    const l = lineaTotalEvento_(orden, 'EUR', null, null)
+    expect(l).toBe('Total (referencia): 18.00 EUR')
+    expect(l).not.toMatch(/Bs/)
+  })
+
+  it('con Pago Móvil agrega lo pagado en bolívares y la tasa', () => {
+    expect(lineaTotalEvento_(orden, 'USD', 720, 40)).toBe('Total (referencia): 18.00 USD · pagado Bs. 720.00 (tasa BCV 40.00)')
+  })
+
+  it('en bolívares el total ya es el monto', () => {
+    expect(lineaTotalEvento_({ total: 720, recargo: 0 }, 'BS', null, null)).toBe('Total: Bs. 720.00')
+  })
+})

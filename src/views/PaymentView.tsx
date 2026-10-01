@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CustomerForm, validateCustomer } from '../components/checkout/CustomerForm'
 import { PagoMovilDetails } from '../components/checkout/PagoMovilDetails'
@@ -14,6 +14,7 @@ import { ApiError, submitReservation } from '../lib/api'
 import { capitalize, formatEUR, formatLongDate, formatTime12 } from '../lib/format'
 import { servicesText, type OrderSummary as Summary } from '../lib/pricing'
 import { buildGoogleCalendarUrl } from '../lib/calendar'
+import type { DatosComprobante } from '../lib/comprobante'
 import { splitDataUrl } from '../lib/image'
 import { buildWhatsAppMessage, buildWhatsAppUrl } from '../lib/whatsapp'
 import { useOrder } from '../state/order'
@@ -25,7 +26,13 @@ interface PaymentViewProps {
   onBack: () => void
   /** El cupo se ocupó mientras la clienta llenaba el formulario. */
   onSlotTaken: () => void
-  onSuccess: (result: { whatsappUrl: string; calendarUrl: string; modalidad: Modalidad }) => void
+  onSuccess: (result: {
+    whatsappUrl: string
+    calendarUrl: string
+    modalidad: Modalidad
+    /** Comprobante de cita no fiscal; null si el negocio factura en modo fiscal. */
+    comprobante: DatosComprobante | null
+  }) => void
 }
 
 const UBICACION_WHATSAPP = 'Ubicación por WhatsApp'
@@ -64,6 +71,12 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
   const comprobanteRef = useRef<HTMLDivElement>(null)
 
   const { customer, payment, schedule, coupon, modalidad, sedeId } = state
+
+  // El PDF del comprobante (jsPDF) se baja mientras la clienta llena el formulario,
+  // así al confirmar no hay que esperarlo.
+  useEffect(() => {
+    if (catalog.config.facturacionModo !== 'fiscal') void import('../lib/comprobantePdf').catch(() => {})
+  }, [catalog.config.facturacionModo])
   const lugar = modalidad ? lugarElegido(catalog.config, modalidad, sedeId) : null
   const customerErrors = validateCustomer(customer)
   const paymentError = attempted && !payment ? 'Elige cómo vas a pagar para continuar.' : null
@@ -141,10 +154,37 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
         plantilla: catalog.config.mensaje.texto,
         tasa,
         reservaId: result.id,
+        recibo: result.recibo,
         comprobanteUrl: result.comprobanteUrl,
         calendarUrl,
       })
-      onSuccess({ whatsappUrl: buildWhatsAppUrl(catalog.config.whatsapp, message), calendarUrl, modalidad })
+      const pagoMovil = payment.metodo === 'pago_movil'
+      const comprobante: DatosComprobante | null =
+        catalog.config.facturacionModo === 'fiscal'
+          ? null
+          : {
+              negocio: catalog.config.marca || catalog.config.nombreNegocio,
+              numero: result.recibo,
+              reservaId: result.id,
+              emitido: new Date(),
+              cliente: customer.nombre.trim(),
+              telefono: customer.telefono.trim(),
+              cita: `${capitalize(formatLongDate(schedule.fecha))} · ${formatTime12(schedule.hora)}`,
+              lugar: lugar?.titulo || (modalidad === 'domicilio' ? 'A domicilio' : ''),
+              direccion: modalidad === 'domicilio' ? '' : lugar?.sede?.direccion ?? '',
+              servicios: summary.lines.map((l) => ({ nombre: l.nombre, precio: l.precio })),
+              recargo: summary.recargo,
+              descuento: summary.descuento,
+              cupon: coupon?.codigo ?? '',
+              total: result.total,
+              moneda: catalog.config.moneda,
+              metodo: payment.metodo,
+              // Con pago en la cita no hay monto en bolívares: depende de la tasa de ese día.
+              pagadoBs: pagoMovil ? result.totalBs : null,
+              tasa: pagoMovil ? result.tasa : null,
+              color: catalog.config.tema.deep,
+            }
+      onSuccess({ whatsappUrl: buildWhatsAppUrl(catalog.config.whatsapp, message), calendarUrl, modalidad, comprobante })
     } catch (err) {
       setSubmitting(false)
       if (err instanceof ApiError && err.code === 'cupo_ocupado') {

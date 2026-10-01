@@ -175,6 +175,16 @@ export default function Landing() {
                   Preguntas frecuentes
                 </a>
               </li>
+              <li>
+                <a href="/terminos/" className="transition-colors duration-150 hover:text-coal">
+                  Términos y condiciones
+                </a>
+              </li>
+              <li>
+                <a href="/privacidad/" className="transition-colors duration-150 hover:text-coal">
+                  Política de privacidad
+                </a>
+              </li>
             </ul>
           </div>
         </div>

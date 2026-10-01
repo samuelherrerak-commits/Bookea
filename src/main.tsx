@@ -13,9 +13,9 @@ import { applyBranding } from './lib/theme'
 import { slugFromLocation } from './lib/tenant'
 import { OrderProvider } from './state/order'
 
-// /campana, /campana/noviembre y /proyeccion son páginas estáticas (public/). Si el
-// servidor cae en la app (por ejemplo sin la barra final), se manda al archivo real.
-const estatica = window.location.pathname.match(/^\/(campana(?:\/noviembre)?|proyeccion)\/?$/)
+// /campana, /proyeccion, /terminos, /privacidad y /guia-legal son páginas estáticas
+// (public/). Si el servidor cae en la app (por ejemplo sin la barra final), se manda al archivo real.
+const estatica = window.location.pathname.match(/^\/(campana(?:\/noviembre)?|proyeccion|terminos|privacidad|guia-legal)\/?$/)
 if (estatica) window.location.replace(`/${estatica[1]}/index.html`)
 
 const slug = slugFromLocation()

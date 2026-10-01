@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<!-- Guía interna: accesible con el enlace, fuera de los buscadores. -->
+<meta name="robots" content="noindex, nofollow" />
+<title>Guía legal bookeaa</title>
+<link rel="icon" type="image/svg+xml" href="/bookeaa.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Condensed:wght@700;800&display=swap" />
+<link rel="stylesheet" href="/legal/estilos.css" />
+<script src="/legal/datos.js" defer></script>
+<style>
+  .pasos { list-style: none; padding: 0; margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .pasos li { max-width: none; margin: 0; }
+  .paso { display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: start; border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+  .paso input { width: 20px; height: 20px; margin-top: 3px; accent-color: var(--fg); }
+  .paso b { display: block; }
+  .paso small { display: block; color: var(--muted); font-size: 15px; line-height: 1.5; margin-top: 2px; }
+  .paso:has(input:checked) { border-color: var(--ok); }
+  .paso:has(input:checked) b { text-decoration: line-through; color: var(--muted); }
+  .progreso { font: 700 14px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-top: 10px; }
+  .tabla { overflow-x: auto; margin-top: 14px; border: 2px solid var(--line); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { font: 700 13px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: var(--surface); }
+  tr:last-child td { border-bottom: 0; }
+  .flujo { counter-reset: f; list-style: none; padding: 0; }
+  .flujo li { counter-increment: f; position: relative; padding-left: 40px; margin-top: 12px; }
+  .flujo li::before { content: counter(f); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--fg); color: var(--bg); display: grid; place-items: center; font: 800 15px/1 var(--display); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="marca" href="/" aria-label="bookeaa, inicio">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="28" height="26" rx="7" fill="currentColor"/><path d="M10 2.5v5M22 2.5v5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="var(--bg)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>
+    bookeaa
+  </a>
+  <p class="kicker">Uso interno · actualizado el 1 de octubre de 2026</p>
+  <h1>Guía legal y de facturación</h1>
+  <span class="regla"></span>
+  <p>Qué necesita bookeaa para operar en regla en Venezuela: registrar la firma personal, facturar la suscripción con facturación digital del SENIAT, qué impuestos aplican y si se puede ofrecer facturación homologada a los negocios.</p>
+  <div class="aviso">
+    <b>Importante:</b> esta guía ordena lo que hay que hacer y cita las normas, pero no reemplaza a un contador ni a un abogado. Las providencias del SENIAT, las alícuotas y los listados de proveedores cambian. Antes de cada paso, confirma con un contador público colegiado y en el portal del SENIAT (seniat.gob.ve).
+  </div>
+
+  <div class="indice">
+    <b>Contenido</b>
+    <ol>
+      <li><a href="#pasos">Lista de pasos</a></li>
+      <li><a href="#firma">La firma personal</a></li>
+      <li><a href="#impuestos">Impuestos</a></li>
+      <li><a href="#facturar">Cómo facturar los $15</a></li>
+      <li><a href="#negocios">Comprobantes y facturación para los negocios</a></li>
+      <li><a href="#otras">Otras obligaciones</a></li>
+      <li><a href="#documentos">Términos y privacidad</a></li>
+    </ol>
+  </div>
+
+  <h2 id="pasos">1. Lista de pasos</h2>
+  <p class="muted">Marca lo que vayas haciendo. Se guarda en este navegador.</p>
+  <p class="progreso" id="progreso" aria-live="polite"></p>
+  <ol class="pasos" id="pasos-lista"></ol>
+
+  <h2 id="firma">2. La firma personal</h2>
+  <p>Una firma personal (comerciante individual) es la forma más simple y barata de formalizar bookeaa. Eres tú haciendo comercio con un nombre registrado, y respondes con tu patrimonio personal. Si más adelante entran socios o el negocio crece, se puede pasar a una compañía anónima (C.A.) o a una S.R.L.</p>
+  <ol class="flujo">
+    <li><b>Reserva del nombre</b> en el SAREN (Servicio Autónomo de Registros y Notarías), en su portal en línea. Busca que "bookeaa" o el nombre que elijas esté libre.</li>
+    <li><b>Documento de constitución</b> (participación de comercio): nombre de la firma, tu identificación, domicilio, objeto (por ejemplo: "desarrollo, comercialización y prestación de servicios de software y plataformas digitales de agenda y reservas en línea") y capital. Muchos registros piden que lo redacte o vise un abogado.</li>
+    <li><b>Inscripción en el Registro Mercantil</b> de tu jurisdicción y pago de las tasas. Te entregan el documento registrado con sus datos (número, tomo, fecha).</li>
+    <li><b>RIF de la firma</b> en el SENIAT: inscribes o actualizas el RIF con los datos de la firma y su actividad económica.</li>
+    <li><b>Licencia de actividades económicas</b> en la alcaldía donde está el domicilio fiscal. Se paga el impuesto municipal sobre los ingresos.</li>
+    <li><b>Cuenta bancaria</b> a nombre de la firma, para separar los cobros de bookeaa de tus cuentas personales.</li>
+    <li><b>Libros:</b> los de contabilidad del Código de Comercio (diario, mayor e inventarios), y si eres contribuyente de IVA, los libros de compras y de ventas.</li>
+  </ol>
+  <p>Cuando tengas el registro, completa tus datos en el archivo <code>public/legal/datos.js</code> y publica: aparecen solos en los términos y en la política de privacidad.</p>
+
+  <h2 id="impuestos">3. Impuestos que te tocan</h2>
+  <div class="tabla"><table>
+    <thead><tr><th>Impuesto</th><th>Qué es</th><th>Qué hacer</th></tr></thead>
+    <tbody>
+      <tr><td><b>IVA</b></td><td>Impuesto al Valor Agregado. La alícuota general es 16 % y aplica a la prestación de servicios.</td><td>Con el contador, define si te inscribes como contribuyente ordinario. Si lo eres, el IVA va en cada factura y se declara cada mes.</td></tr>
+      <tr><td><b>ISLR</b></td><td>Impuesto sobre la Renta. Una firma personal declara como persona natural, sobre su ganancia neta del año.</td><td>Declaración anual (para personas naturales vence normalmente el 31 de marzo). Guarda todos los gastos del proyecto: dominio, tarjetas, publicidad, herramientas.</td></tr>
+      <tr><td><b>IGTF</b></td><td>Impuesto a las Grandes Transacciones Financieras: 3 % sobre ciertos pagos en divisas o criptoactivos.</td><td>Si te pagan en dólares (efectivo, Zelle u otros), pregúntale al contador si debes cobrar y declarar el IGTF según tu condición de contribuyente.</td></tr>
+      <tr><td><b>Municipal</b></td><td>Impuesto sobre actividades económicas de la alcaldía, un porcentaje de los ingresos brutos según el ramo.</td><td>Sacar la licencia y declarar con la frecuencia que pida tu alcaldía.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="facturar">4. Cómo facturar los $15 a cada negocio</h2>
+  <p>Cada pago de la suscripción debe llevar una factura que cumpla las normas generales de emisión de facturas del SENIAT (Providencia SNAT/2011/00071):</p>
+  <ul>
+    <li>RIF y datos de la firma;</li>
+    <li>número de factura correlativo y número de control;</li>
+    <li>fecha;</li>
+    <li>datos del cliente;</li>
+    <li>descripción del servicio;</li>
+    <li>base imponible, IVA y total.</li>
+  </ul>
+  <p>Hay tres maneras de emitirla:</p>
+  <div class="tabla"><table>
+    <thead><tr><th>Opción</th><th>Cómo funciona</th><th>Para bookeaa</th></tr></thead>
+    <tbody>
+      <tr><td><b>Imprenta digital autorizada</b></td><td>Un proveedor autorizado por el SENIAT asigna el número de control y genera la factura electrónica (PDF y datos) desde su portal o su API. Está regulada por la providencia del SENIAT sobre imprentas digitales (SNAT/2024/000102; confirma la versión vigente).</td><td><b>La recomendada.</b> Es digital como el servicio: emites desde el celular o la computadora y la envías por WhatsApp o correo. Con API se puede automatizar más adelante.</td></tr>
+      <tr><td><b>Formatos de imprenta</b></td><td>Talonarios con número de control, impresos por una imprenta autorizada.</td><td>Sirve para empezar, pero es manual y en papel.</td></tr>
+      <tr><td><b>Máquina fiscal</b></td><td>Impresora fiscal homologada, típica de comercios con punto de venta.</td><td>No encaja con una suscripción en línea.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Cómo elegir la imprenta digital</h3>
+  <ul>
+    <li>Que aparezca en el <b>listado de imprentas digitales autorizadas</b> publicado en el portal del SENIAT. No uses un proveedor que no esté ahí.</li>
+    <li>Precio por factura o plan mensual. Con 50 a 100 facturas al mes conviene un plan.</li>
+    <li>Que la factura se pueda enviar por correo o WhatsApp en PDF.</li>
+    <li>Que tenga <b>API</b> o integración, para automatizar la facturación de bookeaa y, a futuro, ofrecérsela a los negocios.</li>
+    <li>Que maneje montos en bolívares con la tasa BCV y muestre la referencia en divisas.</li>
+  </ul>
+  <h3>Cómo queda el cobro mensual</h3>
+  <ol class="flujo">
+    <li>Al terminar la prueba gratis, le escribes al negocio con el monto en dólares y en bolívares (tasa BCV del día).</li>
+    <li>El negocio paga y te manda el comprobante.</li>
+    <li>Emites la factura en la imprenta digital con sus datos fiscales y se la envías.</li>
+    <li>La registras en tu libro de ventas y declaras el IVA del mes si eres contribuyente.</li>
+  </ol>
+
+  <h2 id="negocios">5. Comprobantes y facturación para los negocios</h2>
+  <p>Cada negocio elige en su ventana de configuración (sección <b>Comprobantes</b>) uno de dos modos:</p>
+  <div class="tabla"><table>
+    <thead><tr><th>Modo</th><th>Qué pasa al reservar</th><th>Para quién</th></tr></thead>
+    <tbody>
+      <tr><td><b>Control interno</b> (por defecto)</td><td>El cliente descarga un <b>Comprobante de cita</b> en PDF con número correlativo y después pasa a WhatsApp.</td><td>Barberos, estilistas, manicuristas y negocios informales o que no son contribuyentes ordinarios de IVA.</td></tr>
+      <tr><td><b>Facturación fiscal (SENIAT)</b></td><td>No se genera comprobante. El negocio factura con su imprenta digital autorizada (o su máquina fiscal).</td><td>Negocios formales, contribuyentes de IVA.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Reglas del comprobante no fiscal</h3>
+  <p>Para que el SENIAT no lo considere facturación paralela, el comprobante cumple estas pautas:</p>
+  <ul>
+    <li>Se llama "Comprobante de cita". Nunca dice "factura" ni "número de control".</li>
+    <li>Lleva arriba y abajo la leyenda: <b>"DOCUMENTO NO FISCAL - VÁLIDO ÚNICAMENTE COMO COMPROBANTE DE CONTROL INTERNO"</b>.</li>
+    <li>No desglosa IVA ni base imponible: el total va en bruto.</li>
+    <li>Con <b>pago en la cita</b> muestra solo el <b>valor de referencia</b> en euros o dólares, porque los bolívares dependen de la tasa del día de la cita. Lo mismo se guarda en la hoja y en el calendario.</li>
+    <li>Con <b>Pago Móvil</b> muestra la referencia y lo que se pagó ese día en bolívares, con su tasa.</li>
+  </ul>
+
+  <h3>¿Puede bookeaa dar facturación homologada a los negocios?</h3>
+  <p><b>Sí, a través de una imprenta digital, pero bookeaa no puede emitir facturas en nombre del negocio por su cuenta.</b> Cada factura la debe emitir el propio negocio, con su RIF, mediante una imprenta digital autorizada o su máquina fiscal. bookeaa puede servir de puente:</p>
+  <ol class="flujo">
+    <li>El negocio contrata una imprenta digital autorizada que tenga API (puede ser la misma que use bookeaa, si ofrece cuentas para terceros).</li>
+    <li>En la ventana de configuración de bookeaa, el negocio carga sus datos fiscales y la credencial de su cuenta en ese proveedor.</li>
+    <li>Cuando el negocio marca una cita como pagada, el script de bookeaa le pide a la imprenta digital que emita la factura con los datos del cliente y los servicios, y guarda el número de control y el PDF en la fila de la reserva.</li>
+    <li>El cliente recibe su factura por WhatsApp o correo.</li>
+  </ol>
+  <p>Para hacerlo bien hay que elegir primero el proveedor (su API define cómo se integra) y pedirle al cliente final sus datos fiscales cuando quiera factura. Es un buen <b>plan pagado adicional</b> para más adelante, cuando haya negocios que lo pidan.</p>
+
+  <h2 id="otras">6. Otras obligaciones a tener en cuenta</h2>
+  <ul>
+    <li><b>Precios en bolívares:</b> la normativa de precios (SUNDDE y BCV) exige mostrar los precios en bolívares. Si los muestras en dólares, pon también el equivalente en bolívares a la tasa oficial del BCV, como ya hace la página de cada negocio con su tasa.</li>
+    <li><b>Contratos y aceptación en línea:</b> la Ley sobre Mensajes de Datos y Firmas Electrónicas les da validez a los mensajes y aceptaciones electrónicas. Guarda los chats o correos donde cada negocio acepta los términos y empieza la prueba.</li>
+    <li><b>Datos personales:</b> Venezuela no tiene una ley general de protección de datos, pero la Constitución (artículos 28 y 60) protege la intimidad y el derecho a saber y corregir los datos propios (habeas data). La política de privacidad cubre esto.</li>
+    <li><b>Seguridad informática:</b> la Ley Especial contra Delitos Informáticos castiga el acceso indebido a sistemas y datos. Mantén la verificación en dos pasos y no compartas accesos.</li>
+    <li><b>Conservación:</b> guarda facturas, libros y comprobantes al menos el tiempo de prescripción tributaria (en general, 6 años).</li>
+    <li><b>Marca:</b> si bookeaa crece, registra la marca en el SAPI (Servicio Autónomo de la Propiedad Intelectual) para que nadie más la use.</li>
+    <li><b>Si contratas personas:</b> inscripción en el IVSS, el INCES y Banavih (FAOV), y cumplimiento de la LOPCYMAT.</li>
+  </ul>
+
+  <h2 id="documentos">7. Términos y privacidad</h2>
+  <p>Ya están publicados en <a href="/terminos/">bookeaa.com/terminos</a> y <a href="/privacidad/">bookeaa.com/privacidad</a>. Los datos marcados en amarillo se completan solos cuando llenes <code>public/legal/datos.js</code>. Mándale el enlace de los términos a cada negocio cuando empiece la prueba y guarda su "acepto" en el chat.</p>
+
+  <footer>
+    <p>bookeaa · guía interna, no es asesoría legal ni contable.</p>
+  </footer>
+</div>
+<script>
+(function () {
+  const PASOS = [
+    ['Reservar el nombre de la firma en el SAREN', 'En línea. Verifica que esté libre.'],
+    ['Registrar la firma personal en el Registro Mercantil', 'Con el documento de constitución; muchos registros piden visado de abogado.'],
+    ['Actualizar el RIF con la firma y su actividad', 'En el SENIAT.'],
+    ['Sacar la licencia de actividades económicas', 'En la alcaldía del domicilio fiscal.'],
+    ['Abrir una cuenta bancaria de la firma', 'Para separar los cobros de bookeaa.'],
+    ['Definir con un contador si eres contribuyente ordinario de IVA', 'Y cómo te aplica el IGTF si cobras en divisas.'],
+    ['Contratar una imprenta digital autorizada por el SENIAT', 'Que esté en el listado oficial y, si es posible, que tenga API.'],
+    ['Llevar los libros de compras, ventas y contabilidad', 'O que los lleve tu contador.'],
+    ['Completar tus datos en public/legal/datos.js', 'Se publican solos en los términos y la privacidad.'],
+    ['Que un abogado revise los términos y la privacidad', 'Sobre todo la cancelación, los reembolsos y la ley aplicable.'],
+    ['Enviar los términos a cada negocio al empezar la prueba', 'Y guardar su aceptación en el chat.'],
+    ['Activar la verificación en dos pasos', 'En Google, GitHub, Render y GoDaddy.'],
+    ['Registrar la marca bookeaa en el SAPI', 'Cuando el proyecto despegue.'],
+  ]
+  const CLAVE = 'bookeaa-guia-legal-v1'
+  let hechos = {}
+  try { hechos = JSON.parse(localStorage.getItem(CLAVE) || '{}') } catch (e) { hechos = {} }
+  const lista = document.getElementById('pasos-lista')
+  const progreso = document.getElementById('progreso')
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+  lista.innerHTML = PASOS.map(([t, d], i) => `<li><label class="paso"><input type="checkbox" data-i="${i}" ${hechos[i] ? 'checked' : ''} /><span><b>${esc(t)}</b><small>${esc(d)}</small></span></label></li>`).join('')
+  function contar() {
+    const n = PASOS.filter((_, i) => hechos[i]).length
+    progreso.textContent = `${n} de ${PASOS.length} listos`
+  }
+  lista.addEventListener('change', (e) => {
+    const i = e.target.dataset.i
+    if (i === undefined) return
+    hechos[i] = e.target.checked
+    try { localStorage.setItem(CLAVE, JSON.stringify(hechos)) } catch (err) { /* sin almacenamiento */ }
+    contar()
+  })
+  contar()
+})()
+</script>
+</body>
+</html>

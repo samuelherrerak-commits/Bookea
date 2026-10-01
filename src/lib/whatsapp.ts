@@ -18,13 +18,15 @@ export interface WhatsAppInput {
   plantilla?: string
   tasa: Tasa | null
   reservaId?: string
+  /** Número del comprobante de cita (no fiscal), si se emitió. */
+  recibo?: number | null
   comprobanteUrl?: string | null
   calendarUrl?: string | null
 }
 
 /** Los valores de cada {variable}. Vacío = la línea que la usa desaparece del mensaje. */
 export function variablesMensaje(input: WhatsAppInput): VariablesMensaje {
-  const { customer, schedule, summary, coupon, payment, modalidad, lugar, tasa, reservaId, comprobanteUrl, calendarUrl } =
+  const { customer, schedule, summary, coupon, payment, modalidad, lugar, tasa, reservaId, recibo, comprobanteUrl, calendarUrl } =
     input
   const domicilio = modalidad === 'domicilio'
   const pagoMovil = payment.metodo === 'pago_movil'
@@ -55,7 +57,9 @@ export function variablesMensaje(input: WhatsAppInput): VariablesMensaje {
     pago,
     comprobante: pagoMovil ? comprobanteUrl || 'adjunto en la reserva' : '',
     calendario: calendarUrl ?? '',
-    reserva: reservaId ? `#${reservaId.slice(0, 8).toUpperCase()}` : '',
+    reserva: reservaId
+      ? `#${reservaId.slice(0, 8).toUpperCase()}${recibo ? ` · comprobante N.º ${String(recibo).padStart(6, '0')}` : ''}`
+      : '',
   }
 }
 
