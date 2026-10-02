@@ -18,7 +18,8 @@
     "marketing:carruseles": "node marketing/scripts/render-carruseles.mjs",
     "marketing:historias": "node marketing/scripts/render-historias.mjs",
     "marketing:publicar": "node marketing/scripts/publicar-campana.mjs",
-    "marketing:tarjetas": "node marketing/scripts/render-tarjetas.mjs"
+    "marketing:tarjetas": "node marketing/scripts/render-tarjetas.mjs",
+    "marketing:marca": "node marketing/scripts/render-marca.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

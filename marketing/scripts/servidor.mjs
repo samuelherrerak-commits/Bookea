@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 
 export const RAIZ = fileURLToPath(new URL('../..', import.meta.url))
 const TIPOS = {
-  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.jpg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff',
 }
 

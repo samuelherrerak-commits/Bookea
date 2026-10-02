@@ -168,6 +168,10 @@ const CONFIG_DEFAULTS = [
   ['dias_laborales', '1,2,3,4,5,6'], // 0 = domingo … 6 = sábado
   ['dias_anticipacion', '21'],
   ['anticipacion_min_horas', '2'],
+  // Alertas del evento en el calendario, en minutos antes de la cita ("1440, 60").
+  // "no" = sin alerta; vacío = la alerta por defecto del calendario. Se elige en la
+  // ventana de configuración (Horario).
+  ['recordatorio_minutos', ''],
   ['zona_horaria', ZONA],
   ['paleta', 'Rosa Clásico'], // dropdown: aplica base/soft/deep a la vez
   ['tema_base', ''], // hex manual; si está vacío manda la paleta
@@ -1156,8 +1160,9 @@ function doPost(e) {
     const fila = hoja.getLastRow();
 
     if (calendar) {
+      let evento = null;
       try {
-        calendar.createEvent(
+        evento = calendar.createEvent(
           (modalidad === 'domicilio' ? '🏠 Domicilio · ' : sedes.length > 1 ? '📍 ' + sede.nombre + ' · ' : '') +
             'Cita: ' + cliente + ' - ' + serviciosTexto,
           inicio, fin, {
@@ -1182,6 +1187,12 @@ function doPost(e) {
         // registro que miente que una hora libre que alguien más puede tomar.
         borrarFilaReserva_(hoja, fila);
         throw err;
+      }
+      // La cita ya está agendada: si la alerta falla, la reserva sigue valiendo.
+      try {
+        ponerAlertas_(evento, recordatoriosDe_(config));
+      } catch (err) {
+        console.warn('No se pudo poner la alerta: ' + err);
       }
     }
 
@@ -1252,6 +1263,30 @@ function siguienteRecibo_(ss) {
  * Línea del total para el evento del calendario. Siempre el valor de referencia; los
  * bolívares solo si ya se pagaron (Pago Móvil), con la tasa de ese día.
  */
+/**
+ * Minutos antes de la cita para las alertas del evento ("1440, 60" → [1440, 60]).
+ * Enteros de 0 a 40320 (4 semanas, el máximo de Google), sin repetir, máx. 5.
+ * "no" → [] (sin alerta). Vacío o ilegible → null: no se toca, manda la del calendario.
+ */
+function recordatoriosDe_(config) {
+  const v = String((config && config.recordatorio_minutos) || '').trim().toLowerCase();
+  if (v === 'no') return [];
+  const out = [];
+  v.split(/[\s,;]+/).forEach(function (t) {
+    if (!/^\d{1,5}$/.test(t)) return;
+    const n = Number(t);
+    if (n <= 40320 && out.indexOf(n) === -1) out.push(n);
+  });
+  return out.length ? out.sort(function (a, b) { return b - a; }).slice(0, 5) : null;
+}
+
+/** Reemplaza las alertas del evento; con [] queda sin alerta, con null no se toca. */
+function ponerAlertas_(evento, minutos) {
+  if (!evento || !minutos) return;
+  evento.removeAllReminders();
+  minutos.forEach(function (m) { evento.addPopupReminder(m); });
+}
+
 function lineaTotalEvento_(orden, moneda, bsPagados, tasa) {
   let linea = (moneda === 'BS' ? 'Total: Bs. ' + orden.total.toFixed(2)
     : 'Total (referencia): ' + orden.total.toFixed(2) + ' ' + moneda);
