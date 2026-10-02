@@ -158,6 +158,7 @@
   button.copiar[data-ok] { background: var(--soft); color: var(--fg); }
 
   .archivos { display: grid; gap: 8px; font-size: 15px; }
+  .descargar { justify-self: start; display: inline-flex; font: 700 15px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; background: var(--fg); color: var(--ink-on-fg); padding: 13px 20px; border-radius: 999px; }
   .archivos code { font: 500 14px/1.4 ui-monospace, Menlo, monospace; background: var(--soft); padding: 2px 6px; border-radius: 5px; overflow-wrap: anywhere; }
 
   @media (max-width: 760px) {
@@ -179,6 +180,7 @@
       <a href="#instagram">Instagram</a>
       <a href="#whatsapp">WhatsApp</a>
       <a href="#archivos">Archivos</a>
+      <!-- solo-sitio --><a href="/campana/index.html">Campaña</a>
     </div>
   </div>
 </nav>
@@ -313,7 +315,8 @@
     <div class="bloque">
       <p class="kicker">Descargas</p>
       <h2 id="t-archivos">Archivos</h2>
-      <p class="intro">En el teléfono, mantén presionada cualquier imagen de esta página para guardarla. Todo junto viene en <b>bookeaa-marca.zip</b>, que te mandé en el chat y que se genera en el proyecto con <code>node marketing/scripts/render-marca.mjs</code>.</p>
+      <p class="intro">En el teléfono, mantén presionada cualquier imagen de esta página para guardarla. Todo junto viene en <b>bookeaa-marca.zip</b>, que se genera en el proyecto con <code>npm run marketing:marca</code>.</p>
+      <!-- solo-sitio --><a class="descargar" id="zip" download>Descargar todo el kit (ZIP)</a>
     </div>
     <div class="archivos">
       <p><code>logo/</code> Logos en PNG transparente y PDF vectorial (horizontal, apilado e ícono, en negro y en blanco) y el ícono en SVG.</p>
@@ -332,6 +335,7 @@
 <script>
   const IMG = '../salida/marca/'
   const M = window.Marca, T = window.TEXTOS
+  if (document.getElementById('zip')) document.getElementById('zip').href = IMG + 'bookeaa-marca.zip'
   const $ = (id) => document.getElementById(id)
   // Un color var(--x) no sirve como atributo de SVG: va como estilo.
   const iconoTema = (fg, calado) => M.icono('currentColor', '#000').replace('stroke="#000"', `style="stroke:${calado}"`).replace(/fill="currentColor"/g, `style="fill:${fg}"`).replace(/stroke="currentColor"/g, `style="stroke:${fg}"`)
@@ -385,7 +389,7 @@
   const VOZ = [
     ['Tus clientes reservan solos, 24/7.', 'Plataforma omnicanal de gestión de turnos.'],
     ['Te llega cada cita por WhatsApp.', 'Recibirá notificaciones automatizadas en tiempo real.'],
-    ['1 mes gratis. Después $15 al mes.', '¡¡¡Oferta increíble por tiempo limitado!!!'],
+    ['1 mes gratis. Después $10 al mes.', '¡¡¡Oferta increíble por tiempo limitado!!!'],
     ['¿Se te cruzaron dos citas? Eso se acabó.', 'Optimice la eficiencia operativa de su negocio.'],
   ]
   $('voz').innerHTML = `<div><p class="cab">Sí</p><p class="cab">No</p></div>` + VOZ.map(([s, n]) => `<div><p class="si">${s}</p><p class="no">${n}</p></div>`).join('')
