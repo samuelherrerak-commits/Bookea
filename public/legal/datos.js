@@ -11,7 +11,7 @@ window.DATOS_LEGALES = {
   domicilio: '', // dirección fiscal
   ciudad: '', // ciudad cuyos tribunales resuelven los conflictos
   correo: '', // correo para soporte y privacidad, ej. hola@bookeaa.com
-  whatsapp: '+58 412 029 8203',
+  whatsapp: '+58 422 029 8203',
   sitio: 'bookeaa.com',
   precio: '$15', // precio mensual de referencia
   vigencia: '1 de octubre de 2026', // fecha desde la que rigen los términos

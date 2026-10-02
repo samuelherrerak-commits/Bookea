@@ -9,6 +9,6 @@ describe('trialWhatsappUrl', () => {
   })
 
   it('por defecto va al WhatsApp de bookeaa, no al respaldo de los negocios', () => {
-    expect(new URL(trialWhatsappUrl()).pathname).toBe('/584120298203')
+    expect(new URL(trialWhatsappUrl()).pathname).toBe('/584220298203')
   })
 })

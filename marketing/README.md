@@ -56,6 +56,12 @@ marketing/
 - **Historias:** `/marketing/historias/index.html` las muestra con la zona del sticker marcada; con `?s=4` dibuja una sola (sin marca, como se publica). Las de "nuevo reel" usan la portada del video, así que se renderizan después de los videos.
 - **Pantallas de la app:** son capturas reales de la página de reservas en modo demo ("Barbería Norte", estilo moderno, 2 sedes y domicilio). Las plantillas y colores salen de `public/landing/`.
 
+## Marca y cuentas (@bookeaa.app · WhatsApp +58 422 029 8203)
+
+- **Kit de marca:** `/marketing/kit/index.html` es el manual (logo, colores, tipografía, voz, usos incorrectos) y la guía para configurar Instagram y WhatsApp Business, con cada texto listo para copiar.
+- **Datos de la marca** (colores, logo, íconos, número, enlaces y destacadas): `marca/marca.js`. **Textos** de Instagram y WhatsApp (menú, respuestas rápidas, etiquetas, catálogo): `kit/textos.js`. Cambia ahí el horario de atención y se actualiza en todos los textos.
+- **Piezas:** `/marketing/marca/piezas.html` las muestra todas; con `?p=ig-perfil` dibuja una sola.
+
 ## Regenerar
 
 ```bash
@@ -65,6 +71,7 @@ npm run marketing:carruseles   # los JPG en marketing/salida/carruseles/carrusel
 npm run marketing:historias    # los JPG en marketing/salida/historias/
 npm run marketing:publicar     # copia todo a public/campana/media/ y arma los ZIP
 npm run marketing:tarjetas     # tarjetas de presentación: PDF 96 × 56 mm (90 × 50 + 3 mm de sangrado) y PNG a 600 dpi
+npm run marketing:marca        # logos, perfil y destacadas de Instagram, piezas de WhatsApp y textos .md → marketing/salida/marca/
 ```
 
 Necesita Chromium (`CHROMIUM_PATH`, por defecto `/opt/pw-browsers/chromium`) y, para los videos, un **ffmpeg con libx264** (`FFMPEG_PATH` o `ffmpeg` en el PATH). Para revisar sin renderizar todo: `node marketing/scripts/render-video.mjs 2 --cuadros 1,4.5,9` guarda esos cuadros como PNG.
