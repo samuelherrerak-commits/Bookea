@@ -135,6 +135,8 @@
   .burbuja { max-width: 86%; padding: 8px 11px 6px; border-radius: 10px; white-space: pre-line; box-shadow: 0 1px 0.5px rgb(0 0 0 / 0.13); min-width: 0; overflow-wrap: anywhere; }
   .burbuja.entra { background: var(--chat-in); justify-self: start; border-top-left-radius: 2px; }
   .burbuja.sale { background: var(--chat-out); justify-self: end; border-top-right-radius: 2px; }
+  .opciones { display: grid; gap: 4px; margin-top: 8px; }
+  .opcion { display: block; text-align: center; color: #027eb5; font-weight: 600; border-top: 1px solid rgb(0 0 0 / 0.08); padding-top: 6px; }
   .burbuja time { display: block; text-align: right; font-size: 11px; opacity: 0.55; margin-top: 2px; }
   .wa-intro { display: grid; gap: 24px; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); align-items: start; }
   .pasos { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: paso; }
@@ -189,7 +191,7 @@
   <header class="portada" id="inicio">
     <p class="kicker">Kit de marca · octubre 2026</p>
     <h1>Tu agenda,<br />sin libreta.</h1>
-    <p class="intro">Todo lo que necesitas para abrir las cuentas de bookeaa: el manual de marca, el perfil de Instagram con sus destacadas y la configuración completa de WhatsApp Business para afiliar negocios y dar soporte. Cada texto tiene su botón de copiar.</p>
+    <p class="intro">Todo lo que necesitas para abrir las cuentas de bookeaa: el manual de marca, el perfil de Instagram con sus destacadas y el bot de WhatsApp que afilia negocios, agenda su cita de configuración y da soporte. Cada texto tiene su botón de copiar.</p>
     <div class="datos" id="datos"></div>
   </header>
 
@@ -287,25 +289,25 @@
   <section id="whatsapp" aria-labelledby="t-wa">
     <div class="bloque">
       <p class="kicker" id="wa-numero"></p>
-      <h2 id="t-wa">WhatsApp Business</h2>
-      <p class="intro">El mensaje de bienvenida hace de menú: el negocio responde con un número y tú contestas con la respuesta rápida de ese número (escribe <b>/</b> y el número). Así cada chat queda encaminado: afiliación o soporte.</p>
+      <h2 id="t-wa">Bot de WhatsApp</h2>
+      <p class="intro">Un bot propio con la API oficial de WhatsApp atiende a cada negocio que escribe: toma los datos para afiliarse y le agenda la cita de configuración (presencial los sábados o por Google Meet entre semana), resuelve lo básico de soporte y te pasa el chat cuando hace falta una persona. Tú respondes desde la bandeja web.</p>
     </div>
     <div class="wa-intro">
       <div class="chat" id="chat" aria-label="Ejemplo de conversación"></div>
       <div class="bloque">
         <h3>Para armarlo</h3>
         <ol class="pasos">
-          <li><span>Instala <b>WhatsApp Business</b> con el número nuevo y llena el <b>perfil de empresa</b>, con la foto y la portada.</span></li>
-          <li><span>Activa el <b>mensaje de bienvenida</b> (el menú) y el <b>mensaje de ausencia</b>.</span></li>
-          <li><span>Crea las <b>respuestas rápidas</b>, cada una con su atajo tal cual.</span></li>
-          <li><span>Crea las <b>etiquetas</b> y el <b>catálogo</b> con sus 3 artículos.</span></li>
-          <li><span>Vincula la cuenta a Instagram para que salga el botón de WhatsApp en tu perfil.</span></li>
-          <li><span>Imprime o comparte los <b>QR</b> de afiliación y soporte.</span></li>
+          <li><span>Crea la cuenta gratis de <b>Cloudflare</b> y su token de API.</span></li>
+          <li><span>En <b>Meta</b>, crea la app de empresa con WhatsApp y registra el número (se borra de la app de WhatsApp).</span></li>
+          <li><span>Pon los <b>secretos en GitHub</b>: el bot se despliega solo.</span></li>
+          <li><span>En el <b>Apps Script</b> maestro: genera el token del bot y elige el correo de avisos.</span></li>
+          <li><span>Conecta el <b>webhook</b> en Meta y entra a la <b>bandeja</b>: crea las plantillas y el perfil.</span></li>
+          <li><span>Escríbele al número para probar y comparte los <b>QR</b>.</span></li>
         </ol>
       </div>
     </div>
     <div class="bloque">
-      <h3>Fotos y catálogo</h3>
+      <h3>Imágenes</h3>
       <div class="rejilla" id="wa-imagenes"></div>
     </div>
     <div class="grupo" id="textos-wa"></div>
@@ -323,7 +325,7 @@
       <p><code>instagram/perfil.png</code> Foto de perfil, 1080 × 1080.</p>
       <p><code>instagram/destacadas/</code> Las 7 portadas de destacadas (PNG 1080 × 1920 y el ícono en SVG).</p>
       <p><code>instagram/historias/</code> Una historia para cada destacada.</p>
-      <p><code>whatsapp/</code> Foto de perfil (640 × 640), portada, catálogo y los QR de afiliación y soporte.</p>
+      <p><code>whatsapp/</code> Foto de perfil (640 × 640), portada, imágenes del plan y los QR de afiliación y soporte.</p>
       <p><code>textos-instagram.md</code> y <code>configuracion-whatsapp.md</code> Los mismos textos de esta página.</p>
       <p><code>tarjetas/</code> Las tarjetas de presentación con el número nuevo, en el proyecto: <code>marketing/salida/tarjetas</code>.</p>
     </div>
@@ -429,24 +431,28 @@
   $('textos-ig').innerHTML = bloques(T.INSTAGRAM)
   $('textos-wa').innerHTML = bloques(T.WHATSAPP)
 
-  // Chat de ejemplo: bienvenida → "1" → respuesta rápida /1
-  const bienvenida = T.WHATSAPP.find((t) => t.titulo === 'Mensaje de bienvenida').texto
-  const uno = T.WHATSAPP.find((t) => t.atajo === '1').texto
+  // Chat de ejemplo con los textos reales del bot (bot/src/textos.ts)
   const negrita = (t) => esc(t).replace(/\*([^*\n]+)\*/g, '<b>$1</b>')
+  const boton = (t) => `<span class="opcion">${esc(t)}</span>`
   $('wa-numero').textContent = M.WHATSAPP_VISIBLE
   $('chat').innerHTML = [
     ['entra', 'Hola, vi su Instagram 👋', '9:41'],
-    ['sale', bienvenida, '9:41'],
-    ['entra', '1', '9:42'],
-    ['sale', uno, '9:42'],
-  ].map(([c, t, h]) => `<div class="burbuja ${c}">${negrita(t)}<time>${h}</time></div>`).join('')
+    ['sale', '¡Hola! 👋 Soy el asistente de *bookeaa*, tu agenda online.\n\n¿En qué te ayudo? Toca *Ver opciones* 👇', '9:41', ['☰ Ver opciones']],
+    ['entra', 'Afiliar mi negocio', '9:41'],
+    ['sale', '¡Qué bueno! 🙌 Te hago unas preguntas rápidas y agendamos tu *cita de configuración e inducción*.\n\nPrimero: ¿cómo se llama tu negocio?', '9:41'],
+    ['entra', 'Barbería El Corte', '9:42'],
+    ['sale', '…', '9:42'],
+    ['sale', 'Última parte: la *cita de configuración e inducción*. ¿Cómo la prefieres?\n\n🏪 *Presencial*: vamos a tu negocio, solo los *sábados*.\n💻 *Google Meet*: de *lunes a viernes*.', '9:44', ['Presencial · sábado', 'Google Meet']],
+    ['entra', 'Google Meet', '9:44'],
+    ['sale', '¡Listo! ✅ Tu cita quedó para el *lunes 5 de octubre* a las *10:00 a. m.*, por *Google Meet*.\n\nEnlace: meet.google.com/abc-defg-hij', '9:45'],
+  ].map(([c, t, h, b]) => `<div class="burbuja ${c}">${negrita(t)}${b ? `<div class="opciones">${b.map(boton).join('')}</div>` : ''}<time>${h}</time></div>`).join('')
 
   $('wa-imagenes').innerHTML = [
     ['oscura', 'whatsapp/perfil.png', 'Foto de perfil'],
     ['oscura', 'whatsapp/portada.png', 'Portada'],
-    ['oscura', 'whatsapp/catalogo/plan.png', 'Catálogo · Plan Pro'],
-    ['clara', 'whatsapp/catalogo/como.png', 'Catálogo · Cómo funciona'],
-    ['oscura', 'whatsapp/catalogo/qr.png', 'Catálogo · QR'],
+    ['oscura', 'whatsapp/catalogo/plan.png', 'Plan Pro (estados y anuncios)'],
+    ['clara', 'whatsapp/catalogo/como.png', 'Cómo funciona'],
+    ['oscura', 'whatsapp/catalogo/qr.png', 'QR para el local'],
     ['clara', 'whatsapp/qr-afiliar.png', 'QR · Afiliarse'],
     ['clara', 'whatsapp/qr-soporte.png', 'QR · Soporte'],
   ].map(([f, src, n]) => `<figure class="lamina ${f}" style="padding:16px 16px 36px"><img src="${IMG + src}" alt="${n}" style="max-height:200px;border-radius:8px" /><figcaption>${n}</figcaption></figure>`).join('')

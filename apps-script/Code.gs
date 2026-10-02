@@ -398,6 +398,9 @@ function onOpen() {
     .addSeparator()
     .addItem('Generar token de la API', 'promptGenerarToken')
     .addItem('Actualizar la tasa cada 2 horas', 'instalarDisparadorTasa')
+    .addSeparator()
+    .addItem('Bot de WhatsApp: generar token', 'promptGenerarTokenBot')
+    .addItem('Bot de WhatsApp: avisos y calendario', 'promptAjustesBot')
     .addToUi();
 }
 
@@ -957,6 +960,8 @@ function doPost(e) {
   } catch (err) {
     return json_({ error: 'datos_invalidos', mensaje: 'Solicitud inválida.' });
   }
+  // El bot de WhatsApp tiene su propio token (no el público de la web) y no es de un negocio.
+  if (data && data.accion === 'bot') return json_(atenderBot_(data, Date.now()));
   if (!tokenValido_(data.token)) return json_({ error: 'no_autorizado' });
 
   const tenant = getTenantPorParametro_(data);
@@ -2198,4 +2203,355 @@ function toNumber_(value) {
 
 function round2_(n) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+// ============================================================================
+// Bot de WhatsApp de bookeaa (Cloudflare Worker en bot/)
+// ============================================================================
+// El Worker llama a doPost con { accion: 'bot', token: <bot_token>, op, ... }.
+// - disponibilidad: horas libres para la cita de configuración e inducción
+//   (presencial solo sábados; Google Meet de lunes a viernes)
+// - agendar / reprogramar / cancelar: eventos en el calendario "Afiliaciones bookeaa"
+//   con invitación al Gmail del negocio (y enlace de Meet si es virtual)
+// - soporte / persona: fila en la hoja Soporte y correo de aviso
+// Los horarios se cambian en las propiedades del script (claves bot_*).
+// Requiere el servicio avanzado "Google Calendar API" (identificador Calendar).
+
+const BOT_DEFAULTS = {
+  bot_sabado_desde: '08:00', bot_sabado_hasta: '17:00', bot_sabado_min: '90', bot_sabados: '4',
+  bot_meet_desde: '09:00', bot_meet_hasta: '17:00', bot_meet_min: '60', bot_dias_meet: '8',
+  bot_anticipacion_horas: '12',
+};
+const BOT_CAMPOS_PROSPECTO = ['Fecha', 'Teléfono', 'Nombre en WhatsApp', 'Negocio', 'Rubro', 'Servicios', 'Horario', 'Correo', 'Logo',
+  'Foto de servicios', 'Modalidad', 'Dirección', 'Cita', 'Meet', 'Estado', 'Id evento'];
+const BOT_CAMPOS_SOPORTE = ['Fecha', 'Caso', 'Tipo', 'Teléfono', 'Nombre en WhatsApp', 'Negocio', 'Tema', 'Descripción', 'Captura', 'Estado'];
+
+function botConfig_() {
+  const props = PropertiesService.getScriptProperties().getProperties();
+  const out = {};
+  Object.keys(BOT_DEFAULTS).forEach(function (k) { out[k] = String(props[k] || BOT_DEFAULTS[k]).trim(); });
+  return out;
+}
+
+function minutosDe_(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ''));
+  return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+}
+
+function hhmm_(min) {
+  return ('0' + Math.floor(min / 60)).slice(-2) + ':' + ('0' + (min % 60)).slice(-2);
+}
+
+/** "2026-10-03" + "09:30" en Caracas (UTC−4) → ms. */
+function msCaracas_(fecha, hora) {
+  const p = fecha.split('-').map(Number);
+  return Date.UTC(p[0], p[1] - 1, p[2]) + minutosDe_(hora) * 60000 + 4 * 3600000;
+}
+
+/** Inicios posibles de un día: cada `duracion` minutos, terminando antes de `hasta`. */
+function horasDelDia_(desde, hasta, duracion) {
+  const out = [];
+  const ini = minutosDe_(desde), fin = minutosDe_(hasta), d = Number(duracion);
+  if (!(d > 0) || isNaN(ini) || isNaN(fin)) return out;
+  for (let m = ini; m + d <= fin; m += d) out.push(hhmm_(m));
+  return out;
+}
+
+/** Fechas candidatas (en Caracas) desde `ahoraMs`: los próximos N sábados o N días hábiles. */
+function diasCandidatos_(modalidad, ahoraMs, cfg) {
+  const out = [];
+  const hoy = new Date(ahoraMs - 4 * 3600000);
+  const base = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate());
+  const quiere = modalidad === 'presencial' ? Number(cfg.bot_sabados) : Number(cfg.bot_dias_meet);
+  for (let i = 0; i < 60 && out.length < quiere; i++) {
+    const d = new Date(base + i * 86400000);
+    const dia = d.getUTCDay();
+    const vale = modalidad === 'presencial' ? dia === 6 : dia >= 1 && dia <= 5;
+    if (vale) out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+/** Horas que no chocan con ningún evento y que empiezan después de `minimoMs`. */
+function horasLibres_(fecha, horas, duracion, ocupados, minimoMs) {
+  return horas.filter(function (h) {
+    const ini = msCaracas_(fecha, h), fin = ini + Number(duracion) * 60000;
+    if (ini < minimoMs) return false;
+    return !ocupados.some(function (o) { return o.ini < fin && o.fin > ini; });
+  });
+}
+
+function calendarioAfiliaciones_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('bot_calendario');
+  const cal = id ? CalendarApp.getCalendarById(id) : null;
+  if (cal) return cal;
+  const nuevo = CalendarApp.createCalendar('Afiliaciones bookeaa', { timeZone: ZONA });
+  props.setProperty('bot_calendario', nuevo.getId());
+  return nuevo;
+}
+
+function botDuracion_(modalidad, cfg) {
+  return Number(modalidad === 'presencial' ? cfg.bot_sabado_min : cfg.bot_meet_min);
+}
+
+/** Días con horas libres. `excluir`: id de un evento que no cuenta como ocupado (al reprogramar). */
+function botDisponibilidad_(modalidad, ahoraMs, cfg, cal, excluir) {
+  const fechas = diasCandidatos_(modalidad, ahoraMs, cfg);
+  if (!fechas.length) return [];
+  const horas = modalidad === 'presencial'
+    ? horasDelDia_(cfg.bot_sabado_desde, cfg.bot_sabado_hasta, cfg.bot_sabado_min)
+    : horasDelDia_(cfg.bot_meet_desde, cfg.bot_meet_hasta, cfg.bot_meet_min);
+  const desde = new Date(msCaracas_(fechas[0], '00:00'));
+  const hasta = new Date(msCaracas_(fechas[fechas.length - 1], '23:59'));
+  const limpio = String(excluir || '').replace(/@google\.com$/, '');
+  const ocupados = cal.getEvents(desde, hasta)
+    .filter(function (ev) { return !limpio || String(ev.getId()).replace(/@google\.com$/, '') !== limpio; })
+    .map(function (ev) { return { ini: ev.getStartTime().getTime(), fin: ev.getEndTime().getTime() }; });
+  const minimo = ahoraMs + Number(cfg.bot_anticipacion_horas) * 3600000;
+  return fechas
+    .map(function (f) { return { fecha: f, horas: horasLibres_(f, horas, botDuracion_(modalidad, cfg), ocupados, minimo) }; })
+    .filter(function (d) { return d.horas.length; });
+}
+
+function hojaBot_(nombre, campos) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(nombre);
+  if (!sheet) {
+    sheet = ss.insertSheet(nombre);
+    sheet.appendRow(campos);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, campos.length).setFontWeight('bold');
+  }
+  return sheet;
+}
+
+/** Guarda una imagen del chat en la carpeta "bookeaa · bot" y devuelve el enlace. */
+function botGuardarImagen_(img, nombre) {
+  if (!img || !img.base64) return '';
+  try {
+    const bytes = Utilities.base64Decode(img.base64);
+    if (!esImagen_(bytes)) return '';
+    const props = PropertiesService.getScriptProperties();
+    let carpeta = null;
+    const id = props.getProperty('bot_carpeta');
+    try { carpeta = id ? DriveApp.getFolderById(id) : null; } catch (_) {}
+    if (!carpeta) {
+      carpeta = DriveApp.createFolder('bookeaa · bot');
+      props.setProperty('bot_carpeta', carpeta.getId());
+    }
+    return carpeta.createFile(Utilities.newBlob(bytes, img.mime || 'image/jpeg', nombre)).getUrl();
+  } catch (err) {
+    console.warn('No se pudo guardar la imagen: ' + err);
+    return '';
+  }
+}
+
+function botAvisar_(asunto, lineas) {
+  const props = PropertiesService.getScriptProperties();
+  const para = props.getProperty('aviso_email') || Session.getEffectiveUser().getEmail();
+  if (!para) return;
+  try {
+    MailApp.sendEmail({ to: para, subject: '[bookeaa bot] ' + asunto, body: lineas.filter(Boolean).join('\n') + '\n\nBandeja: ' + (props.getProperty('bot_bandeja_url') || '(pon bot_bandeja_url en las propiedades)') });
+  } catch (err) {
+    console.warn('No se pudo mandar el aviso: ' + err);
+  }
+}
+
+function botTexto_(v, max) {
+  return paraCelda_(String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, max));
+}
+
+function botCita_(modalidad, fecha, hora, cfg) {
+  const ini = msCaracas_(fecha, hora);
+  return { ini: new Date(ini), fin: new Date(ini + botDuracion_(modalidad, cfg) * 60000) };
+}
+
+/** Punto de entrada desde doPost. */
+function atenderBot_(data, ahoraMs) {
+  const esperado = String(PropertiesService.getScriptProperties().getProperty('bot_token') || '');
+  if (esperado.length < 24 || String(data.token || '') !== esperado) return { error: 'no_autorizado' };
+  if (limite_('bot', 240, 60)) return { error: 'limite' };
+  const cfg = botConfig_();
+  const op = String(data.op || '');
+  const quien = { telefono: String(data.telefono || '').replace(/\D/g, '').slice(0, 20), nombre: botTexto_(data.nombre, 80) };
+
+  if (op === 'disponibilidad') {
+    const modalidad = data.modalidad === 'presencial' ? 'presencial' : 'meet';
+    return { dias: botDisponibilidad_(modalidad, ahoraMs, cfg, calendarioAfiliaciones_()) };
+  }
+  if (op === 'agendar') return botAgendar_(data, quien, ahoraMs, cfg);
+  if (op === 'reprogramar') return botReprogramar_(data, quien, ahoraMs, cfg);
+  if (op === 'cancelar') return botCancelar_(data, quien);
+  if (op === 'soporte' || op === 'persona') return botSoporte_(op, data, quien);
+  return { error: 'op_desconocida' };
+}
+
+function botLibre_(modalidad, fecha, hora, ahoraMs, cfg, cal, excluir) {
+  return botDisponibilidad_(modalidad, ahoraMs, cfg, cal, excluir).some(function (d) {
+    return d.fecha === fecha && d.horas.indexOf(hora) !== -1;
+  });
+}
+
+function botAgendar_(data, quien, ahoraMs, cfg) {
+  const af = data.af || {};
+  const modalidad = af.modalidad === 'presencial' ? 'presencial' : 'meet';
+  const fecha = String(af.fecha || ''), hora = String(af.hora || '');
+  const correo = String(af.correo || '').trim().toLowerCase();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !/^\d{2}:\d{2}$/.test(hora) || !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(correo)) {
+    return { ok: false, motivo: 'error' };
+  }
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { ok: false, motivo: 'error' };
+  try {
+    const cal = calendarioAfiliaciones_();
+    if (!botLibre_(modalidad, fecha, hora, ahoraMs, cfg, cal)) return { ok: false, motivo: 'ocupado' };
+    const negocio = botTexto_(af.negocio, 80);
+    const logo = botGuardarImagen_(data.logo, 'logo-' + negocio);
+    const foto = botGuardarImagen_(data.serviciosFoto, 'servicios-' + negocio);
+    const direccion = modalidad === 'presencial' ? botTexto_(af.direccion, 300) : '';
+    const c = botCita_(modalidad, fecha, hora, cfg);
+    const descripcion = [
+      'Cita de configuración e inducción de bookeaa.',
+      '',
+      'Negocio: ' + negocio,
+      'Rubro: ' + botTexto_(af.rubro, 80),
+      'WhatsApp: +' + quien.telefono + (quien.nombre ? ' (' + quien.nombre + ')' : ''),
+      'Horario: ' + botTexto_(af.horario, 200),
+      'Servicios:\n' + botTexto_(af.servicios, 1500),
+      logo ? 'Logo: ' + logo : 'Logo: no mandó',
+      foto ? 'Foto de servicios: ' + foto : '',
+    ].filter(function (l) { return l !== null; }).join('\n');
+    const evento = {
+      summary: 'Afiliación bookeaa · ' + negocio + (modalidad === 'presencial' ? ' (presencial)' : ' (Google Meet)'),
+      description: descripcion,
+      start: { dateTime: c.ini.toISOString(), timeZone: ZONA },
+      end: { dateTime: c.fin.toISOString(), timeZone: ZONA },
+      attendees: [{ email: correo }],
+      reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 1440 }, { method: 'popup', minutes: 60 }] },
+    };
+    if (direccion) evento.location = direccion;
+    if (modalidad === 'meet') evento.conferenceData = { createRequest: { requestId: Utilities.getUuid(), conferenceSolutionKey: { type: 'hangoutsMeet' } } };
+    const creado = Calendar.Events.insert(evento, cal.getId(), { conferenceDataVersion: 1, sendUpdates: 'all' });
+    const meet = creado.hangoutLink || '';
+    hojaBot_('Prospectos', BOT_CAMPOS_PROSPECTO).appendRow([
+      new Date(ahoraMs), "'+" + quien.telefono, quien.nombre, negocio, botTexto_(af.rubro, 80), botTexto_(af.servicios, 1500),
+      botTexto_(af.horario, 200), correo, logo, foto, modalidad === 'presencial' ? 'Presencial' : 'Google Meet', direccion,
+      c.ini, meet, 'Agendada', creado.id,
+    ]);
+    botAvisar_('Nueva afiliación: ' + negocio, [
+      negocio + ' agendó su cita de configuración.',
+      'Cuándo: ' + Utilities.formatDate(c.ini, ZONA, "EEEE d 'de' MMMM, h:mm a"),
+      modalidad === 'presencial' ? 'Presencial en: ' + direccion : 'Google Meet: ' + meet,
+      'WhatsApp: +' + quien.telefono, 'Correo: ' + correo,
+    ]);
+    return { ok: true, cita: { idEvento: creado.id, modalidad: modalidad, fecha: fecha, hora: hora, direccion: direccion || undefined, meet: meet || undefined } };
+  } catch (err) {
+    console.error('botAgendar_: ' + err);
+    return { ok: false, motivo: 'error' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Fila de Prospectos de un evento (por su id). */
+function botFilaDeEvento_(idEvento) {
+  const sheet = hojaBot_('Prospectos', BOT_CAMPOS_PROSPECTO);
+  const n = sheet.getLastRow();
+  if (n < 2) return null;
+  const col = BOT_CAMPOS_PROSPECTO.indexOf('Id evento') + 1;
+  const ids = sheet.getRange(2, col, n - 1, 1).getValues();
+  for (let i = ids.length - 1; i >= 0; i--) if (String(ids[i][0]) === String(idEvento)) return { sheet: sheet, fila: i + 2 };
+  return null;
+}
+
+function botReprogramar_(data, quien, ahoraMs, cfg) {
+  const cita = data.cita || {};
+  const fecha = String(data.fecha || ''), hora = String(data.hora || '');
+  const modalidad = cita.modalidad === 'presencial' ? 'presencial' : 'meet';
+  if (!cita.idEvento || !/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !/^\d{2}:\d{2}$/.test(hora)) return { ok: false, motivo: 'error' };
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { ok: false, motivo: 'error' };
+  try {
+    const cal = calendarioAfiliaciones_();
+    if (!botLibre_(modalidad, fecha, hora, ahoraMs, cfg, cal, cita.idEvento)) return { ok: false, motivo: 'ocupado' };
+    const c = botCita_(modalidad, fecha, hora, cfg);
+    Calendar.Events.patch({ start: { dateTime: c.ini.toISOString(), timeZone: ZONA }, end: { dateTime: c.fin.toISOString(), timeZone: ZONA } },
+      cal.getId(), cita.idEvento, { sendUpdates: 'all' });
+    const f = botFilaDeEvento_(cita.idEvento);
+    if (f) {
+      f.sheet.getRange(f.fila, BOT_CAMPOS_PROSPECTO.indexOf('Cita') + 1).setValue(c.ini);
+      f.sheet.getRange(f.fila, BOT_CAMPOS_PROSPECTO.indexOf('Estado') + 1).setValue('Reprogramada');
+    }
+    botAvisar_('Cita reprogramada', ['+' + quien.telefono + ' cambió su cita para ' + Utilities.formatDate(c.ini, ZONA, "EEEE d 'de' MMMM, h:mm a") + '.']);
+    return { ok: true, cita: { idEvento: cita.idEvento, modalidad: modalidad, fecha: fecha, hora: hora, direccion: cita.direccion, meet: cita.meet } };
+  } catch (err) {
+    console.error('botReprogramar_: ' + err);
+    return { ok: false, motivo: 'error' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function botCancelar_(data, quien) {
+  const cita = data.cita || {};
+  if (!cita.idEvento) return { ok: false };
+  try {
+    Calendar.Events.remove(calendarioAfiliaciones_().getId(), cita.idEvento, { sendUpdates: 'all' });
+    const f = botFilaDeEvento_(cita.idEvento);
+    if (f) f.sheet.getRange(f.fila, BOT_CAMPOS_PROSPECTO.indexOf('Estado') + 1).setValue('Cancelada');
+    botAvisar_('Cita cancelada', ['+' + quien.telefono + ' canceló su cita de ' + cita.fecha + ' ' + cita.hora + '.']);
+    return { ok: true };
+  } catch (err) {
+    console.error('botCancelar_: ' + err);
+    return { ok: false };
+  }
+}
+
+function botSoporte_(op, data, quien) {
+  const props = PropertiesService.getScriptProperties();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  let caso;
+  try {
+    caso = Number(props.getProperty('bot_caso_ultimo') || 0) + 1;
+    props.setProperty('bot_caso_ultimo', String(caso));
+  } finally {
+    lock.releaseLock();
+  }
+  const sop = data.sop || {};
+  const captura = op === 'soporte' ? botGuardarImagen_(data.captura, 'caso-' + caso) : '';
+  hojaBot_('Soporte', BOT_CAMPOS_SOPORTE).appendRow([
+    new Date(), caso, op === 'soporte' ? 'Soporte' : 'Pidió una persona', "'+" + quien.telefono, quien.nombre,
+    botTexto_(sop.negocio, 120), botTexto_(sop.tema, 80), botTexto_(sop.descripcion, 1500), captura, 'Abierto',
+  ]);
+  botAvisar_(op === 'soporte' ? 'Caso de soporte #' + caso : 'Te piden hablar con una persona', [
+    'WhatsApp: +' + quien.telefono + (quien.nombre ? ' (' + quien.nombre + ')' : ''),
+    sop.negocio ? 'Negocio: ' + sop.negocio : '',
+    sop.tema ? 'Tema: ' + sop.tema : '',
+    sop.descripcion ? 'Descripción: ' + sop.descripcion : '',
+    captura ? 'Captura: ' + captura : '',
+  ]);
+  return { ok: true, caso: caso };
+}
+
+function promptGenerarTokenBot() {
+  const ui = SpreadsheetApp.getUi();
+  const token = 'bot_' + Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').slice(0, 12);
+  PropertiesService.getScriptProperties().setProperty('bot_token', token);
+  ui.alert('Token del bot', token + '\n\nCópialo en GitHub > Settings > Secrets and variables > Actions > BOT_TOKEN.\nEl anterior deja de servir ahora.', ui.ButtonSet.OK);
+}
+
+function promptAjustesBot() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getScriptProperties();
+  const r = ui.prompt('Avisos del bot', 'Correo que recibe los avisos (afiliaciones, soporte). Actual: ' +
+    (props.getProperty('aviso_email') || Session.getEffectiveUser().getEmail()), ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  const correo = r.getResponseText().trim();
+  if (correo) props.setProperty('aviso_email', correo);
+  const b = ui.prompt('Bandeja del bot', 'Dirección de la bandeja (https://…workers.dev/bandeja), para el enlace de los correos:', ui.ButtonSet.OK_CANCEL);
+  if (b.getSelectedButton() === ui.Button.OK && b.getResponseText().trim()) props.setProperty('bot_bandeja_url', b.getResponseText().trim());
+  calendarioAfiliaciones_();
+  ui.alert('Listo. El calendario "Afiliaciones bookeaa" ya existe: ahí caen las citas y, si bloqueas una hora, el bot no la ofrece.');
 }

@@ -1,0 +1,18 @@
+# Bot de WhatsApp de bookeaa. Lo despliega .github/workflows/bot.yml.
+name = "bookeaa-bot"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[observability]
+enabled = true
+
+# La base se crea una vez (la Action lo hace sola) y su id se pone aquí.
+[[d1_databases]]
+binding = "DB"
+database_name = "bookeaa-bot"
+database_id = "REEMPLAZAR_CON_EL_ID_DE_D1"
+migrations_dir = "migrations"
+
+# Secretos (no van aquí): WA_TOKEN, WA_PHONE_ID, WA_WABA_ID, APP_SECRET, VERIFY_TOKEN,
+# BANDEJA_CLAVE, APPS_SCRIPT_URL, BOT_TOKEN. Los carga la Action desde los secretos de GitHub.
