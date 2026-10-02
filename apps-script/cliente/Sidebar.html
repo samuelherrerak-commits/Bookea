@@ -95,6 +95,8 @@
     border: 1.5px solid var(--rule); border-radius: 999px; background: var(--paper); padding: 4px 9px 4px 5px;
     display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px;
   }
+  .chip.alerta { padding: 5px 11px; cursor: pointer; }
+  .chip.alerta[aria-pressed='true'] { border-color: var(--coal); background: var(--coal); color: var(--paper); }
   .chip i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12); display: inline-block; }
 
   /* Vista previa */
@@ -3215,7 +3217,64 @@ var Logica = (function () {
         campo('Días a mostrar', texto('horario', 'dias_anticipacion', { type: 'number', inputmode: 'numeric' }))),
       campo('Horas mínimas de aviso', texto('horario', 'anticipacion_min_horas', { type: 'number', inputmode: 'numeric' }),
         'Cuánto antes tienen que reservar para hoy.'),
-      campo('Zona horaria', seleccion('horario', 'zona_horaria', ZONAS.map(function (z) { return [z, z.replace(/_/g, ' ')]; }))));
+      campo('Zona horaria', seleccion('horario', 'zona_horaria', ZONAS.map(function (z) { return [z, z.replace(/_/g, ' ')]; }))),
+      vAlertas());
+  }
+
+  // Alertas del evento en tu calendario: "no", vacío (la del calendario) o minutos "1440, 60".
+  var ALERTAS = [[0, 'Al empezar'], [5, '5 min'], [15, '15 min'], [30, '30 min'], [60, '1 h'], [120, '2 h'], [1440, '1 día'], [2880, '2 días']];
+  function alertasElegidas() {
+    var v = String(cfg('recordatorio_minutos')).trim().toLowerCase();
+    if (v === 'no') return [];
+    if (!v) return null;
+    var out = [];
+    v.split(/[\s,;]+/).forEach(function (t) { if (/^\d+$/.test(t) && out.indexOf(+t) < 0) out.push(+t); });
+    return out.sort(function (a, b) { return b - a; });
+  }
+  function textoAlerta(m) {
+    var a = ALERTAS.filter(function (x) { return x[0] === m; })[0];
+    if (a) return m === 0 ? 'al empezar' : a[1] + ' antes';
+    return m % 1440 === 0 ? (m / 1440) + ' días antes' : m % 60 === 0 ? (m / 60) + ' h antes' : m + ' min antes';
+  }
+  function vAlertas() {
+    var caja = h('div', {});
+    function pintarAlertas() {
+      caja.textContent = '';
+      var elegidas = alertasElegidas();
+      function guardarLista(lista) {
+        setCfg('horario', 'recordatorio_minutos', lista.length ? lista.sort(function (a, b) { return b - a; }).join(', ') : 'no');
+        pintarAlertas();
+      }
+      var fichas = [h('button', {
+        type: 'button', class: 'chip alerta', 'aria-pressed': String(!!elegidas && elegidas.length === 0),
+        on: { click: function () { guardarLista([]); } },
+      }, 'Sin alerta')].concat(ALERTAS.map(function (a) {
+        var activa = !!elegidas && elegidas.indexOf(a[0]) >= 0;
+        return h('button', {
+          type: 'button', class: 'chip alerta', 'aria-pressed': String(activa),
+          on: { click: function () {
+            var lista = (elegidas || []).filter(function (m) { return m !== a[0]; });
+            if (!activa) {
+              if (lista.length >= 5) { estado('Puedes elegir hasta 5 alertas.', 'error'); return; }
+              lista.push(a[0]);
+            }
+            guardarLista(lista);
+          } },
+        }, a[1]);
+      }));
+      var resumen = elegidas === null
+        ? 'Aún no eliges: se usa la alerta por defecto de tu calendario de Google.'
+        : elegidas.length === 0
+          ? 'Las citas no tendrán alerta.'
+          : 'Cada cita te avisará ' + elegidas.map(textoAlerta).join(', ').replace(/, ([^,]*)$/, ' y $1') + '.';
+      caja.appendChild(h('div', { class: 'chips' }, fichas));
+      caja.appendChild(h('p', { class: 'hint', text: resumen }));
+    }
+    pintarAlertas();
+    return h('div', {},
+      h('h3', { text: 'Alerta de cada cita' }),
+      h('p', { class: 'hint', text: 'Suena en tu teléfono, en el calendario de Google donde llegan las citas. Puedes marcar varias. Aplica a las citas nuevas.' }),
+      caja);
   }
 
   // ---------- Pagos ----------
@@ -3589,7 +3648,7 @@ var Logica = (function () {
     estilo: ['tema_estilo', 'color_principal', 'color_fondo', 'paleta'],
     lugar: ['lugar_tipo', 'lugar_nombre', 'permite_domicilio', 'recargo_domicilio_pct', 'minutos_extra_domicilio'],
     mensaje: ['mensaje_plantilla'],
-    horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria'],
+    horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria', 'recordatorio_minutos'],
     pagos: ['whatsapp', 'moneda', 'metodos_pago', 'pm_banco', 'pm_telefono', 'pm_cedula', 'tasa_eur_manual', 'tasa_usd_manual'],
     comprobantes: ['facturacion_modo', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
   };

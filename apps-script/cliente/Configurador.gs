@@ -21,7 +21,7 @@ const CLAVES_POR_SECCION = {
   estilo: ['tema_estilo', 'color_principal', 'color_fondo', 'paleta'],
   lugar: ['lugar_tipo', 'lugar_nombre', 'permite_domicilio', 'recargo_domicilio_pct', 'minutos_extra_domicilio'],
   mensaje: ['mensaje_plantilla'],
-  horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria'],
+  horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria', 'recordatorio_minutos'],
   pagos: ['whatsapp', 'moneda', 'metodos_pago', 'pm_banco', 'pm_telefono', 'pm_cedula', 'tasa_eur_manual', 'tasa_usd_manual'],
   comprobantes: ['facturacion_modo', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
 };
@@ -289,6 +289,9 @@ function validar_(seccion, datos) {
     numero('intervalo_min', 5, 240);
     numero('dias_anticipacion', 1, 365);
     numero('anticipacion_min_horas', 0, 168);
+    if (!alertasValidas_(c.recordatorio_minutos)) {
+      errores.push('Alerta: elige hasta 5 tiempos, de 0 minutos a 4 semanas antes de la cita.');
+    }
     (datos.horarios || []).forEach(function (h) {
       if (!h.inicio && !h.fin) return;
       if (!/^\d{1,2}:\d{2}$/.test(h.inicio || '') || !/^\d{1,2}:\d{2}$/.test(h.fin || '') || minutos_(h.fin) <= minutos_(h.inicio)) {
@@ -392,6 +395,14 @@ function leerConfig_(ss) {
     if (k) out[k] = String(r[1]).trim();
   });
   return out;
+}
+
+/** recordatorio_minutos: vacío, "no" o hasta 5 minutos (0–40320) separados por comas. Igual que Code.gs. */
+function alertasValidas_(valor) {
+  const v = String(valor === undefined || valor === null ? '' : valor).trim().toLowerCase();
+  if (v === '' || v === 'no') return true;
+  const partes = v.split(/[\s,;]+/);
+  return partes.length <= 5 && partes.every(function (t) { return /^\d{1,5}$/.test(t) && Number(t) <= 40320; });
 }
 
 function setClave_(sheet, clave, valor) {
