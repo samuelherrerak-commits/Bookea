@@ -34,7 +34,7 @@
         const k = pos(h('p', { class: 'kicker', text: kicker }), { top: '300px', left: '90px' })
         const t = lineas(['1 MES', 'GRATIS.'], { a: 0.25, clase: 'mega' })
         const tEl = pos(esquinas(t.el, true), { top: '370px', left: '90px' })
-        const sub = pos(h('p', { class: 'texto', html: 'Después, <b>$15 al mes</b>.<br>Todo incluido. Sin tarjeta.' }), { top: '860px', left: '90px' })
+        const sub = pos(h('p', { class: 'texto', html: 'Después, <b>$10 al mes</b>.<br>Todo incluido. Sin tarjeta.' }), { top: '860px', left: '90px' })
         const pill = pos(h('span', { class: 'pill', text: 'Escríbenos · link en la bio' }), { top: '1110px', left: '90px' })
         const lg = pos(logo(true, 0.62), { bottom: '170px', left: '90px' })
         root.append(k, tEl, sub, pill, lg, cruces(true))
@@ -520,12 +520,12 @@
           const k = pos(h('p', { class: 'kicker', text: 'Precio' }), { top: '240px', left: '90px' })
           const cero = pos(h('div', { class: 'mega', style: { fontSize: '420px' }, text: '$0' }), { top: '330px', left: '80px' })
           const ceroTxt = pos(h('p', { class: 'medio', text: 'POR 30 DÍAS' }), { top: '720px', left: '90px' })
-          const quince = pos(h('div', { class: 'mega', style: { fontSize: '420px' }, text: '$15' }), { top: '330px', left: '80px' })
-          const quinceTxt = pos(h('p', { class: 'medio', text: 'AL MES · TODO INCLUIDO' }), { top: '720px', left: '90px' })
+          const diez = pos(h('div', { class: 'mega', style: { fontSize: '420px' }, text: '$10' }), { top: '330px', left: '80px' })
+          const diezTxt = pos(h('p', { class: 'medio', text: 'AL MES · TODO INCLUIDO' }), { top: '720px', left: '90px' })
           const lista = ['Reservas ilimitadas', 'Google Calendar', 'Tu link y tu página', 'Los 8 estilos', 'Sedes y domicilio', 'Soporte por WhatsApp'].map((x, i) =>
             pos(h('p', { class: 'texto', html: `<b>✓</b>&nbsp; ${x}` }), { top: `${960 + i * 92}px`, left: '90px' }),
           )
-          root.append(k, cero, ceroTxt, quince, quinceTxt, ...lista)
+          root.append(k, cero, ceroTxt, diez, diezTxt, ...lista)
           sonido(1.8, 'golpe', { g: 0.7 })
           lista.forEach((_, i) => sonido(2.2 + i * 0.12, 'tecla', { g: 1.4 }))
           return (s) => {
@@ -534,8 +534,8 @@
             cero.style.opacity = ceroTxt.style.opacity = String(1 - cambio)
             cero.style.transform = `translateY(${tw(s, 0.1, 0.5, 80, 0) - cambio * 120}px)`
             ceroTxt.style.transform = `translateY(${-cambio * 60}px)`
-            quince.style.opacity = quinceTxt.style.opacity = String(cambio)
-            quince.style.transform = `translateY(${(1 - cambio) * 120}px)`
+            diez.style.opacity = diezTxt.style.opacity = String(cambio)
+            diez.style.transform = `translateY(${(1 - cambio) * 120}px)`
             lista.forEach((el, i) => aparece(el, s, 2.2 + i * 0.12, { y: 30, d: 0.35 }))
           }
         },

@@ -9,7 +9,7 @@ Landing page **estática y mobile-first** para reservar citas de uñas con ByMar
 
 ## Landing de bookeaa (raíz `/`)
 
-Quien abre la raíz del dominio, sin `/u/<slug>`, ve la landing comercial de **bookeaa** (`src/landing/`): problema y solución, cómo funciona, funciones, plantillas, precio (1 mes gratis, luego Pro a $15/mes) y preguntas frecuentes. Se carga en un chunk aparte, así que no pesa en la agenda de los negocios.
+Quien abre la raíz del dominio, sin `/u/<slug>`, ve la landing comercial de **bookeaa** (`src/landing/`): problema y solución, cómo funciona, funciones, plantillas, precio (1 mes gratis, luego Pro a $10/mes) y preguntas frecuentes. Se carga en un chunk aparte, así que no pesa en la agenda de los negocios.
 
 - **"Prueba gratis"** abre WhatsApp al número de `VITE_BOOKEAA_WHATSAPP` (+58 422 029 8203) con un mensaje ya armado (`src/landing/cta.ts`).
 - **"Ver una agenda real"** lleva a `/u/<VITE_DEFAULT_SHOP>`. La raíz ya no redirige a ese negocio.

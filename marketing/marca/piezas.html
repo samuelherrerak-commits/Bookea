@@ -110,7 +110,7 @@
       <div style="margin-top:auto">${cuerpo}</div>
     </div>`)
   const lineas = (items) => `<ul class="lista" style="margin:0;gap:18px">${items.map((t) => `<li style="font-size:40px"><b style="width:46px;height:46px;font-size:26px">✓</b><span>${t}</span></li>`).join('')}</ul>`
-  PIEZAS['catalogo-plan'] = () => tarjetaCat('negra', 'Plan Pro', '$15<span style="font-size:70px"> /mes</span><br><span style="font-size:90px">1 mes gratis</span>',
+  PIEZAS['catalogo-plan'] = () => tarjetaCat('negra', 'Plan Pro', '$10<span style="font-size:70px"> /mes</span><br><span style="font-size:90px">1 mes gratis</span>',
     lineas(['Tu página con tu logo y colores', 'Reservas 24/7 en Google Calendar', 'Pago Móvil y comprobante de cita', 'Sin contrato']) + `<div style="margin-top:46px">${M.logo({ claro: true, alto: 46 })}</div>`)
   PIEZAS['catalogo-como'] = () => tarjetaCat('blanca', 'Cómo funciona', 'En 3<br>pasos.',
     `<ul class="lista" style="margin:0;gap:18px">${M.DESTACADAS[0].puntos.map((p, i) => `<li style="font-size:40px"><b style="width:46px;height:46px;font-size:28px">${i + 1}</b><span>${p}</span></li>`).join('')}</ul><div style="margin-top:46px">${M.logo({ alto: 46 })}</div>`)

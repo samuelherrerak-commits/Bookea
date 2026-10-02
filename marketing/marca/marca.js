@@ -70,7 +70,7 @@
     { id: 'como', nombre: 'Cómo funciona', kicker: 'Cómo funciona', titulo: ['ASÍ DE', 'FÁCIL.'],
       puntos: ['Te damos tu página: bookeaa.com/u/tu-negocio', 'Tus clientes eligen servicio, día y hora', 'La cita cae en tu Google Calendar y te llega por WhatsApp'] },
     { id: 'precios', nombre: 'Precios', kicker: 'Precios', titulo: ['1 MES', 'GRATIS.'],
-      texto: 'Después $15 al mes, todo incluido. Sin contrato: si no sigues, tu página se pausa y no pagas nada.',
+      texto: 'Después $10 al mes, todo incluido. Sin contrato: si no sigues, tu página se pausa y no pagas nada.',
       puntos: ['Tu página con tus colores y tu logo', 'Reservas 24/7 en tu Google Calendar', 'Pago Móvil y comprobante de cita', 'Tarjetas QR para tu local'] },
     { id: 'afiliate', nombre: 'Afíliate', kicker: 'Afilia tu negocio', titulo: ['ESCRÍBENOS', 'Y TE LA', 'DEJAMOS LISTA.'],
       texto: 'Por WhatsApp, opción 1. Ten a mano:',

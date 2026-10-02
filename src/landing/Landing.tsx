@@ -105,7 +105,7 @@ export default function Landing() {
               </Reveal>
               <Reveal delay={0.2}>
                 <p className="mt-5 font-condensed text-[15px] font-semibold uppercase tracking-[0.1em] text-graphite">
-                  30 días gratis · Luego $15/mes · Sin tarjeta
+                  30 días gratis · Luego $10/mes · Sin tarjeta
                 </p>
               </Reveal>
             </div>
