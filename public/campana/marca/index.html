@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8" />
+<title>Kit de marca bookeaa</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" />
+<style>
+  /* Layout: una columna de lectura con navegación pegada arriba; cada sección es un capítulo del kit. */
+  :root {
+    --bg: #ffffff;
+    --fg: #0f0f0e;
+    --muted: #5b5b57;
+    --soft: #f4f4f2;
+    --rule: #e3e3df;
+    --ink-on-fg: #ffffff;
+    --chat: #efeae2;
+    --chat-in: #ffffff;
+    --chat-out: #d9fdd3;
+    --display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --body: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f0f0e; --fg: #f4f4f2; --muted: #a3a39d; --soft: #1b1b19; --rule: #2c2c29; --ink-on-fg: #0f0f0e;
+      --chat: #0b141a; --chat-in: #1f2c34; --chat-out: #005c4b; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f0f0e; --fg: #f4f4f2; --muted: #a3a39d; --soft: #1b1b19; --rule: #2c2c29; --ink-on-fg: #0f0f0e;
+    --chat: #0b141a; --chat-in: #1f2c34; --chat-out: #005c4b; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 400 17px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+  .envoltura { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 0 80px; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em; line-height: 0.92; margin: 0; text-wrap: balance; }
+  h2 { font-size: clamp(44px, 8vw, 84px); }
+  h3 { font-size: 30px; line-height: 1; }
+  p { margin: 0; }
+  .kicker { font: 700 14px/1 var(--display); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  .intro { max-width: 62ch; color: var(--muted); }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+
+  /* Navegación */
+  nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--rule); }
+  nav .envoltura { display: flex; align-items: center; gap: 22px; padding-block: 12px; overflow-x: auto; }
+  nav .marca { display: inline-flex; align-items: center; gap: 8px; font: 800 24px/1 var(--display); text-decoration: none; flex: none; }
+  nav .marca svg { width: 24px; height: 24px; }
+  nav .enlaces { display: flex; gap: 18px; margin-left: auto; }
+  nav .enlaces a { font: 700 15px/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: var(--muted); white-space: nowrap; }
+  nav .enlaces a:hover { color: var(--fg); }
+
+  /* Portada */
+  .portada { padding-block: 56px 40px; display: grid; gap: 28px; }
+  .portada h1 { font-size: clamp(64px, 13vw, 150px); line-height: 0.84; }
+  .datos { display: flex; flex-wrap: wrap; gap: 10px; }
+  .dato { display: inline-flex; gap: 10px; align-items: center; border: 1.5px solid var(--fg); border-radius: 999px; padding: 8px 8px 8px 16px; font: 700 18px/1 var(--display); letter-spacing: 0.02em; }
+  .dato small { font: 600 12px/1 var(--display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+
+  section { padding-block: 64px 8px; border-top: 1px solid var(--rule); display: grid; gap: 32px; scroll-margin-top: 60px; }
+  .bloque { display: grid; gap: 16px; }
+  .bloque > h3 + p { color: var(--muted); max-width: 62ch; }
+
+  /* Logos */
+  .rejilla { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); }
+  .lamina { border-radius: 14px; min-height: 180px; display: grid; place-items: center; padding: 26px; position: relative; }
+  .lamina img { max-height: 110px; max-width: 100%; width: auto; height: auto; }
+  .lamina figcaption { position: absolute; left: 14px; bottom: 12px; font: 700 12px/1 var(--display); letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.6; }
+  .lamina.clara { background: #ffffff; color: #0f0f0e; box-shadow: inset 0 0 0 1px #e3e3df; }
+  .lamina.oscura { background: #0f0f0e; color: #ffffff; box-shadow: inset 0 0 0 1px #2c2c29; }
+  figure { margin: 0; }
+
+  .reglas { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+  .regla-caja { background: var(--soft); border-radius: 14px; padding: 22px; display: grid; gap: 14px; align-content: start; }
+  .regla-caja p { font-size: 15px; color: var(--muted); }
+  .respeto { position: relative; background: #ffffff; border-radius: 10px; padding: 14px; display: grid; place-items: center; }
+  .respeto img { display: block; width: 100%; max-width: 280px; height: auto; outline: 1.5px dashed #9a9a94; outline-offset: -1px; background: repeating-linear-gradient(45deg, #f4f4f2 0 6px, #ffffff 6px 12px); }
+  .respeto span { position: absolute; top: 18px; left: 22px; font: 600 11px/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: #5b5b57; }
+
+  /* Colores */
+  .colores { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
+  .color { border-radius: 14px; overflow: hidden; border: 1px solid var(--rule); display: grid; }
+  .color .muestra { height: 110px; }
+  .color .info { padding: 14px; display: grid; gap: 6px; font-size: 14px; }
+  .color .info b { font: 800 22px/1 var(--display); text-transform: uppercase; }
+  .color code { font: 500 13px/1.4 ui-monospace, Menlo, monospace; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .color button { justify-self: start; }
+
+  /* Tipografía */
+  .tipos { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+  .tipo { border: 1px solid var(--rule); border-radius: 14px; padding: 22px; display: grid; gap: 12px; min-width: 0; }
+  .tipo .grande { font: 800 64px/0.9 var(--display); text-transform: uppercase; }
+  .tipo .cuerpo { font: 400 22px/1.4 var(--body); }
+  .tipo small { color: var(--muted); font-size: 14px; }
+
+  /* Voz */
+  .voz { display: grid; gap: 10px; }
+  .voz div { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .voz p { padding: 14px 16px; border-radius: 12px; font-size: 15px; min-width: 0; }
+  .voz .si { background: var(--soft); }
+  .voz .no { border: 1.5px dashed var(--rule); color: var(--muted); text-decoration: line-through; text-decoration-color: var(--muted); }
+  .voz .cab { font: 700 13px/1 var(--display); letter-spacing: 0.16em; text-transform: uppercase; padding: 0 2px; background: none; color: var(--muted); text-decoration: none; border: 0; }
+
+  /* Usos incorrectos */
+  .mal { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
+  .mal figure { background: var(--soft); border-radius: 12px; padding: 18px 12px 12px; display: grid; gap: 10px; justify-items: center; text-align: center; }
+  .mal .caja { height: 70px; display: grid; place-items: center; position: relative; width: 100%; }
+  .mal .caja::after { content: ''; position: absolute; inset: 6px 22%; background: linear-gradient(to top right, transparent calc(50% - 1.5px), #d83a2e 50%, transparent calc(50% + 1.5px)); }
+  .mal figcaption { font-size: 13px; color: var(--muted); line-height: 1.3; }
+
+  /* Instagram */
+  .ig { display: grid; gap: 28px; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); align-items: start; }
+  .telefono { border: 10px solid var(--fg); border-radius: 36px; background: #ffffff; color: #0f0f0e; padding: 22px 16px 18px; display: grid; gap: 14px; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 13.5px; line-height: 1.35; }
+  .telefono .usuario { font-weight: 700; font-size: 16px; text-align: center; }
+  .telefono .cabeza { display: flex; align-items: center; gap: 18px; }
+  .telefono .avatar { width: 84px; height: 84px; border-radius: 50%; flex: none; }
+  .telefono .cifras { display: flex; flex: 1; justify-content: space-around; text-align: center; }
+  .telefono .cifras b { display: block; font-size: 16px; }
+  .telefono .bio { white-space: pre-line; }
+  .telefono .bio .cat { color: #737373; display: block; }
+  .telefono .bio a { color: #00376b; text-decoration: none; display: block; font-weight: 600; }
+  .telefono .botones { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .telefono .botones span { background: #efefef; border-radius: 8px; text-align: center; padding: 7px 0; font-weight: 600; }
+  .telefono .destacadas { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+  .telefono .destacadas figure { display: grid; gap: 5px; justify-items: center; flex: none; }
+  .telefono .destacadas .aro { width: 62px; height: 62px; border-radius: 50%; padding: 3px; box-shadow: 0 0 0 1px #dbdbdb; }
+  .telefono .destacadas .aro div { width: 100%; height: 100%; border-radius: 50%; background-size: cover; background-position: center; }
+  .telefono .destacadas figcaption { font-size: 11.5px; }
+
+  .historias { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+  .historias img { width: 150px; border-radius: 12px; flex: none; }
+
+  /* WhatsApp */
+  .chat { background: var(--chat); border-radius: 18px; padding: 18px 14px; display: grid; gap: 8px; max-width: 420px; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 14.5px; line-height: 1.38; }
+  .burbuja { max-width: 86%; padding: 8px 11px 6px; border-radius: 10px; white-space: pre-line; box-shadow: 0 1px 0.5px rgb(0 0 0 / 0.13); min-width: 0; overflow-wrap: anywhere; }
+  .burbuja.entra { background: var(--chat-in); justify-self: start; border-top-left-radius: 2px; }
+  .burbuja.sale { background: var(--chat-out); justify-self: end; border-top-right-radius: 2px; }
+  .burbuja time { display: block; text-align: right; font-size: 11px; opacity: 0.55; margin-top: 2px; }
+  .wa-intro { display: grid; gap: 24px; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); align-items: start; }
+  .pasos { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: paso; }
+  .pasos li { counter-increment: paso; display: grid; grid-template-columns: 38px 1fr; gap: 12px; align-items: start; }
+  .pasos li::before { content: counter(paso); width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--fg); display: grid; place-items: center; font: 800 18px/1 var(--display); }
+  .pasos b { font-weight: 600; }
+
+  /* Bloques de texto copiables */
+  .grupo { display: grid; gap: 12px; }
+  .grupo > h3 { margin-top: 18px; }
+  .copiable { border: 1px solid var(--rule); border-radius: 14px; padding: 16px 18px; display: grid; gap: 10px; min-width: 0; }
+  .copiable header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .copiable header b { font: 700 19px/1.1 var(--display); text-transform: uppercase; letter-spacing: 0.02em; }
+  .atajo { font: 600 14px/1 ui-monospace, Menlo, monospace; background: var(--fg); color: var(--ink-on-fg); padding: 5px 8px; border-radius: 6px; }
+  .copiable header button { margin-left: auto; }
+  .copiable pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 400 15px/1.5 var(--body); background: var(--soft); border-radius: 10px; padding: 12px 14px; }
+  .copiable .donde { font-size: 14px; color: var(--muted); }
+  .copiable .donde::before { content: '→ '; }
+  .copiable .nota { font-size: 14px; color: var(--muted); border-left: 3px solid var(--rule); padding-left: 10px; }
+  button.copiar { font: 700 13px/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; background: var(--fg); color: var(--ink-on-fg); border: 0; border-radius: 999px; padding: 9px 14px; cursor: pointer; }
+  button.copiar[data-ok] { background: var(--soft); color: var(--fg); }
+
+  .archivos { display: grid; gap: 8px; font-size: 15px; }
+  .descargar { justify-self: start; display: inline-flex; font: 700 15px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; background: var(--fg); color: var(--ink-on-fg); padding: 13px 20px; border-radius: 999px; }
+  .archivos code { font: 500 14px/1.4 ui-monospace, Menlo, monospace; background: var(--soft); padding: 2px 6px; border-radius: 5px; overflow-wrap: anywhere; }
+
+  @media (max-width: 760px) {
+    .ig, .wa-intro { grid-template-columns: minmax(0, 1fr); }
+    .voz div { grid-template-columns: 1fr; }
+    .voz div:first-child { display: none; }
+    .voz .si::before { content: 'Sí · '; font-weight: 600; }
+    .voz div + div { margin-bottom: 6px; }
+    nav .enlaces { gap: 14px; }
+  }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<nav aria-label="Secciones">
+  <div class="envoltura">
+    <a class="marca" href="#inicio" id="nav-marca">bookeaa</a>
+    <div class="enlaces">
+      <a href="#marca">Marca</a>
+      <a href="#instagram">Instagram</a>
+      <a href="#whatsapp">WhatsApp</a>
+      <a href="#archivos">Archivos</a>
+      <a href="/campana/index.html">Campaña</a>
+    </div>
+  </div>
+</nav>
+
+<main class="envoltura">
+  <header class="portada" id="inicio">
+    <p class="kicker">Kit de marca · octubre 2026</p>
+    <h1>Tu agenda,<br />sin libreta.</h1>
+    <p class="intro">Todo lo que necesitas para abrir las cuentas de bookeaa: el manual de marca, el perfil de Instagram con sus destacadas y la configuración completa de WhatsApp Business para afiliar negocios y dar soporte. Cada texto tiene su botón de copiar.</p>
+    <div class="datos" id="datos"></div>
+  </header>
+
+  <section id="marca" aria-labelledby="t-marca">
+    <div class="bloque">
+      <p class="kicker">01 · Identidad</p>
+      <h2 id="t-marca">Marca</h2>
+      <p class="intro">Blanco y negro, letra condensada y gruesa, y un calendario con la "b" calada. La marca es seria y directa porque lo que vendemos es orden: nada de degradados ni colores extra.</p>
+    </div>
+
+    <div class="bloque">
+      <h3>Logo</h3>
+      <p>El ícono es un calendario con sus dos argollas y la "b" de bookeaa calada adentro. El nombre va siempre en minúsculas, en Barlow Condensed 800.</p>
+      <div class="rejilla" id="logos"></div>
+    </div>
+
+    <div class="reglas">
+      <div class="regla-caja">
+        <h3>Área de respeto</h3>
+        <div class="respeto" id="respeto" role="img" aria-label="Área de respeto del logo: media altura del ícono por cada lado"></div>
+        <p>Deja libre alrededor del logo al menos la mitad de la altura del ícono. Ningún texto, borde o foto entra en esa zona.</p>
+      </div>
+      <div class="regla-caja">
+        <h3>Tamaño mínimo</h3>
+        <p><b style="color:var(--fg)">Ícono solo:</b> 16 px en pantalla, 5 mm impreso.<br /><b style="color:var(--fg)">Logo horizontal:</b> 80 px de ancho en pantalla, 22 mm impreso.<br />Más chico que eso, usa solo el ícono.</p>
+      </div>
+      <div class="regla-caja">
+        <h3>Sobre qué fondo</h3>
+        <p>Logo negro sobre blanco o niebla. Logo blanco sobre negro o sobre una foto oscura. Sobre una foto clara o con mucho detalle, ponlo dentro de un recuadro blanco o negro.</p>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <h3>Colores</h3>
+      <p>El negro carbón es la marca. Los grises solo acompañan: fondos de apoyo, bordes y texto secundario.</p>
+      <div class="colores" id="colores"></div>
+    </div>
+
+    <div class="bloque">
+      <h3>Tipografía</h3>
+      <p>Las dos son gratis en Google Fonts, así que funcionan en Canva, en Instagram (con plantillas) y en la web.</p>
+      <div class="tipos">
+        <div class="tipo">
+          <small>Titulares · Barlow Condensed 800 · MAYÚSCULAS</small>
+          <div class="grande">Reserva en un minuto.</div>
+          <small>Interlineado 0,9. Frases cortas que cierran con punto.</small>
+        </div>
+        <div class="tipo">
+          <small>Texto · Barlow 400, 500 y 600</small>
+          <div class="cuerpo">Tus clientes eligen servicio, día y hora, y la cita cae en tu Google Calendar.</div>
+          <small>Etiquetas: Barlow Condensed 700, mayúsculas, espaciado amplio.</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <h3>Cómo hablamos</h3>
+      <p>Tuteamos, frases cortas, palabras del día a día del negocio. Hablamos del problema del dueño (el chat, la libreta, la cita perdida) y no de la tecnología.</p>
+      <div class="voz" id="voz"></div>
+    </div>
+
+    <div class="bloque">
+      <h3>No hagas esto</h3>
+      <div class="mal" id="mal"></div>
+    </div>
+  </section>
+
+  <section id="instagram" aria-labelledby="t-ig">
+    <div class="bloque">
+      <p class="kicker" id="ig-usuario"></p>
+      <h2 id="t-ig">Instagram</h2>
+      <p class="intro">Así queda el perfil con la foto, la biografía y las 7 destacadas. Abajo están las historias que van dentro de cada destacada, para que no arranquen vacías, y todos los textos para copiar.</p>
+    </div>
+    <div class="ig">
+      <div class="telefono" id="telefono"></div>
+      <div class="bloque">
+        <h3>Para armarlo</h3>
+        <ol class="pasos">
+          <li><span>Cambia la cuenta a <b>profesional → Empresa</b> (Configuración → Tipo de cuenta y herramientas).</span></li>
+          <li><span>Sube la <b>foto de perfil</b> (<code>instagram/perfil.png</code>).</span></li>
+          <li><span>Copia nombre, biografía, enlaces y categoría de abajo, y vincula el <b>botón de WhatsApp</b>.</span></li>
+          <li><span>Publica las <b>7 historias</b> y crea una destacada con cada una, con su portada.</span></li>
+          <li><span>Activa las <b>preguntas frecuentes</b> y las <b>respuestas guardadas</b> del chat.</span></li>
+          <li><span>Publica las <b>primeras 9 publicaciones</b> en el orden de la lista y fija las 3 indicadas.</span></li>
+        </ol>
+      </div>
+    </div>
+    <div class="bloque">
+      <h3>Historias de cada destacada</h3>
+      <div class="historias" id="historias"></div>
+    </div>
+    <div class="grupo" id="textos-ig"></div>
+  </section>
+
+  <section id="whatsapp" aria-labelledby="t-wa">
+    <div class="bloque">
+      <p class="kicker" id="wa-numero"></p>
+      <h2 id="t-wa">WhatsApp Business</h2>
+      <p class="intro">El mensaje de bienvenida hace de menú: el negocio responde con un número y tú contestas con la respuesta rápida de ese número (escribe <b>/</b> y el número). Así cada chat queda encaminado: afiliación o soporte.</p>
+    </div>
+    <div class="wa-intro">
+      <div class="chat" id="chat" aria-label="Ejemplo de conversación"></div>
+      <div class="bloque">
+        <h3>Para armarlo</h3>
+        <ol class="pasos">
+          <li><span>Instala <b>WhatsApp Business</b> con el número nuevo y llena el <b>perfil de empresa</b>, con la foto y la portada.</span></li>
+          <li><span>Activa el <b>mensaje de bienvenida</b> (el menú) y el <b>mensaje de ausencia</b>.</span></li>
+          <li><span>Crea las <b>respuestas rápidas</b>, cada una con su atajo tal cual.</span></li>
+          <li><span>Crea las <b>etiquetas</b> y el <b>catálogo</b> con sus 3 artículos.</span></li>
+          <li><span>Vincula la cuenta a Instagram para que salga el botón de WhatsApp en tu perfil.</span></li>
+          <li><span>Imprime o comparte los <b>QR</b> de afiliación y soporte.</span></li>
+        </ol>
+      </div>
+    </div>
+    <div class="bloque">
+      <h3>Fotos y catálogo</h3>
+      <div class="rejilla" id="wa-imagenes"></div>
+    </div>
+    <div class="grupo" id="textos-wa"></div>
+  </section>
+
+  <section id="archivos" aria-labelledby="t-archivos">
+    <div class="bloque">
+      <p class="kicker">Descargas</p>
+      <h2 id="t-archivos">Archivos</h2>
+      <p class="intro">En el teléfono, mantén presionada cualquier imagen de esta página para guardarla. Todo junto viene en <b>bookeaa-marca.zip</b>, que se genera en el proyecto con <code>npm run marketing:marca</code>.</p>
+      <a class="descargar" id="zip" download>Descargar todo el kit (ZIP)</a>
+    </div>
+    <div class="archivos">
+      <p><code>logo/</code> Logos en PNG transparente y PDF vectorial (horizontal, apilado e ícono, en negro y en blanco) y el ícono en SVG.</p>
+      <p><code>instagram/perfil.png</code> Foto de perfil, 1080 × 1080.</p>
+      <p><code>instagram/destacadas/</code> Las 7 portadas de destacadas (PNG 1080 × 1920 y el ícono en SVG).</p>
+      <p><code>instagram/historias/</code> Una historia para cada destacada.</p>
+      <p><code>whatsapp/</code> Foto de perfil (640 × 640), portada, catálogo y los QR de afiliación y soporte.</p>
+      <p><code>textos-instagram.md</code> y <code>configuracion-whatsapp.md</code> Los mismos textos de esta página.</p>
+      <p><code>tarjetas/</code> Las tarjetas de presentación con el número nuevo, en el proyecto: <code>marketing/salida/tarjetas</code>.</p>
+    </div>
+  </section>
+</main>
+
+<script src="/campana/marca/marca.js"></script>
+<script src="/campana/marca/textos.js"></script>
+<script>
+  const IMG = '/campana/marca/img/'
+  const M = window.Marca, T = window.TEXTOS
+  if (document.getElementById('zip')) document.getElementById('zip').href = IMG + 'bookeaa-marca.zip'
+  const $ = (id) => document.getElementById(id)
+  // Un color var(--x) no sirve como atributo de SVG: va como estilo.
+  const iconoTema = (fg, calado) => M.icono('currentColor', '#000').replace('stroke="#000"', `style="stroke:${calado}"`).replace(/fill="currentColor"/g, `style="fill:${fg}"`).replace(/stroke="currentColor"/g, `style="stroke:${fg}"`)
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+
+  function copiar(boton, texto) {
+    const listo = () => { boton.dataset.ok = ''; boton.textContent = 'Copiado'; setTimeout(() => { delete boton.dataset.ok; boton.textContent = 'Copiar' }, 1600) }
+    const respaldo = () => {
+      const pre = boton.closest('.copiable')?.querySelector('pre')
+      if (!pre) return
+      const r = document.createRange(); r.selectNodeContents(pre)
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r)
+      boton.textContent = 'Seleccionado'
+    }
+    try { navigator.clipboard.writeText(texto).then(listo, respaldo) } catch (_) { respaldo() }
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('button.copiar')
+    if (b) copiar(b, b.dataset.texto)
+  })
+  const botonCopiar = (texto) => `<button type="button" class="copiar" data-texto="${esc(texto)}">Copiar</button>`
+
+  // Navegación y portada
+  $('nav-marca').insertAdjacentHTML('afterbegin', iconoTema('var(--fg)', 'var(--bg)'))
+  $('datos').innerHTML = [
+    ['Instagram', '@' + M.INSTAGRAM, '@' + M.INSTAGRAM],
+    ['WhatsApp', M.WHATSAPP_VISIBLE, M.WHATSAPP_VISIBLE],
+    ['Web', M.WEB, M.ENLACES.web],
+  ].map(([k, v, c]) => `<span class="dato"><small>${k}</small>${v}${botonCopiar(c)}</span>`).join('')
+
+  // Logos
+  $('logos').innerHTML = [
+    ['clara', 'logo/bookeaa-logo-horizontal-negro.png', 'Horizontal'],
+    ['oscura', 'logo/bookeaa-logo-horizontal-blanco.png', 'Horizontal en negativo'],
+    ['clara', 'logo/bookeaa-logo-apilado-negro.png', 'Apilado'],
+    ['oscura', 'logo/bookeaa-logo-apilado-blanco.png', 'Apilado en negativo'],
+    ['clara', 'logo/bookeaa-icono-negro.png', 'Ícono'],
+    ['oscura', 'logo/bookeaa-icono-blanco.png', 'Ícono en negativo'],
+  ].map(([f, src, n]) => `<figure class="lamina ${f}"><img src="${IMG + src}" alt="${n}" /><figcaption>${n}</figcaption></figure>`).join('')
+
+  // Área de respeto: el logo con su margen de media altura del ícono
+  // El PNG del logo ya trae su área de respeto (½ ícono por lado): se marca su borde.
+  $('respeto').innerHTML = `<img src="${IMG}logo/bookeaa-logo-horizontal-negro.png" alt="" /><span>½ ícono</span>`
+
+  // Colores
+  $('colores').innerHTML = M.COLORES.map((c) => `
+    <div class="color"><div class="muestra" style="background:${c.hex};${c.id === 'paper' ? 'box-shadow:inset 0 -1px 0 #e3e3df' : ''}"></div>
+      <div class="info"><b>${c.nombre}</b><code>HEX ${c.hex.toUpperCase()}<br>RGB ${c.rgb}<br>CMYK ${c.cmyk}</code><span>${c.uso}</span>${botonCopiar(c.hex.toUpperCase())}</div></div>`).join('')
+
+  // Voz
+  const VOZ = [
+    ['Tus clientes reservan solos, 24/7.', 'Plataforma omnicanal de gestión de turnos.'],
+    ['Te llega cada cita por WhatsApp.', 'Recibirá notificaciones automatizadas en tiempo real.'],
+    ['1 mes gratis. Después $10 al mes.', '¡¡¡Oferta increíble por tiempo limitado!!!'],
+    ['¿Se te cruzaron dos citas? Eso se acabó.', 'Optimice la eficiencia operativa de su negocio.'],
+  ]
+  $('voz').innerHTML = `<div><p class="cab">Sí</p><p class="cab">No</p></div>` + VOZ.map(([s, n]) => `<div><p class="si">${s}</p><p class="no">${n}</p></div>`).join('')
+
+  // Usos incorrectos, dibujados con el ícono real
+  const ic = (fg, bg) => M.icono(fg, bg).replace('<svg', '<svg width="56" height="56"')
+  $('mal').innerHTML = [
+    [`<span style="display:inline-block;transform:scaleX(1.6)">${ic('#0f0f0e', '#fff')}</span>`, 'No lo estires ni lo aplastes'],
+    [`<span style="display:inline-block;transform:rotate(-18deg)">${ic('#0f0f0e', '#fff')}</span>`, 'No lo gires'],
+    [ic('#e0457b', '#fff'), 'No le cambies el color'],
+    [`<span style="display:inline-block;filter:drop-shadow(4px 6px 3px rgb(0 0 0 / .45))">${ic('#0f0f0e', '#fff')}</span>`, 'No le pongas sombras ni efectos'],
+    [`<span style="padding:8px;background:repeating-linear-gradient(45deg,#7a6a55 0 8px,#c9b79a 8px 16px)">${ic('#0f0f0e', '#fff')}</span>`, 'No lo pongas sobre fondos cargados'],
+    [`<span style="font:italic 400 30px/1 Georgia,serif;color:#0f0f0e">Bookeaa</span>`, 'No cambies la letra ni escribas "Bookeaa"'],
+  ].map(([h, t]) => `<figure><div class="caja">${h}</div><figcaption>${t}</figcaption></figure>`).join('')
+
+  // Perfil de Instagram simulado
+  const bio = T.INSTAGRAM.find((t) => t.titulo === 'Biografía (opción 1, directa)').texto
+  const nombre = T.INSTAGRAM.find((t) => t.titulo === 'Nombre').texto
+  $('ig-usuario').textContent = '@' + M.INSTAGRAM
+  $('telefono').innerHTML = `
+    <div class="usuario">${M.INSTAGRAM}</div>
+    <div class="cabeza"><img class="avatar" src="${IMG}instagram/perfil.png" alt="Foto de perfil" />
+      <div class="cifras"><span><b>9</b>publicaciones</span><span><b>0</b>seguidores</span><span><b>0</b>seguidos</span></div></div>
+    <div class="bio"><b>${esc(nombre)}</b><span class="cat">Software</span>${esc(bio)}<a>🔗 bookeaa.com y 1 más</a></div>
+    <div class="botones"><span>Seguir</span><span>Mensaje</span><span>WhatsApp</span></div>
+    <div class="destacadas">${M.DESTACADAS.map((d) => `<figure><div class="aro"><div style="background-image:url(${IMG}instagram/destacadas/${d.id}.png)"></div></div><figcaption>${d.nombre}</figcaption></figure>`).join('')}</div>`
+  $('historias').innerHTML = M.DESTACADAS.map((d) => `<img src="${IMG}instagram/historias/${d.id}.png" alt="Historia: ${d.nombre}" />`).join('')
+
+  // Bloques de texto
+  function bloques(lista) {
+    return lista.map((t) => {
+      if (t.seccion) return `<h3>${t.seccion}</h3>`
+      return `<div class="copiable"><header>${t.atajo ? `<span class="atajo">/${t.atajo}</span>` : ''}<b>${esc(t.titulo)}</b>${t.texto ? botonCopiar(t.texto) : ''}</header>
+        ${t.donde ? `<p class="donde">${esc(t.donde)}</p>` : ''}${t.texto ? `<pre>${esc(t.texto)}</pre>` : ''}${t.nota ? `<p class="nota">${esc(t.nota)}</p>` : ''}</div>`
+    }).join('')
+  }
+  $('textos-ig').innerHTML = bloques(T.INSTAGRAM)
+  $('textos-wa').innerHTML = bloques(T.WHATSAPP)
+
+  // Chat de ejemplo: bienvenida → "1" → respuesta rápida /1
+  const bienvenida = T.WHATSAPP.find((t) => t.titulo === 'Mensaje de bienvenida').texto
+  const uno = T.WHATSAPP.find((t) => t.atajo === '1').texto
+  const negrita = (t) => esc(t).replace(/\*([^*\n]+)\*/g, '<b>$1</b>')
+  $('wa-numero').textContent = M.WHATSAPP_VISIBLE
+  $('chat').innerHTML = [
+    ['entra', 'Hola, vi su Instagram 👋', '9:41'],
+    ['sale', bienvenida, '9:41'],
+    ['entra', '1', '9:42'],
+    ['sale', uno, '9:42'],
+  ].map(([c, t, h]) => `<div class="burbuja ${c}">${negrita(t)}<time>${h}</time></div>`).join('')
+
+  $('wa-imagenes').innerHTML = [
+    ['oscura', 'whatsapp/perfil.png', 'Foto de perfil'],
+    ['oscura', 'whatsapp/portada.png', 'Portada'],
+    ['oscura', 'whatsapp/catalogo/plan.png', 'Catálogo · Plan Pro'],
+    ['clara', 'whatsapp/catalogo/como.png', 'Catálogo · Cómo funciona'],
+    ['oscura', 'whatsapp/catalogo/qr.png', 'Catálogo · QR'],
+    ['clara', 'whatsapp/qr-afiliar.png', 'QR · Afiliarse'],
+    ['clara', 'whatsapp/qr-soporte.png', 'QR · Soporte'],
+  ].map(([f, src, n]) => `<figure class="lamina ${f}" style="padding:16px 16px 36px"><img src="${IMG + src}" alt="${n}" style="max-height:200px;border-radius:8px" /><figcaption>${n}</figcaption></figure>`).join('')
+</script>
+
+</html>
