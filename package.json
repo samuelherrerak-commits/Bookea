@@ -19,7 +19,10 @@
     "marketing:historias": "node marketing/scripts/render-historias.mjs",
     "marketing:publicar": "node marketing/scripts/publicar-campana.mjs",
     "marketing:tarjetas": "node marketing/scripts/render-tarjetas.mjs",
-    "marketing:marca": "node marketing/scripts/render-marca.mjs"
+    "marketing:marca": "node marketing/scripts/render-marca.mjs",
+    "bot:dev": "wrangler dev --config bot/wrangler.toml",
+    "bot:deploy": "wrangler deploy --config bot/wrangler.toml",
+    "bot:test": "vitest run bot && tsc -p bot"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
@@ -42,6 +45,7 @@
     "sonner": "^2.0.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261002.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^22.20.4",
     "@types/react": "^19.3.0",
@@ -52,6 +56,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9",
     "vite": "^8.3.1",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.1",
+    "wrangler": "^4.147.0"
   }
 }

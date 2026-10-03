@@ -1,0 +1,10 @@
+# Copia este archivo como .dev.vars para probar en local (no se sube a git).
+WA_TOKEN=
+WA_PHONE_ID=
+WA_WABA_ID=
+APP_SECRET=
+VERIFY_TOKEN=
+BANDEJA_CLAVE=
+APPS_SCRIPT_URL=
+BOT_TOKEN=
+# GRAPH_URL=http://127.0.0.1:9911   # para apuntar a un Graph API falso

@@ -52,7 +52,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss(), csp(env.VITE_API_URL ?? '')],
     test: {
       environment: 'node',
-      include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+      include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'bot/src/**/*.test.ts'],
     },
   }
 })

@@ -70,7 +70,7 @@ try {
       if (t.seccion) return `## ${t.seccion}\n`
       return [`### ${t.atajo ? '/' + t.atajo + ' · ' : ''}${t.titulo}`, t.donde ? `_${t.donde}_` : '', t.texto ? '```\n' + t.texto + '\n```' : '', t.nota || '', ''].filter(Boolean).join('\n\n')
     })).join('\n')
-    return { ig: aMd('Instagram · @' + window.Marca.INSTAGRAM, T.INSTAGRAM), wa: aMd('WhatsApp Business · ' + window.Marca.WHATSAPP_VISIBLE, T.WHATSAPP) }
+    return { ig: aMd('Instagram · @' + window.Marca.INSTAGRAM, T.INSTAGRAM), wa: aMd('Bot de WhatsApp · ' + window.Marca.WHATSAPP_VISIBLE, T.WHATSAPP) }
   })
   await kit.close()
   await writeFile(join(SALIDA, 'textos-instagram.md'), md.ig + '\n')

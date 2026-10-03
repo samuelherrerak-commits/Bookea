@@ -7,3 +7,7 @@ dist
 
 # Renders de la campaña (se regeneran con los scripts de marketing/scripts)
 marketing/salida/
+
+# Bot de WhatsApp (local)
+bot/.dev.vars
+bot/.wrangler/
