@@ -1,12 +1,15 @@
 # Bot de WhatsApp de bookeaa
 
 El bot atiende el número **+58 422 029 8203** con la API oficial de WhatsApp. Hace lo siguiente:
-- **Afiliar un negocio**: pide los datos y agenda la **cita de configuración e inducción**.
+- **Afiliar un negocio**: pide en un solo mensaje el nombre del negocio y el Gmail, y agenda la **cita de configuración e inducción**. Son 5 o 6 mensajes en total.
   - Presencial: solo los sábados, en el negocio. Pide la dirección.
   - Google Meet: de lunes a viernes. El enlace se crea solo.
-- **Precios** y **cómo funciona**.
+  - Servicios, precios y horario los tomas tú en la cita.
+- **Cómo funciona y precio**: un solo mensaje que lleva a afiliar.
 - **Soporte**: resuelve solo lo básico. Si no alcanza, abre un caso y te pasa el chat.
 - **Hablar con una persona**: te avisa y se calla.
+
+Los diagramas de todos los flujos, con los mensajes que gasta cada uno, están en [FLUJOS.md](FLUJOS.md).
 
 Atiendes los chats desde la **bandeja**: `https://bookeaa-bot.<tu-subdominio>.workers.dev/bandeja`.
 
