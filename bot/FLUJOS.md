@@ -54,7 +54,7 @@ flowchart TD
   HP -->|elige hora| OK
   HM -->|elige hora| OK
   OK["5 (Meet: 4) · ¡Listo! ✅ Cita el sábado 10 de octubre 9:30 a. m.<br/>+ dirección o enlace de Meet<br/>Para cambiarla: mi cita"]:::bot
-  OK --> G([Apps Script: evento en "Afiliaciones bookeaa" + Meet<br/>invitación al Gmail + fila en Prospectos + correo para ti])
+  OK --> G([Apps Script: evento en Afiliaciones bookeaa + Meet<br/>invitación al Gmail + fila en Prospectos + correo para ti])
   HP -.->|hora ocupada| HP
   HM -.->|sin horas libres| X["Te aviso al equipo"]:::bot --> H([Modo humano])
   classDef bot fill:#dbeafe,stroke:#1d4ed8,color:#0f0f0e
@@ -67,7 +67,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  A([Escribe "mi cita" o la elige en el menú]) --> C["1 · Tu cita es el … [Cambiar fecha] [Cancelar cita] [Menú]"]:::bot
+  A([Escribe mi cita o la elige en el menú]) --> C["1 · Tu cita es el … [Cambiar fecha] [Cancelar cita] [Menú]"]:::bot
   C -->|Cambiar fecha| L["2 · Lista de horas libres"]:::bot -->|elige| R["3 · ¡Listo! Cambié tu cita"]:::bot
   C -->|Cancelar cita| Q["2 · ¿Seguro? [Sí, cancelar] [No]"]:::bot -->|Sí| X["3 · Cancelada"]:::bot
   classDef bot fill:#dbeafe,stroke:#1d4ed8,color:#0f0f0e
