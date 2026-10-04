@@ -2411,17 +2411,22 @@ function botAgendar_(data, quien, ahoraMs, cfg) {
     const foto = botGuardarImagen_(data.serviciosFoto, 'servicios-' + negocio);
     const direccion = modalidad === 'presencial' ? botTexto_(af.direccion, 300) : '';
     const c = botCita_(modalidad, fecha, hora, cfg);
+    // El bot solo pide lo mínimo; servicios, precios y horario se toman en la cita.
     const descripcion = [
       'Cita de configuración e inducción de bookeaa.',
       '',
       'Negocio: ' + negocio,
-      'Rubro: ' + botTexto_(af.rubro, 80),
       'WhatsApp: +' + quien.telefono + (quien.nombre ? ' (' + quien.nombre + ')' : ''),
-      'Horario: ' + botTexto_(af.horario, 200),
-      'Servicios:\n' + botTexto_(af.servicios, 1500),
-      logo ? 'Logo: ' + logo : 'Logo: no mandó',
+      'Correo: ' + correo,
+      direccion ? 'Dirección: ' + direccion : '',
+      af.rubro ? 'Rubro: ' + botTexto_(af.rubro, 80) : '',
+      af.horario ? 'Horario: ' + botTexto_(af.horario, 200) : '',
+      af.servicios ? 'Servicios:\n' + botTexto_(af.servicios, 1500) : '',
+      logo ? 'Logo: ' + logo : '',
       foto ? 'Foto de servicios: ' + foto : '',
-    ].filter(function (l) { return l !== null; }).join('\n');
+      '',
+      'En la cita: servicios con precio y duración, horario, dirección, logo y colores.',
+    ].filter(function (l, i, a) { return l !== '' || (i > 0 && a[i - 1] !== ''); }).join('\n');
     const evento = {
       summary: 'Afiliación bookeaa · ' + negocio + (modalidad === 'presencial' ? ' (presencial)' : ' (Google Meet)'),
       description: descripcion,

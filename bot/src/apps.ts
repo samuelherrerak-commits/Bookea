@@ -49,8 +49,7 @@ export function serviciosAppsScript(env: EnvApps): Servicios {
       return (await llamar(env, 'disponibilidad', { modalidad })).dias || []
     },
     async agendar(conv: Conversacion, af: Afiliacion) {
-      const [logo, foto] = await Promise.all([imagen(env, af.logo), imagen(env, af.serviciosFoto)])
-      return resultado(await llamar(env, 'agendar', { ...quien(conv), af: { ...af, logo: undefined, serviciosFoto: undefined }, logo, serviciosFoto: foto }))
+      return resultado(await llamar(env, 'agendar', { ...quien(conv), af }))
     },
     async reprogramar(conv: Conversacion, cita: Cita, fecha: string, hora: string) {
       return resultado(await llamar(env, 'reprogramar', { ...quien(conv), cita, fecha, hora }))
