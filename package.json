@@ -20,6 +20,10 @@
     "marketing:publicar": "node marketing/scripts/publicar-campana.mjs",
     "marketing:tarjetas": "node marketing/scripts/render-tarjetas.mjs",
     "marketing:marca": "node marketing/scripts/render-marca.mjs",
+    "ar:objetivo": "node marketing/scripts/ar-objetivo.mjs",
+    "ar:imprenta": "node marketing/scripts/ar-imprenta.mjs",
+    "ar:probar": "node marketing/scripts/ar-probar.mjs",
+    "ar:verificar": "node marketing/scripts/ar-verificar.mjs",
     "bot:dev": "wrangler dev --config bot/wrangler.toml",
     "bot:deploy": "wrangler deploy --config bot/wrangler.toml",
     "bot:test": "vitest run bot && tsc -p bot"
