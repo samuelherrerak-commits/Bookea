@@ -14,11 +14,7 @@
   .historia.negra { background: var(--coal); color: var(--paper); }
   .historia.blanca { background: var(--paper); color: var(--coal); }
 
-  /* Los tres pasos del trío, como la barra de progreso de las historias. */
-  .pasos { display: flex; gap: 14px; margin-bottom: 44px; }
-  .pasos span { flex: 1; display: grid; gap: 14px; font: 700 30px/1 'Barlow Condensed', sans-serif; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.35; }
-  .pasos span::before { content: ''; height: 8px; border-radius: 4px; background: currentColor; }
-  .pasos span.on { opacity: 1; }
+  .historia .kicker { margin-bottom: 36px; }
   .historia .grande { font-size: 124px; line-height: 0.9; }
   .historia .texto { font-size: 46px; margin-top: 40px; max-width: 880px; }
   .historia .regla { margin-top: 44px; }
@@ -51,16 +47,17 @@
     const fg = claro ? '#ffffff' : '#0f0f0e', bg = claro ? '#0f0f0e' : '#ffffff'
     return `<svg viewBox="0 0 32 32"><rect x="2" y="4" width="28" height="26" rx="7" fill="${fg}"/><path d="M10 2.5v5M22 2.5v5" stroke="${fg}" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="${bg}" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>`
   }
-  const NOMBRES = { problema: 'El problema', solucion: 'La solución', recompensa: 'Lo que ganas' }
-  const INDICA = { Encuesta: 'Vota aquí', Pregunta: 'Responde aquí', Enlace: 'Escríbenos' }
+  const INDICA = { Encuesta: 'Vota aquí', Pregunta: 'Responde aquí', Enlace: 'Escríbenos', Quiz: 'Adivina', Slider: 'Desliza', 'Cuenta regresiva': 'Activa el recordatorio' }
 
   function historia(s) {
-    const negra = s.fase !== 'solucion'
+    // Sin etiquetas de "problema / solución / recompensa": eso es solo para nosotros.
+    const negra = s.fase === 'sencilla' ? s.fondo === 'negro' : s.fase !== 'solucion'
     const el = h('div', { class: `historia ${negra ? 'negra' : 'blanca'} ${s.fase}`, 'data-id': s.id })
-    el.append(h('div', { class: 'pasos' }, ...['problema', 'solucion', 'recompensa'].map((f) => h('span', { class: f === s.fase ? 'on' : '', text: NOMBRES[f] }))))
+    if (s.kicker) el.append(h('div', { class: 'kicker', text: s.kicker }))
     const t = h('div', { class: 'grande', html: s.titulo.join('<br>') })
-    el.append(s.fase === 'problema' ? Motor.esquinas(t, negra) : t)
-    el.append(h('i', { class: 'regla' }), h('p', { class: 'texto', text: s.texto }))
+    el.append(s.fase === 'problema' || s.tipo === 'tip' ? Motor.esquinas(t, negra) : t)
+    el.append(h('i', { class: 'regla' }))
+    if (s.texto) el.append(h('p', { class: 'texto', text: s.texto }))
     if (s.fase === 'solucion') el.append(Motor.telefono(s.img, 520))
     if (s.fase === 'recompensa' && s.oferta) {
       el.append(h('div', { class: 'oferta' }, h('b', { text: 'Escríbenos hoy' }), h('span', { text: 'WhatsApp +58 422 029 8203 · link en la bio' })))

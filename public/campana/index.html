@@ -139,7 +139,7 @@
     <h1>Campaña de lanzamiento</h1>
     <span class="regla"></span>
     <div class="resumen">
-      <span><b>4</b> reels</span><span><b>7</b> carruseles</span><span><b>27</b> historias</span><span><b>4</b> semanas</span><span><b>1</b> oferta: 1 mes gratis</span>
+      <span><b>4</b> reels</span><span><b>7</b> carruseles</span><span><b>39</b> historias</span><span><b>4</b> semanas</span><span><b>1</b> oferta: 1 mes gratis</span>
     </div>
     <div class="descargas">
       <a class="descargar" href="#reels">Ver los reels ↓</a>
@@ -229,10 +229,10 @@
   </section>
 
   <section id="historias" aria-labelledby="t-historias">
-    <p class="kicker">Historias · 1080×1920 · problema → solución → recompensa</p>
-    <h2 id="t-historias">27 historias en 9 tríos</h2>
-    <p class="muted">Cada trío toca un dolor del dueño del negocio, muestra bookeaa como la salida y cierra con lo que gana: respeto, tiempo libre, citas que no se escapan, cobros claros. Sube las tres seguidas el mismo día, a las 12:00 p. m. En la primera agrega la encuesta y en la última el sticker de enlace a WhatsApp: la zona queda libre para eso.</p>
-    <div class="descargas"><a class="descargar" href="/campana/media/bookeaa-historias-octubre.zip" download>Descargar las 27 historias (ZIP)</a></div>
+    <p class="kicker">Historias · 1080×1920 · todos los días hábiles</p>
+    <h2 id="t-historias">39 historias: 9 tríos y 12 sueltas</h2>
+    <p class="muted">Cada trío toca un dolor del dueño del negocio, muestra bookeaa como la salida y cierra con lo que gana: respeto, tiempo libre, citas que no se escapan, cobros claros. Sube las tres seguidas el mismo día, a las 12:00 p. m. En la primera agrega la encuesta y en la última el sticker de enlace a WhatsApp: la zona queda libre para eso. Los demás días hábiles va una historia suelta (encuesta, pregunta, quiz, slider o tip) para conversar. Las etiquetas de aquí son solo para ti: en las imágenes no aparecen.</p>
+    <div class="descargas"><a class="descargar" href="/campana/media/bookeaa-historias-octubre.zip" download>Descargar las 39 historias (ZIP)</a></div>
     <div id="lista-historias-oct"></div>
   </section>
 
@@ -402,20 +402,22 @@ Con eso te dejo tu página lista. El primer mes es gratis y no necesitas tarjeta
     ))
   })
 
-  // Historias de octubre, agrupadas por trío
+  // Historias de octubre, por día: un trío o una suelta
   const listaHO = document.getElementById('lista-historias-oct')
-  const FASES = { problema: 'El problema', solucion: 'La solución', recompensa: 'Lo que ganas' }
-  const trios = {}
-  ;(window.HISTORIAS_OCTUBRE || []).forEach((h) => (trios[h.trio] ||= []).push(h))
-  Object.values(trios).forEach((hs) => {
-    listaHO.append(el('article', { class: 'trio', id: `trio-${hs[0].trio}` },
-      el('p', { class: 'kicker', text: `${hs[0].fecha} · ${hs[0].angulo}` }),
+  const FASES = { problema: 'El problema', solucion: 'La solución', recompensa: 'Lo que ganas', sencilla: 'Suelta' }
+  const dias = {}
+  ;(window.HISTORIAS_OCTUBRE || []).forEach((h) => (dias[h.dia] ||= []).push(h))
+  Object.keys(dias).sort().forEach((dia) => {
+    const hs = dias[dia]
+    const suelta = hs[0].fase === 'sencilla'
+    listaHO.append(el('article', { class: 'trio', id: suelta ? `dia-${dia}` : `trio-${hs[0].trio}` },
+      el('p', { class: 'kicker', text: `${hs[0].fecha} · ${suelta ? 'Historia suelta · ' + hs[0].kicker : hs[0].angulo}` }),
       el('div', { class: 'fila' }, hs.map((h) => {
         const src = `/campana/media/historias-octubre/${String(h.id).padStart(2, '0')}.jpg`
         const st = h.sticker ? `${h.sticker.tipo}: ${h.sticker.texto}${h.sticker.opciones ? ' · ' + h.sticker.opciones.join(' / ') : ''}` : 'Sin sticker'
         return el('figure', {},
           el('img', { src, alt: `${FASES[h.fase]}: ${h.titulo.join(' ')}`, loading: 'lazy', width: '1080', height: '1920' }),
-          el('figcaption', {}, el('b', { text: `${h.paso}/3 · ${FASES[h.fase]}` }), st + ' · ', el('a', { href: src, download: `bookeaa-octubre-${String(h.id).padStart(2, '0')}.jpg`, text: 'Descargar' })))
+          el('figcaption', {}, el('b', { text: suelta ? FASES[h.fase] : `${h.paso}/3 · ${FASES[h.fase]}` }), st + ' · ', el('a', { href: src, download: `bookeaa-octubre-${String(h.id).padStart(2, '0')}.jpg`, text: 'Descargar' })))
       })),
     ))
   })
