@@ -53,6 +53,7 @@ marketing/
 - **Videos:** cada escena arma su HTML y se anima como función del tiempo. `render-video.mjs` abre la página, pide cada cuadro con `window.seek(t)` y se lo pasa a ffmpeg: el resultado es exacto cuadro a cuadro. Para verlos en el navegador sin renderizar, sirve el repo por http (por ejemplo `npx vite` y abre `/marketing/video/index.html?v=1`); tiene reproductor y barra.
 - **Audio:** `scripts/audio.mjs` sintetiza la música (La menor, 116 bpm: bombo, palmas, hi-hats, bajo, pads y arpegio) y los efectos, sin samples ni dependencias. Cada escena registra sus sonidos con `sonido(t, tipo)` o `teclear(desde, duración, letras)`; las transiciones suman los suyos solas. El render mezcla todo con la música de fondo (que baja un poco con cada efecto) y normaliza a -14 LUFS, el nivel de Instagram.
 - **Carruseles:** `/marketing/carruseles/index.html` muestra todas las publicaciones en miniatura; con `?c=3&s=2` dibuja una sola lámina.
+- **Historias de octubre:** `/marketing/historias/octubre.html` (datos en `historias/octubre.js`): 9 tríos problema → solución → recompensa, uno cada 3 días del 6 al 30 de octubre, y 12 historias sueltas (encuesta, pregunta, quiz, slider, tip) para los demás días hábiles. Las imágenes no llevan las etiquetas problema / solución / recompensa.
 - **Historias:** `/marketing/historias/index.html` las muestra con la zona del sticker marcada; con `?s=4` dibuja una sola (sin marca, como se publica). Las de "nuevo reel" usan la portada del video, así que se renderizan después de los videos.
 - **Pantallas de la app:** son capturas reales de la página de reservas en modo demo ("Barbería Norte", estilo moderno, 2 sedes y domicilio). Las plantillas y colores salen de `public/landing/`.
 
@@ -68,7 +69,8 @@ marketing/
 npm run marketing:capturas     # vuelve a capturar el flujo de reserva (tras cambiar la app)
 npm run marketing:videos       # los 8 MP4 con audio en marketing/salida/videos/ (o: … 5 6)
 npm run marketing:carruseles   # los JPG en marketing/salida/carruseles/carrusel-N/
-npm run marketing:historias    # los JPG en marketing/salida/historias/
+npm run marketing:historias    # los JPG en marketing/salida/historias/ (noviembre)
+node marketing/scripts/render-historias.mjs --octubre   # las 39 de octubre (9 tríos + 12 sueltas)
 npm run marketing:publicar     # copia todo a public/campana/media/ y arma los ZIP
 npm run marketing:tarjetas     # tarjetas de presentación: PDF 96 × 56 mm (90 × 50 + 3 mm de sangrado) y PNG a 600 dpi
 npm run marketing:marca        # logos, perfil y destacadas de Instagram, piezas de WhatsApp y textos .md → marketing/salida/marca/

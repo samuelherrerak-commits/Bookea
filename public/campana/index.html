@@ -114,6 +114,14 @@
   nav.meses { display: flex; gap: 8px; flex-wrap: wrap; }
   nav.meses a { font: 700 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; padding: 9px 14px; border-radius: 99px; border: 2px solid var(--line); }
   nav.meses a[aria-current] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .trio { padding-block: 26px; border-top: 2px solid var(--line); display: grid; gap: 14px; }
+  .trio .fila { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .trio figure { margin: 0; display: grid; gap: 8px; align-content: start; min-width: 0; }
+  .trio img { width: 100%; height: auto; aspect-ratio: 9 / 16; border-radius: 12px; border: 1px solid var(--line); }
+  .trio figcaption { font-size: 14px; color: var(--muted); }
+  .trio figcaption b { display: block; color: var(--fg); font: 700 13px/1.2 var(--display); letter-spacing: 0.1em; text-transform: uppercase; }
+  .trio figcaption a { color: inherit; }
+  @media (max-width: 560px) { .trio .fila { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .trio figcaption { font-size: 12px; } }
   footer { padding-top: 70px; color: var(--muted); font-size: 15px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -131,7 +139,7 @@
     <h1>Campaña de lanzamiento</h1>
     <span class="regla"></span>
     <div class="resumen">
-      <span><b>4</b> reels</span><span><b>7</b> carruseles</span><span><b>4</b> semanas</span><span><b>1</b> oferta: 1 mes gratis</span>
+      <span><b>4</b> reels</span><span><b>7</b> carruseles</span><span><b>39</b> historias</span><span><b>4</b> semanas</span><span><b>1</b> oferta: 1 mes gratis</span>
     </div>
     <div class="descargas">
       <a class="descargar" href="#reels">Ver los reels ↓</a>
@@ -220,6 +228,14 @@
     <div id="lista-carruseles"></div>
   </section>
 
+  <section id="historias" aria-labelledby="t-historias">
+    <p class="kicker">Historias · 1080×1920 · todos los días hábiles</p>
+    <h2 id="t-historias">39 historias: 9 tríos y 12 sueltas</h2>
+    <p class="muted">Cada trío toca un dolor del dueño del negocio, muestra bookeaa como la salida y cierra con lo que gana: respeto, tiempo libre, citas que no se escapan, cobros claros. Sube las tres seguidas el mismo día, a las 12:00 p. m. En la primera agrega la encuesta y en la última el sticker de enlace a WhatsApp: la zona queda libre para eso. Los demás días hábiles va una historia suelta (encuesta, pregunta, quiz, slider o tip) para conversar. Las etiquetas de aquí son solo para ti: en las imágenes no aparecen.</p>
+    <div class="descargas"><a class="descargar" href="/campana/media/bookeaa-historias-octubre.zip" download>Descargar las 39 historias (ZIP)</a></div>
+    <div id="lista-historias-oct"></div>
+  </section>
+
   <section id="tarjetas" aria-labelledby="t-tarjetas">
     <p class="kicker">Impresos · 9 × 5 cm, frente y dorso</p>
     <h2 id="t-tarjetas">Tarjetas de presentación</h2>
@@ -256,6 +272,7 @@ Con eso te dejo tu página lista. El primer mes es gratis y no necesitas tarjeta
   </footer>
 </div>
 
+<script src="/campana/historias-octubre.js"></script>
 <script>
   const TAGS_BASE = '#agendaonline #reservasonline #citasonline #emprendedores #negociosvenezuela'
 
@@ -382,6 +399,26 @@ Con eso te dejo tu página lista. El primer mes es gratis y no necesitas tarjeta
       el('div', { class: 'tira', tabindex: '0', 'aria-label': `Láminas de ${c.titulo}` }, imgs),
       el('a', { class: 'descargar', href: `/campana/media/bookeaa-carrusel-${c.n}.zip`, download: '', text: `Descargar carrusel ${c.n} (ZIP, 1080×1350)` }),
       bloqueCopia(`cap-c${c.n}`, `${c.caption}\n\n${c.tags} ${TAGS_BASE}`),
+    ))
+  })
+
+  // Historias de octubre, por día: un trío o una suelta
+  const listaHO = document.getElementById('lista-historias-oct')
+  const FASES = { problema: 'El problema', solucion: 'La solución', recompensa: 'Lo que ganas', sencilla: 'Suelta' }
+  const dias = {}
+  ;(window.HISTORIAS_OCTUBRE || []).forEach((h) => (dias[h.dia] ||= []).push(h))
+  Object.keys(dias).sort().forEach((dia) => {
+    const hs = dias[dia]
+    const suelta = hs[0].fase === 'sencilla'
+    listaHO.append(el('article', { class: 'trio', id: suelta ? `dia-${dia}` : `trio-${hs[0].trio}` },
+      el('p', { class: 'kicker', text: `${hs[0].fecha} · ${suelta ? 'Historia suelta · ' + hs[0].kicker : hs[0].angulo}` }),
+      el('div', { class: 'fila' }, hs.map((h) => {
+        const src = `/campana/media/historias-octubre/${String(h.id).padStart(2, '0')}.jpg`
+        const st = h.sticker ? `${h.sticker.tipo}: ${h.sticker.texto}${h.sticker.opciones ? ' · ' + h.sticker.opciones.join(' / ') : ''}` : 'Sin sticker'
+        return el('figure', {},
+          el('img', { src, alt: `${FASES[h.fase]}: ${h.titulo.join(' ')}`, loading: 'lazy', width: '1080', height: '1920' }),
+          el('figcaption', {}, el('b', { text: suelta ? FASES[h.fase] : `${h.paso}/3 · ${FASES[h.fase]}` }), st + ' · ', el('a', { href: src, download: `bookeaa-octubre-${String(h.id).padStart(2, '0')}.jpg`, text: 'Descargar' })))
+      })),
     ))
   })
 

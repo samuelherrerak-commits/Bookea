@@ -82,6 +82,18 @@ if (existsSync(dirHist)) {
   console.log(`  ✓ ${lista.length} historias`)
 }
 
+// Historias de octubre: problema → solución → recompensa (27, en tríos)
+const dirOct = join(SALIDA, 'historias-octubre')
+if (existsSync(dirOct)) {
+  const destino = join(MEDIA, 'historias-octubre')
+  await rm(destino, { recursive: true, force: true })
+  await mkdir(destino, { recursive: true })
+  const lista = (await jpgs(dirOct)).map((f) => join(dirOct, f))
+  for (const f of lista) await copyFile(f, join(destino, f.split('/').pop().replace('historia-', '')))
+  comprimir(join(MEDIA, 'bookeaa-historias-octubre.zip'), lista)
+  console.log(`  ✓ ${lista.length} historias de octubre`)
+}
+
 // Tarjetas de presentación
 const dirTarjetas = join(SALIDA, 'tarjetas')
 if (existsSync(dirTarjetas)) {
