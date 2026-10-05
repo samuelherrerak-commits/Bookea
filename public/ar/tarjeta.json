@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "tarjeta": 1,
+  "ancho": 90,
+  "alto": 50,
+  "fondo": "#0f0f0e",
+  "logo": {
+    "x": 5,
+    "y": 40.197,
+    "lado": 4.597,
+    "cuerpo": "#ffffff",
+    "calado": "#0f0f0e"
+  },
+  "imagen": {
+    "ancho": 1000,
+    "alto": 556
+  },
+  "mind": {
+    "puntos": [
+      162,
+      164,
+      162,
+      154,
+      150,
+      141,
+      120,
+      98,
+      82
+    ],
+    "seguimiento": [
+      30,
+      29
+    ]
+  }
+}
