@@ -75,10 +75,10 @@
   // WhatsApp: bot propio con la API oficial (bot/ en el repo). Los textos del bot viven en bot/src/textos.ts.
   const WHATSAPP = [
     { seccion: 'Cómo funciona el bot' },
-    { titulo: 'Menú', texto: '1. Afiliar mi negocio\n2. Precios y prueba gratis\n3. Soporte\n4. Cómo funciona\n5. Hablar con una persona',
-      nota: 'Llega como una lista con botones. También entiende si escriben el número o palabras como "precio" o "soporte". "menú" vuelve al inicio desde cualquier punto.' },
-    { titulo: 'Afiliar mi negocio', texto: 'Pide uno por uno: nombre del negocio, rubro, servicios con precio y duración (sirve una foto de la lista), horario, correo de Gmail y logo (o Saltar).\n\nDespués agenda la cita de configuración e inducción:\n🏪 Presencial: solo sábados, en el negocio (pide la dirección o la ubicación).\n💻 Google Meet: de lunes a viernes, con enlace automático.\n\nMuestra solo las horas libres de tu calendario "Afiliaciones bookeaa", confirma y le llega la invitación al Gmail del negocio.',
-      nota: 'Cada afiliación queda en la hoja Prospectos del archivo maestro y te llega un correo. Si el negocio escribe otra vez, el menú le ofrece ver, cambiar o cancelar su cita.' },
+    { titulo: 'Menú', texto: '¡Hola! 👋 Soy bookeaa… 🎁 1 mes gratis, luego $10 al mes.\n\n• Afiliar mi negocio\n• Cómo funciona y precio\n• Soporte\n• Hablar con una persona',
+      nota: 'Siempre sale primero, en un solo mensaje con el precio. La prueba gratis es la afiliación: el primer mes es gratis. "menú" vuelve al inicio desde cualquier punto. Diagramas de todos los flujos: bot/FLUJOS.md.' },
+    { titulo: 'Afiliar mi negocio (5 o 6 mensajes en total)', texto: '1. Nombre del negocio y correo Gmail, en un solo mensaje\n2. Presencial (sábados) o Google Meet (lunes a viernes)\n3. Dirección, solo si es presencial\n4. Lista de horas libres (día y hora juntos)\n5. Al tocar la hora queda agendada: ¡Listo! + dirección o enlace de Meet',
+      nota: 'Servicios, precios, duración, horario, logo y colores los tomas tú en la cita de configuración. Cada afiliación queda en la hoja Prospectos, en el calendario "Afiliaciones bookeaa" con invitación al Gmail del negocio, y te llega un correo. Si escribe "mi cita", puede cambiarla o cancelarla.' },
     { titulo: 'Horarios de afiliación', texto: 'Sábados presencial: 8:00 a. m. a 5:00 p. m., citas de 1 h 30 min (con traslado)\nGoogle Meet: lunes a viernes, 9:00 a. m. a 5:00 p. m., citas de 1 h\nCon al menos 12 h de anticipación',
       donde: 'Apps Script → Configuración del proyecto → Propiedades del script (claves bot_*)',
       nota: 'Para bloquear un día u horas, crea un evento en el calendario "Afiliaciones bookeaa": el bot deja de ofrecer esa hora.' },

@@ -23,10 +23,9 @@ export type Etiqueta = '' | 'prospecto' | 'cita' | 'prueba' | 'pago' | 'activo' 
 
 export type Paso =
   | 'inicio'
-  | 'af_nombre' | 'af_rubro' | 'af_rubro_otro' | 'af_servicios' | 'af_horario' | 'af_correo' | 'af_correo_confirmar'
-  | 'af_logo' | 'af_modalidad' | 'af_direccion' | 'af_dia' | 'af_hora' | 'af_confirmar' | 'af_corregir'
+  | 'af_datos' | 'af_correo' | 'af_modalidad' | 'af_direccion' | 'af_hora'
   | 'cita_menu' | 'cita_cancelar'
-  | 'sop_negocio' | 'sop_tema' | 'sop_resuelto' | 'sop_descripcion' | 'sop_captura'
+  | 'sop_tema' | 'sop_resuelto' | 'sop_descripcion'
 
 /** Un día con horas libres, como lo devuelve Apps Script. */
 export type Dia = { fecha: string; horas: string[] }
@@ -41,15 +40,10 @@ export type Cita = {
   meet?: string
 }
 
+/** Lo mínimo para agendar la cita; servicios, precios y horario se toman en la inducción. */
 export type Afiliacion = {
   negocio?: string
-  rubro?: string
-  servicios?: string
-  serviciosFoto?: string // id de la imagen si mandó foto de la lista
-  horario?: string
   correo?: string
-  logo?: string // id de la imagen en WhatsApp
-  sinLogo?: boolean
   modalidad?: Modalidad
   direccion?: string
   ubicacion?: { lat: number; lng: number }
@@ -61,8 +55,8 @@ export type DatosConversacion = {
   af?: Afiliacion
   /** Días ofrecidos en la última consulta, para no volver a pedirlos. */
   dias?: Dia[]
-  /** Al corregir un dato se vuelve directo al resumen. */
-  volverAResumen?: boolean
+  /** Página de horas que se está mostrando (9 por página). */
+  pagina?: number
   /** Elegir día y hora para mover la cita que ya existe. */
   reprogramando?: boolean
   sop?: { negocio?: string; tema?: string; descripcion?: string; captura?: string }

@@ -437,14 +437,15 @@
   $('wa-numero').textContent = M.WHATSAPP_VISIBLE
   $('chat').innerHTML = [
     ['entra', 'Hola, vi su Instagram 👋', '9:41'],
-    ['sale', '¡Hola! 👋 Soy el asistente de *bookeaa*, tu agenda online.\n\n¿En qué te ayudo? Toca *Ver opciones* 👇', '9:41', ['☰ Ver opciones']],
+    ['sale', '¡Hola! 👋 Soy *bookeaa*: tus clientes reservan solos y la cita te llega a tu Google Calendar y por WhatsApp.\n\n🎁 *1 mes gratis*, luego $10 al mes. ¿Qué necesitas?', '9:41', ['☰ Ver opciones']],
     ['entra', 'Afiliar mi negocio', '9:41'],
-    ['sale', '¡Qué bueno! 🙌 Te hago unas preguntas rápidas y agendamos tu *cita de configuración e inducción*.\n\nPrimero: ¿cómo se llama tu negocio?', '9:41'],
-    ['entra', 'Barbería El Corte', '9:42'],
-    ['sale', '…', '9:42'],
-    ['sale', 'Última parte: la *cita de configuración e inducción*. ¿Cómo la prefieres?\n\n🏪 *Presencial*: vamos a tu negocio, solo los *sábados*.\n💻 *Google Meet*: de *lunes a viernes*.', '9:44', ['Presencial · sábado', 'Google Meet']],
-    ['entra', 'Google Meet', '9:44'],
-    ['sale', '¡Listo! ✅ Tu cita quedó para el *lunes 5 de octubre* a las *10:00 a. m.*, por *Google Meet*.\n\nEnlace: meet.google.com/abc-defg-hij', '9:45'],
+    ['sale', '¡Vamos! 🙌 Escríbeme en un solo mensaje el *nombre de tu negocio* y tu *correo Gmail*.', '9:41'],
+    ['entra', 'Barbería El Corte, elcorte@gmail.com', '9:42'],
+    ['sale', 'Listo, *Barbería El Corte* ✅ ¿Cómo prefieres la cita?', '9:42', ['Presencial · sábado', 'Google Meet']],
+    ['entra', 'Google Meet', '9:42'],
+    ['sale', 'Elige día y hora para la videollamada 👇', '9:42', ['☰ Ver horas']],
+    ['entra', 'Lun 5 oct · 10:00 a. m.', '9:43'],
+    ['sale', '¡Listo! ✅ Tu cita de configuración quedó para el *lunes 5 de octubre* a las *10:00 a. m.*, por *Google Meet*.\n\nmeet.google.com/abc-defg-hij', '9:43'],
   ].map(([c, t, h, b]) => `<div class="burbuja ${c}">${negrita(t)}${b ? `<div class="opciones">${b.map(boton).join('')}</div>` : ''}<time>${h}</time></div>`).join('')
 
   $('wa-imagenes').innerHTML = [

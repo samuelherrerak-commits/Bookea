@@ -17,78 +17,50 @@ export const ATENCION = {
   hasta: 18 * 60,
 }
 
-export const RUBROS: [string, string][] = [
-  ['barberia', 'Barbería o peluquería'],
-  ['unas', 'Uñas, pestañas o cejas'],
-  ['estetica', 'Estética o spa'],
-  ['consultorio', 'Consultorio o terapia'],
-  ['otro', 'Otro'],
-]
-
+/**
+ * Cada texto es un mensaje del bot, y cada mensaje cuenta para los 1.000 gratis del mes:
+ * un mensaje por turno, cortos y que pidan todo lo que se pueda de una vez.
+ */
 export const T = {
   bienvenida: (nombre: string) =>
-    `¡Hola${nombre ? ' ' + nombre : ''}! 👋 Soy el asistente de *bookeaa*, tu agenda online.\n\n¿En qué te ayudo? Toca *Ver opciones* 👇`,
-  menuOtraVez: '¿En qué más te ayudo? Toca *Ver opciones* 👇',
-  noEntendi: 'No te entendí 🙈 Elige una opción del menú 👇',
-  usaBotones: 'Toca una de las opciones de arriba 👆 (o escribe *menú* para empezar de nuevo).',
+    `¡Hola${nombre ? ' ' + nombre.split(' ')[0] : ''}! 👋 Soy *bookeaa*: tus clientes reservan solos y la cita te llega a tu Google Calendar y por WhatsApp.\n\n🎁 *1 mes gratis*, luego $10 al mes. ¿Qué necesitas?`,
+  menuOtraVez: '¿En qué más te ayudo? 👇',
+  noEntendi: 'No te entendí 🙈 Elige una opción 👇',
+  usaBotones: 'Toca una de las opciones de arriba 👆 o escribe *menú*.',
 
-  precios:
-    `El *primer mes es gratis* 🎁 y después son *${MARCA.precio} al mes*, todo incluido:\n\n` +
-    '✓ Tu página con tu logo y colores\n✓ Reservas 24/7 en tu Google Calendar\n✓ Aviso de cada cita por WhatsApp\n' +
-    '✓ Pago Móvil con la tasa BCV del día\n✓ Comprobante de cita y QR para tu local\n\n' +
-    'Sin contrato: si no sigues, tu página se pausa y no pagas nada.',
-  como:
-    'Así de fácil 👇\n\n1️⃣ Te damos tu página: bookeaa.com/u/tu-negocio\n2️⃣ Tus clientes eligen servicio, día y hora\n' +
-    `3️⃣ La cita cae en tu Google Calendar y te llega por WhatsApp\n\nMira un ejemplo real: ${MARCA.demo}`,
+  info:
+    'Te damos tu página de reservas (bookeaa.com/u/tu-negocio): tus clientes eligen servicio, día y hora, y la cita cae en tu Google Calendar y te avisa por WhatsApp. ' +
+    `Con tu logo, tus colores, Pago Móvil y comprobante.\n\n🎁 *1 mes gratis*, luego *$10 al mes*. Sin contrato.\n\nMira un ejemplo: ${MARCA.demo}`,
 
-  // --- Afiliación ---
-  afInicio:
-    '¡Qué bueno! 🙌 Te hago unas preguntas rápidas y agendamos tu *cita de configuración e inducción*: ahí dejamos tu página lista contigo.\n\n' +
-    'Primero: ¿cómo se llama tu negocio?',
-  afNombreCorto: 'Escríbeme el nombre de tu negocio (al menos 2 letras).',
-  afRubro: (negocio: string) => `Perfecto, *${negocio}*. ¿A qué se dedica?`,
-  afRubroOtro: 'Cuéntame en pocas palabras a qué se dedica tu negocio.',
-  afServicios:
-    'Ahora tus *servicios*, con el precio y cuánto dura cada uno. Por ejemplo:\n\nCorte · $5 · 30 min\nCorte y barba · $8 · 45 min\n\nPuedes mandarlos en un solo mensaje.',
-  afServiciosCorto: 'Mándame al menos un servicio con su precio y duración.',
-  afHorario: '¿Cuál es tu *horario de trabajo*? Por ejemplo: lunes a sábado de 9:00 a 7:00.',
-  afCorreo: 'Necesito un *correo de Gmail*: ahí te llega la invitación a la cita y luego tu calendario de reservas.',
-  afCorreoMal: 'Ese correo no parece válido. Escríbelo completo, por ejemplo: minegocio@gmail.com',
-  afCorreoNoGmail: (correo: string) =>
-    `${correo} no es de Gmail. Para el calendario necesitamos una cuenta de Google. ¿Ese correo es de Google (Workspace)?`,
-  afLogo: 'Si tienes *logo*, mándamelo como imagen 🖼️ (mejor PNG con fondo transparente). Si no, toca *Saltar*.',
-  afLogoRecibido: '¡Recibido el logo! ✅',
-  afModalidad:
-    'Última parte: la *cita de configuración e inducción* (1 hora aprox.). ¿Cómo la prefieres?\n\n' +
-    '🏪 *Presencial*: vamos a tu negocio, solo los *sábados*.\n💻 *Google Meet*: por videollamada, de *lunes a viernes*.',
-  afDireccion: '¿Cuál es la *dirección* de tu negocio? Escríbela con un punto de referencia, o mándame tu ubicación 📍.',
+  // --- Afiliación: lo mínimo para agendar; el resto se toma en la inducción ---
+  afDatos:
+    '¡Vamos! 🙌 Tu mes gratis empieza con una *cita de configuración* (1 h): ahí dejamos tu página lista contigo.\n\n' +
+    'Escríbeme en un solo mensaje el *nombre de tu negocio* y tu *correo Gmail*.\nEj: _Barbería El Corte, elcorte@gmail.com_',
+  afFaltaNombre: '¿Y cómo se llama tu negocio?',
+  afFaltaCorreo: (negocio: string) => `Perfecto, *${negocio}*. Ahora tu *correo Gmail* (ahí te llega la invitación) ✉️`,
+  afCorreoMal: 'Ese correo no parece válido. Escríbelo completo, ej: minegocio@gmail.com',
+  afModalidad: (negocio: string) => `Listo, *${negocio}* ✅ ¿Cómo prefieres la cita?\n\n🏪 *Presencial*: vamos a tu negocio, los *sábados*.\n💻 *Google Meet*: de *lunes a viernes*.`,
+  afDireccion: '¿Cuál es la *dirección* de tu negocio? Con un punto de referencia, o mándame tu ubicación 📍',
   afDireccionCorta: 'Escríbeme la dirección completa (o manda tu ubicación 📍).',
-  afDia: (modalidad: 'presencial' | 'meet') =>
-    modalidad === 'presencial' ? 'Elige el *sábado* que te quede mejor 👇' : 'Elige el *día* para la videollamada 👇',
-  afSinDias: 'Ahorita no tengo horas libres para esa opción 😕 Ya le aviso al equipo para que te escriba y cuadremos la cita.',
-  afHora: (dia: string) => `Horas libres del ${dia} 👇`,
+  afHoras: (modalidad: 'presencial' | 'meet') => (modalidad === 'presencial' ? 'Elige día y hora para visitarte 👇' : 'Elige día y hora para la videollamada 👇'),
+  afSinHoras: 'Ahorita no tengo horas libres para esa opción 😕 Ya le aviso al equipo para que te escriba y cuadremos la cita.',
   afHoraTomada: 'Uy, esa hora se acaba de ocupar 😅 Elige otra 👇',
   afError: 'Tuve un problema para agendar 😕 Intenta de nuevo en un momento, o escribe *persona* y te atiende alguien del equipo.',
-  afCorregir: '¿Qué dato quieres corregir?',
 
   // --- Cita ya agendada ---
-  citaCancelada: 'Listo, cancelé tu cita. Cuando quieras agendar otra, escribe *menú* y toca *Afiliar mi negocio*.',
+  citaCancelada: 'Listo, cancelé tu cita. Cuando quieras otra, escribe *menú* → *Afiliar mi negocio*.',
   citaNoCancelada: 'No pude cancelarla 😕 Escribe *persona* y lo resolvemos.',
 
   // --- Soporte ---
-  sopNegocio: 'Claro, te ayudo 🛠️ ¿Cuál es el nombre de tu negocio o tu link (bookeaa.com/u/…)?',
-  sopTema: '¿Con qué necesitas ayuda?',
-  sopResuelto: '¿Con eso se resolvió?',
-  sopGracias: '¡Genial! Cualquier otra cosa, escribe *menú* 🙌',
-  sopDescripcion: 'Cuéntame qué pasó, con el mayor detalle que puedas.',
-  sopCaptura: 'Si tienes una *captura de pantalla*, mándamela 📸. Si no, toca *Enviar sin captura*.',
+  sopTema: '¿Con qué te ayudo? 🛠️',
+  sopDescripcion: 'Cuéntame en un mensaje qué pasó y el *nombre de tu negocio*. Si tienes captura, mándala con el texto 📸',
+  sopGracias: '¡Genial! Cualquier cosa, escribe *menú* 🙌',
   sopAbierto: (caso: number | null) =>
-    `Listo, abrí tu caso${caso ? ` *#${caso}*` : ''} ✅ Alguien del equipo lo revisa y te escribe por aquí.`,
+    `Listo, abrí tu caso${caso ? ` *#${caso}*` : ''} ✅ Alguien del equipo te escribe por aquí.`,
 
   // --- Persona ---
   persona: 'Listo, ya le aviso al equipo 🙋 Te escribimos por aquí en breve.',
   personaFuera: `Ya le aviso al equipo 🙋 Ahora estamos fuera de horario (atendemos ${ATENCION.texto}): te escribimos apenas abramos.`,
-  humanoEspera: 'Ya le avisé al equipo y te escribimos por aquí. Si quieres volver al menú, escribe *menú*.',
 }
 
 /** Respuestas de soporte que el bot da solo (mismas del kit). */
