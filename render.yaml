@@ -25,11 +25,18 @@ services:
       - key: VITE_DEFAULT_SHOP
         value: samuel-herrera
     routes:
-      # /ar es una carpeta estatica (public/ar). Sin la barra final caeria en la app de React
-      # (pasa lo mismo con /campana), asi que se manda directo a /ar/.
+      # /ar, /ar1 y /ar2 son carpetas estaticas (public/ar*: tarjetas en realidad aumentada).
+      # Sin la barra final caerian en la app de React (pasa lo mismo con /campana): van directo
+      # a la carpeta.
       - type: redirect
         source: /ar
         destination: /ar/
+      - type: redirect
+        source: /ar1
+        destination: /ar1/
+      - type: redirect
+        source: /ar2
+        destination: /ar2/
       # El negocio se saca de la ruta (/u/<slug>), asi que /u/samuel-herrera tiene
       # que servir la app aunque no exista ese archivo. Sin esto, 404. Los archivos
       # que si existen ganan sobre la regla, asi que /assets/* sigue sirviendo.
@@ -48,8 +55,8 @@ services:
       - path: /*
         name: Referrer-Policy
         value: strict-origin-when-cross-origin
-      # camera=(self): solo las paginas del propio sitio pueden pedir la camara (la usa /ar,
-      # la tarjeta en realidad aumentada). Va en /* y no en una regla aparte para /ar porque
+      # camera=(self): solo las paginas del propio sitio pueden pedir la camara (la usan /ar*,
+      # las tarjetas en realidad aumentada). Va en /* y no en una regla aparte para /ar porque
       # Render no documenta cual gana cuando dos reglas mandan la misma cabecera.
       - path: /*
         name: Permissions-Policy
@@ -60,8 +67,8 @@ services:
       - path: /assets/*
         name: Cache-Control
         value: public, max-age=31536000, immutable
-      # Librerias de /ar (three.js y MindAR): la version va en el nombre de la carpeta.
-      - path: /ar/vendor/*
+      # Librerias de realidad aumentada (three.js y MindAR): la version va en el nombre de la carpeta.
+      - path: /ar-comun/vendor/*
         name: Cache-Control
         value: public, max-age=31536000, immutable
       - path: /index.html

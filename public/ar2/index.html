@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f0f0e" />
+<!-- Es para quien tiene la tarjeta en la mano: fuera de los buscadores. -->
+<meta name="robots" content="noindex" />
+<meta name="description" content="Apunta la cámara a tu tarjeta de bookeaa: la agenda de papel malvada contra bookee. Tu agenda online." />
+<meta property="og:title" content="bookeaa · La agenda malvada" />
+<meta property="og:description" content="Tu agenda online. Prueba 1 mes gratis." />
+<link rel="icon" type="image/svg+xml" href="/bookeaa.svg" />
+<title>bookeaa · La agenda malvada</title>
+<link rel="preload" href="../ar-comun/fuentes/barlow-condensed-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="modulepreload" href="../ar-comun/vendor/three-0.186.1/three.module.js" />
+<style>
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 800; font-display: swap; src: url('../ar-comun/fuentes/barlow-condensed-latin-800-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Barlow'; font-weight: 500; font-display: swap; src: url('../ar-comun/fuentes/barlow-latin-500-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Barlow'; font-weight: 600; font-display: swap; src: url('../ar-comun/fuentes/barlow-latin-600-normal.woff2') format('woff2'); }
+
+  :root {
+    --carbon: #0f0f0e; --papel: #ffffff; --niebla: #f4f4f2; --linea: #e3e3df; --grafito: #5b5b57;
+    --titulo: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --texto: 'Barlow', system-ui, -apple-system, sans-serif;
+    --abajo: max(16px, env(safe-area-inset-bottom));
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--carbon); color: var(--papel);
+    font: 500 17px/1.45 var(--texto); -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent; overscroll-behavior: none;
+  }
+  body[data-pantalla='planb'], body[data-pantalla='estatico'] { background: var(--niebla); color: var(--carbon); }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
+  [hidden] { display: none !important; }
+  .titulo { font-family: var(--titulo); font-weight: 800; text-transform: uppercase; letter-spacing: -0.005em; line-height: 0.95; }
+
+  /* Las pantallas se muestran según body[data-pantalla]: no hay pantalla inicial, se entra directo */
+  #vista, .barra, #cargando, #apunta, #nota, #estatico, #cta { display: none; }
+  body[data-pantalla='cargando'] #cargando { display: grid; }
+  body:is([data-pantalla='ar'], [data-pantalla='planb']) :is(#vista, .barra, #cta) { display: flex; }
+  body[data-pantalla='ar']:not([data-rastreo='encontrada']) #apunta { display: grid; }
+  body[data-pantalla='planb'] #nota { display: block; }
+  body[data-pantalla='estatico'] :is(#estatico, #cta) { display: flex; }
+
+  /* ── Vista: video de la cámara + escena ── */
+  #vista { position: fixed; inset: 0; overflow: hidden; touch-action: none; }
+  #vista .camara { position: absolute; object-fit: cover; }
+  #vista .lienzo { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  body[data-pantalla='planb'] #vista { background: var(--niebla); }
+
+  .barra {
+    position: fixed; z-index: 3; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px;
+    justify-content: flex-end; align-items: center; gap: 8px; pointer-events: none;
+  }
+  .redondo {
+    pointer-events: auto; width: 46px; height: 46px; border-radius: 999px; display: grid; place-items: center; flex: none;
+    background: rgb(15 15 14 / 0.62); color: var(--papel); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .redondo svg { width: 22px; height: 22px; }
+  #sonido .off { display: none; }
+  #sonido[aria-pressed='true'] .on { display: none; }
+  #sonido[aria-pressed='true'] .off { display: block; }
+  /* hasta el primer toque el navegador no deja sonar nada: se avisa */
+  #activar-sonido {
+    pointer-events: auto; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px;
+    border-radius: 999px; background: var(--papel); color: var(--carbon); font: 600 14px/1 var(--texto);
+    box-shadow: 0 6px 18px -6px rgb(0 0 0 / 0.5); animation: late 1.6s ease-in-out infinite;
+  }
+  #activar-sonido svg { width: 18px; height: 18px; }
+  @keyframes late { 50% { transform: scale(1.05); } }
+
+  /* ── Avisos sobre la cámara ── */
+  #cargando, #apunta { position: fixed; inset: 0; z-index: 2; place-items: center; align-content: center; gap: 16px; text-align: center; padding: 24px; pointer-events: none; }
+  #cargando .titulo { font-size: 30px; }
+  #cargando .pista { max-width: 30ch; color: rgb(255 255 255 / 0.75); font-weight: 600; }
+  .giro { width: 44px; height: 44px; border-radius: 999px; border: 4px solid rgb(255 255 255 / 0.25); border-top-color: var(--papel); animation: giro 0.9s linear infinite; }
+  @keyframes giro { to { transform: rotate(1turn); } }
+  .mesa { position: relative; width: min(70vw, 300px); aspect-ratio: 90 / 50; perspective: 600px; }
+  .mesa img { width: 100%; height: 100%; display: block; border-radius: 4px; transform: rotateX(52deg); box-shadow: 0 30px 30px -20px rgb(0 0 0 / 0.6); opacity: 0.9; }
+  .mesa::after { content: ''; position: absolute; inset: -14% -18%; border: 3px dashed rgb(255 255 255 / 0.55); border-radius: 18px; transform: rotateX(52deg); }
+  #apunta .titulo { font-size: 32px; text-shadow: 0 2px 12px rgb(0 0 0 / 0.55); }
+  #apunta p { font-weight: 600; text-shadow: 0 1px 8px rgb(0 0 0 / 0.7); max-width: 30ch; }
+  .pausa { display: inline-block; padding: 7px 12px; border-radius: 999px; background: rgb(15 15 14 / 0.7); font: 600 14px/1.2 var(--texto); }
+  #consejo { pointer-events: auto; display: grid; gap: 10px; justify-items: center; max-width: 34ch; padding: 14px 16px; border-radius: 16px; background: rgb(15 15 14 / 0.78); }
+  #consejo button { font-weight: 600; text-decoration: underline; text-underline-offset: 4px; min-height: 40px; }
+
+  /* ── Plan B ── */
+  #nota { position: fixed; z-index: 2; left: 16px; right: 70px; top: max(14px, env(safe-area-inset-top)); pointer-events: none; }
+  #nota .titulo { font-size: 17px; letter-spacing: 0.02em; line-height: 1; }
+  #nota-motivo { margin-top: 4px; font-size: 13px; line-height: 1.3; color: var(--grafito); max-width: 40ch; }
+  #reintentar { pointer-events: auto; margin-top: 2px; font: 600 14px/1 var(--texto); text-decoration: underline; text-underline-offset: 4px; min-height: 32px; }
+
+  /* ── Sin WebGL ── */
+  #estatico { min-height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 32px 20px calc(var(--abajo) + 96px); text-align: center; }
+  #estatico img { width: min(330px, 82vw); border-radius: 6px; box-shadow: 0 18px 34px -18px rgb(15 15 14 / 0.6); }
+  #estatico p { max-width: 32ch; color: var(--grafito); }
+
+  /* ── Botón fijo ── */
+  #cta {
+    position: fixed; z-index: 4; left: 50%; bottom: var(--abajo); transform: translateX(-50%);
+    width: min(420px, calc(100% - 32px)); min-height: 60px; align-items: center; justify-content: center;
+    background: var(--carbon); color: var(--papel); border-radius: 999px; text-decoration: none;
+    font: 800 23px/1 var(--titulo); letter-spacing: 0.05em; text-transform: uppercase;
+    box-shadow: 0 0 0 3px var(--papel), 0 10px 26px -8px rgb(0 0 0 / 0.55);
+  }
+  #cta.resalta { animation: llama 0.9s ease-in-out infinite; }
+  @keyframes llama {
+    0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 0 3px var(--papel), 0 10px 26px -8px rgb(0 0 0 / 0.55); }
+    50% { transform: translateX(-50%) scale(1.06); box-shadow: 0 0 0 3px var(--papel), 0 0 0 10px rgb(255 255 255 / 0.45), 0 14px 30px -8px rgb(0 0 0 / 0.6); }
+  }
+
+  /* ── Modo de prueba ── */
+  #prueba {
+    position: fixed; z-index: 5; left: 12px; right: 66px; top: max(12px, env(safe-area-inset-top));
+    display: flex; flex-wrap: wrap; gap: 5px; align-items: center;
+    padding: 6px; border-radius: 12px; background: rgb(15 15 14 / 0.86); color: var(--papel); font: 600 12px/1 var(--texto);
+  }
+  #prueba .fila { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; flex: 1 1 100%; }
+  #prueba button { flex: none; padding: 7px 8px; border-radius: 7px; background: rgb(255 255 255 / 0.12); min-height: 30px; }
+  #prueba button[aria-current='true'] { background: var(--papel); color: var(--carbon); }
+  #prueba input { flex: 1 1 100px; min-width: 0; accent-color: var(--papel); }
+  #prueba-reloj { min-width: 150px; text-align: right; font-variant-numeric: tabular-nums; }
+  body:has(#prueba:not([hidden])) #nota { display: none; }
+  #debug { position: fixed; z-index: 5; left: 12px; bottom: calc(var(--abajo) + 70px); padding: 4px 8px; border-radius: 6px; background: rgb(15 15 14 / 0.7); color: var(--papel); font: 600 12px/1.2 ui-monospace, Menlo, monospace; pointer-events: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #activar-sonido { animation: none; }
+  }
+</style>
+</head>
+<body data-pantalla="cargando" data-rastreo="buscando">
+
+<div id="vista"></div>
+
+<div class="barra">
+  <button id="activar-sonido" type="button" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+    Toca para activar el sonido
+  </button>
+  <button id="sonido" class="redondo" type="button" aria-label="Silenciar" aria-pressed="false">
+    <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+    <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/></svg>
+  </button>
+</div>
+
+<div id="cargando" role="status" aria-live="polite">
+  <div class="giro" aria-hidden="true"></div>
+  <p id="cargando-texto" class="titulo">Abriendo la cámara…</p>
+  <p class="pista">Deja la tarjeta sobre una mesa, con el logo hacia arriba.</p>
+</div>
+
+<div id="apunta" role="status" aria-live="polite">
+  <div class="mesa" aria-hidden="true"><img src="tarjeta.webp" alt="" /></div>
+  <p class="titulo">Apunta a la tarjeta</p>
+  <p>Déjala sobre una mesa, con el logo hacia arriba, y mírala desde arriba en diagonal.</p>
+  <p id="apunta-pausa" class="pausa" hidden>Se perdió la tarjeta: la animación quedó en pausa</p>
+  <div id="consejo" hidden>
+    <p>¿No aparece? Usa más luz, evita reflejos y acércate a unos 25 cm.</p>
+    <button id="consejo-sin-camara" type="button">Ver sin cámara</button>
+  </div>
+</div>
+
+<div id="nota">
+  <p class="titulo">Así se ve en realidad aumentada</p>
+  <p id="nota-motivo" hidden></p>
+  <button id="reintentar" type="button" hidden>Reintentar con cámara</button>
+</div>
+
+<section id="estatico" aria-label="bookeaa">
+  <img src="tarjeta.webp" alt="Frente de la tarjeta: bookeaa, tu agenda online." />
+  <p class="titulo" style="font-size:34px">Tu agenda online, sin libreta</p>
+  <p>Tus clientes reservan desde tu link y cada cita llega sola a tu calendario.</p>
+</section>
+
+<nav id="prueba" aria-label="Controles del modo de prueba" hidden>
+  <div class="fila" id="prueba-escenas">
+    <button id="prueba-play" type="button">Pausa</button>
+    <button id="prueba-reiniciar" type="button" aria-label="Desde el principio">⟲</button>
+    <button type="button" data-vel="0.5">×0,5</button>
+    <button type="button" data-vel="1">×1</button>
+    <button type="button" data-vel="2">×2</button>
+  </div>
+  <input id="prueba-t" type="range" min="0" max="15" step="0.01" value="0" aria-label="Segundo de la animación" />
+  <span id="prueba-reloj">0.0 s</span>
+</nav>
+<div id="debug" hidden></div>
+
+<a id="cta" href="https://bookeaa.com">Prueba 1 mes gratis</a>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

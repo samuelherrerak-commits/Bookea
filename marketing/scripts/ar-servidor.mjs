@@ -1,6 +1,7 @@
-// Servidor estático de public/ para probar /ar en local, con las mismas reglas que Render:
-// /ar redirige a /ar/, las carpetas sirven su index.html y la cabecera de cámara es la de
-// producción (camera=(self)). Lo usan ar-probar.mjs y ar-verificar.mjs.
+// Servidor estático de public/ para probar las experiencias de realidad aumentada en local,
+// con las mismas reglas que Render: /ar1 redirige a /ar1/ (igual con cualquier carpeta), las
+// carpetas sirven su index.html y la cabecera de cámara es la de producción (camera=(self)).
+// Lo usan ar-probar.mjs y ar-verificar.mjs.
 
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import { createServer } from 'node:http'
@@ -26,17 +27,19 @@ const TIPOS = {
 /** Levanta el servidor (puerto libre si `puerto` es 0) y devuelve { url, puerto, cerrar }. */
 export async function servirPublico({ puerto = 0, host = '127.0.0.1' } = {}) {
   const server = createServer((req, res) => {
-    let ruta = decodeURIComponent(new URL(req.url, 'http://x').pathname)
-    if (ruta === '/ar') {
-      res.writeHead(301, { Location: '/ar/' }).end()
-      return
-    }
+    const ruta = decodeURIComponent(new URL(req.url, 'http://x').pathname)
     let archivo = normalize(join(PUBLICO, ruta))
     if (archivo !== PUBLICO && !archivo.startsWith(PUBLICO + sep)) {
       res.writeHead(403).end()
       return
     }
-    if (existsSync(archivo) && statSync(archivo).isDirectory()) archivo = join(archivo, 'index.html')
+    if (existsSync(archivo) && statSync(archivo).isDirectory()) {
+      if (!ruta.endsWith('/')) {
+        res.writeHead(301, { Location: `${ruta}/` }).end()
+        return
+      }
+      archivo = join(archivo, 'index.html')
+    }
     if (!existsSync(archivo)) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('No existe')
       return

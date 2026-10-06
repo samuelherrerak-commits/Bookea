@@ -1,14 +1,14 @@
-// Probar /ar en tu teléfono antes de publicar.
+// Probar una experiencia de realidad aumentada en tu teléfono antes de publicar.
 //
-//   npm run ar:probar
+//   npm run ar:probar -- --experiencia ar1
 //
 // La cámara del navegador exige HTTPS, así que esto levanta un servidor local de public/ y un
 // túnel HTTPS gratuito de Cloudflare (no pide cuenta) y muestra un QR en la terminal para
 // abrirlo con el teléfono. Mientras corre, cualquiera con el enlace puede abrirlo: ciérralo con
 // Ctrl+C al terminar.
 //
-// Sin la tarjeta impresa: abre marketing/ar/tarjeta-ar-frente.png en la pantalla del computador
-// y apunta el teléfono ahí (con el brillo alto y sin reflejos).
+// Sin la tarjeta impresa: abre marketing/<exp>/bookeaa-<exp>-frente.png en la pantalla del
+// computador y apunta el teléfono ahí (con el brillo alto y sin reflejos).
 //
 // Si el túnel no arranca: instala cloudflared (macOS: brew install cloudflared · Windows:
 // winget install Cloudflare.cloudflared) y vuelve a correr esto, o usa otro túnel HTTPS
@@ -17,11 +17,14 @@
 import { spawn } from 'node:child_process'
 import qrcode from 'qrcode-generator'
 import { servirPublico } from './ar-servidor.mjs'
+import { EXPERIENCIAS, experienciaDeArgs } from './ar-experiencias.mjs'
+
+const EXP = experienciaDeArgs()
 
 const PUERTO = Number(process.env.PUERTO) || 5180
 const { puerto, cerrar } = await servirPublico({ puerto: PUERTO, host: '0.0.0.0' })
-console.log(`\nServidor local en el puerto ${puerto}: http://localhost:${puerto}/ar/`)
-console.log(`(en el computador, sin cámara: http://localhost:${puerto}/ar/?prueba)\n`)
+console.log(`\nServidor local en el puerto ${puerto}: http://localhost:${puerto}/${EXP.id}/`)
+console.log(`(en el computador, sin cámara: http://localhost:${puerto}/${EXP.id}/?prueba)\n`)
 console.log('Abriendo el túnel HTTPS de Cloudflare…')
 
 const tunel = spawn('npx', ['--yes', 'cloudflared', 'tunnel', '--no-autoupdate', '--url', `http://localhost:${puerto}`], {
@@ -33,10 +36,12 @@ const leer = (datos) => {
   const m = String(datos).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)
   if (!m || listo) return
   listo = true
-  const direccion = `${m[0]}/ar/`
+  const direccion = `${m[0]}/${EXP.id}/`
   console.log(`\nAbre esto en el teléfono (Safari en iPhone, Chrome en Android):\n\n  ${direccion}\n`)
   console.log(qrTerminal(direccion))
   console.log(`Modo de prueba, sin tarjeta: ${direccion}?prueba`)
+  const otras = Object.keys(EXPERIENCIAS).filter((id) => id !== EXP.id)
+  if (otras.length) console.log(`Otras experiencias: ${otras.map((id) => `${m[0]}/${id}/`).join(' · ')}`)
   console.log('El túnel tarda unos segundos en responder la primera vez. Ctrl+C para cerrar.\n')
 }
 tunel.stdout.on('data', leer)

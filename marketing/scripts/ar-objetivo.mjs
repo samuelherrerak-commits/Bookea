@@ -1,45 +1,52 @@
-// Objetivo de la tarjeta en realidad aumentada (/ar): lo que la cámara reconoce.
+// Objetivo de una tarjeta en realidad aumentada: lo que la cámara reconoce.
 //
-//   npm run ar:objetivo                     (tarjeta 1 · Sin libreta)
-//   node marketing/scripts/ar-objetivo.mjs --tarjeta 3 --ancho 1000
+//   npm run ar:objetivo -- --experiencia ar1
+//   node marketing/scripts/ar-objetivo.mjs --tarjeta 2 --quitar .esq --destino marketing/salida/prueba
 //
 // 1. Renderiza el frente de la tarjeta desde marketing/tarjetas/index.html (sin tocarlo),
 //    recortado a 90 × 50 mm: el sangrado se va al cortar, así que la cámara nunca lo ve.
+//    Con --quitar se borran elementos de esa cara antes (por ejemplo, las esquinas: .esq).
 // 2. Mide dónde quedó el ícono del logo, para que el personaje salga exactamente de ahí.
 // 3. Compila el .mind con el compilador de MindAR (el mismo de la web oficial) en Chromium.
 //
-// Deja:
-//   marketing/ar/objetivo.png   imagen objetivo (también sirve para el compilador web)
-//   public/ar/tarjeta.webp      miniatura del frente (pantalla inicial y Plan B)
-//   public/ar/tarjeta.json      medidas, posición del logo y colores
-//   public/ar/tarjeta.mind      objetivo compilado
+// Deja en public/<experiencia>/ (o en --destino):
+//   tarjeta.mind   objetivo compilado
+//   tarjeta.json   medidas, posición del logo y colores
+//   tarjeta.webp   miniatura del frente (pantalla inicial y Plan B)
+// y en marketing/<experiencia>/objetivo.png la imagen objetivo (sirve para el compilador web).
 //
 // Si cambias el frente de la tarjeta, vuelve a correr esto: el .mind viejo ya no lo reconoce.
 
 import { mkdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { chromium } from 'playwright-core'
 import { RAIZ, servir } from './servidor.mjs'
+import { MINDAR_WEB, experiencia } from './ar-experiencias.mjs'
 
 const { values: op } = parseArgs({
   options: {
-    tarjeta: { type: 'string', default: '1' },
+    experiencia: { type: 'string' },
+    tarjeta: { type: 'string' },
+    quitar: { type: 'string' },
+    destino: { type: 'string' },
     ancho: { type: 'string', default: '1000' },
   },
 })
-const TARJETA = Number(op.tarjeta)
+const EXP = experiencia(op.experiencia)
+const TARJETA = Number(op.tarjeta ?? EXP.tarjeta)
+const QUITAR = (op.quitar ?? (EXP.quitar ?? []).join(',')).split(',').filter(Boolean)
 const ANCHO = Number(op.ancho)
 const CHROMIUM = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium'
 const MM = 96 / 25.4 // px CSS por mm
 const SANGRADO = 3
 const CORTE = { ancho: 90, alto: 50 }
-const MINDAR = '/public/ar/vendor/mind-ar-1.2.5/mindar-image.prod.js'
 // Menos puntos que esto en la escala original y el reconocimiento se vuelve inestable.
 const PUNTOS_MINIMOS = 80
 
-const AR = join(RAIZ, 'public/ar')
-const SALIDA = join(RAIZ, 'marketing/ar')
+const AR = op.destino ? resolve(RAIZ, op.destino) : EXP.publico
+const SALIDA = op.destino ? resolve(RAIZ, op.destino) : EXP.marketing
+await mkdir(AR, { recursive: true })
 await mkdir(SALIDA, { recursive: true })
 
 const { url, cerrar } = await servir()
@@ -62,6 +69,7 @@ try {
   })
   await page.goto(`${url}/marketing/tarjetas/index.html?t=${TARJETA}&cara=frente`, { waitUntil: 'networkidle' })
   await page.evaluate(() => window.listo)
+  if (QUITAR.length) await page.evaluate((sel) => sel.forEach((s) => document.querySelectorAll(s).forEach((n) => n.remove())), QUITAR)
 
   // 1. Imagen objetivo: la cara sin el sangrado, a ANCHO px y con la proporción exacta de 90 × 50.
   const cara = await page.locator('.cara').screenshot()
@@ -148,7 +156,7 @@ try {
         seguimiento: datos[0].trackingData.map((d) => d.points.length),
       }
     },
-    { b64: png.toString('base64'), MINDAR },
+    { b64: png.toString('base64'), MINDAR: MINDAR_WEB },
   )
   const mind = Buffer.from(resultado.mind, 'base64')
   await writeFile(join(AR, 'tarjeta.mind'), mind)
@@ -157,6 +165,7 @@ try {
   const config = {
     version: 1,
     tarjeta: TARJETA,
+    quitar: QUITAR,
     ancho: CORTE.ancho,
     alto: CORTE.alto,
     fondo: medida.fondo,
@@ -171,7 +180,7 @@ try {
   console.log(`  ✓ tarjeta.mind (${(mind.length / 1024).toFixed(0)} KB) en ${((Date.now() - t0) / 1000).toFixed(0)} s`)
   console.log(`    puntos por escala: ${resultado.puntos.join(' · ')}  (seguimiento: ${resultado.seguimiento.join(' · ')})`)
   console.log(`  ✓ logo en x=${medida.logo.x} y=${medida.logo.y} mm, lado ${medida.logo.lado} mm`)
-  console.log('  ✓ marketing/ar/objetivo.png · public/ar/tarjeta.webp · public/ar/tarjeta.json')
+  console.log(`  ✓ ${join(SALIDA, 'objetivo.png').replace(RAIZ, '')} · ${AR.replace(RAIZ, '')}/tarjeta.{mind,json,webp}`)
   if (original < PUNTOS_MINIMOS) {
     console.warn(`  ⚠ Solo ${original} puntos en la escala original: el diseño tiene poco detalle y el reconocimiento será inestable.`)
   }
