@@ -27,3 +27,9 @@ Para verla en vivo: `npm run dev` y abre http://localhost:5173/marketing/bookee/
   (`blender -b --python rig.py -- base_basic_pbr.glb bookee-rig.glb`). Los pesos van por zonas
   medidas en la malla; si cambia el modelo, hay que revisar esas medidas.
 - `3d/bookee-prueba.mp4`: los tres clips renderizados con three.js.
+
+## La agenda malvada (segunda historia)
+
+- `agenda-boceto.png` / `agenda-boceto.pdf`: boceto de la villana con 4 poses (acecho, mordida,
+  persigue, vencida), su tamaño junto a bookee y notas de partes, cara, movimiento y colores.
+- `agenda.html`: la página que lo dibuja (SVG; las poses salen de una sola función `agenda()`).
