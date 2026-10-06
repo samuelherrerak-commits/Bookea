@@ -401,6 +401,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Bot de WhatsApp: generar token', 'promptGenerarTokenBot')
     .addItem('Bot de WhatsApp: avisos y calendario', 'promptAjustesBot')
+    .addItem('Bot de WhatsApp: probar agenda', 'probarAgendaBot')
     .addToUi();
 }
 
@@ -961,7 +962,15 @@ function doPost(e) {
     return json_({ error: 'datos_invalidos', mensaje: 'Solicitud inválida.' });
   }
   // El bot de WhatsApp tiene su propio token (no el público de la web) y no es de un negocio.
-  if (data && data.accion === 'bot') return json_(atenderBot_(data, Date.now()));
+  if (data && data.accion === 'bot') {
+    // Si algo revienta (permisos de Calendar, servicio sin activar), el bot recibe el motivo
+    // en JSON en vez de la página de error de Google.
+    try {
+      return json_(atenderBot_(data, Date.now()));
+    } catch (err) {
+      return json_({ error: 'excepcion', mensaje: String(err && err.message || err).slice(0, 300) });
+    }
+  }
   if (!tokenValido_(data.token)) return json_({ error: 'no_autorizado' });
 
   const tenant = getTenantPorParametro_(data);
@@ -2399,7 +2408,7 @@ function botAgendar_(data, quien, ahoraMs, cfg) {
   const fecha = String(af.fecha || ''), hora = String(af.hora || '');
   const correo = String(af.correo || '').trim().toLowerCase();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !/^\d{2}:\d{2}$/.test(hora) || !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(correo)) {
-    return { ok: false, motivo: 'error' };
+    return { ok: false, motivo: 'error', mensaje: 'Datos incompletos: fecha ' + fecha + ', hora ' + hora + ', correo ' + correo };
   }
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) return { ok: false, motivo: 'error' };
@@ -2437,7 +2446,7 @@ function botAgendar_(data, quien, ahoraMs, cfg) {
     };
     if (direccion) evento.location = direccion;
     if (modalidad === 'meet') evento.conferenceData = { createRequest: { requestId: Utilities.getUuid(), conferenceSolutionKey: { type: 'hangoutsMeet' } } };
-    const creado = Calendar.Events.insert(evento, cal.getId(), { conferenceDataVersion: 1, sendUpdates: 'all' });
+    const creado = botCrearEvento_(cal, evento, c);
     const meet = creado.hangoutLink || '';
     hojaBot_('Prospectos', BOT_CAMPOS_PROSPECTO).appendRow([
       new Date(ahoraMs), "'+" + quien.telefono, quien.nombre, negocio, botTexto_(af.rubro, 80), botTexto_(af.servicios, 1500),
@@ -2447,16 +2456,59 @@ function botAgendar_(data, quien, ahoraMs, cfg) {
     botAvisar_('Nueva afiliación: ' + negocio, [
       negocio + ' agendó su cita de configuración.',
       'Cuándo: ' + Utilities.formatDate(c.ini, ZONA, "EEEE d 'de' MMMM, h:mm a"),
-      modalidad === 'presencial' ? 'Presencial en: ' + direccion : 'Google Meet: ' + meet,
+      modalidad === 'presencial' ? 'Presencial en: ' + direccion : 'Google Meet: ' + (meet || 'sin enlace. Activa el servicio Google Calendar API en Apps Script y crea el Meet a mano en el evento.'),
       'WhatsApp: +' + quien.telefono, 'Correo: ' + correo,
     ]);
     return { ok: true, cita: { idEvento: creado.id, modalidad: modalidad, fecha: fecha, hora: hora, direccion: direccion || undefined, meet: meet || undefined } };
   } catch (err) {
     console.error('botAgendar_: ' + err);
-    return { ok: false, motivo: 'error' };
+    return { ok: false, motivo: 'error', mensaje: String(err && err.message || err).slice(0, 300) };
   } finally {
     lock.releaseLock();
   }
+}
+
+// Con el servicio avanzado "Google Calendar API" el evento lleva Meet. Sin él, se crea igual
+// con CalendarApp (sin enlace de Meet) para que la cita nunca se pierda. Los ids de CalendarApp
+// terminan en @google.com; así se sabe con qué servicio moverlos o borrarlos después.
+function botCalAvanzado_() {
+  return typeof Calendar !== 'undefined' && Calendar.Events;
+}
+
+function botCrearEvento_(cal, evento, c) {
+  if (botCalAvanzado_()) {
+    try {
+      return Calendar.Events.insert(evento, cal.getId(), { conferenceDataVersion: 1, sendUpdates: 'all' });
+    } catch (err) {
+      console.warn('Calendar.Events.insert falló, uso CalendarApp: ' + err);
+    }
+  }
+  const ev = cal.createEvent(evento.summary, c.ini, c.fin, {
+    description: evento.description, location: evento.location || '', guests: evento.attendees[0].email, sendInvites: true,
+  });
+  ev.addEmailReminder(1440);
+  ev.addPopupReminder(60);
+  return { id: ev.getId(), hangoutLink: '' };
+}
+
+function botMoverEvento_(cal, id, c) {
+  if (botCalAvanzado_() && !/@/.test(id)) {
+    Calendar.Events.patch({ start: { dateTime: c.ini.toISOString(), timeZone: ZONA }, end: { dateTime: c.fin.toISOString(), timeZone: ZONA } },
+      cal.getId(), id, { sendUpdates: 'all' });
+    return;
+  }
+  const ev = cal.getEventById(id);
+  if (!ev) throw new Error('No encuentro el evento ' + id);
+  ev.setTime(c.ini, c.fin);
+}
+
+function botBorrarEvento_(cal, id) {
+  if (botCalAvanzado_() && !/@/.test(id)) {
+    Calendar.Events.remove(cal.getId(), id, { sendUpdates: 'all' });
+    return;
+  }
+  const ev = cal.getEventById(id);
+  if (ev) ev.deleteEvent();
 }
 
 /** Fila de Prospectos de un evento (por su id). */
@@ -2481,8 +2533,7 @@ function botReprogramar_(data, quien, ahoraMs, cfg) {
     const cal = calendarioAfiliaciones_();
     if (!botLibre_(modalidad, fecha, hora, ahoraMs, cfg, cal, cita.idEvento)) return { ok: false, motivo: 'ocupado' };
     const c = botCita_(modalidad, fecha, hora, cfg);
-    Calendar.Events.patch({ start: { dateTime: c.ini.toISOString(), timeZone: ZONA }, end: { dateTime: c.fin.toISOString(), timeZone: ZONA } },
-      cal.getId(), cita.idEvento, { sendUpdates: 'all' });
+    botMoverEvento_(cal, cita.idEvento, c);
     const f = botFilaDeEvento_(cita.idEvento);
     if (f) {
       f.sheet.getRange(f.fila, BOT_CAMPOS_PROSPECTO.indexOf('Cita') + 1).setValue(c.ini);
@@ -2492,7 +2543,7 @@ function botReprogramar_(data, quien, ahoraMs, cfg) {
     return { ok: true, cita: { idEvento: cita.idEvento, modalidad: modalidad, fecha: fecha, hora: hora, direccion: cita.direccion, meet: cita.meet } };
   } catch (err) {
     console.error('botReprogramar_: ' + err);
-    return { ok: false, motivo: 'error' };
+    return { ok: false, motivo: 'error', mensaje: String(err && err.message || err).slice(0, 300) };
   } finally {
     lock.releaseLock();
   }
@@ -2502,7 +2553,7 @@ function botCancelar_(data, quien) {
   const cita = data.cita || {};
   if (!cita.idEvento) return { ok: false };
   try {
-    Calendar.Events.remove(calendarioAfiliaciones_().getId(), cita.idEvento, { sendUpdates: 'all' });
+    botBorrarEvento_(calendarioAfiliaciones_(), cita.idEvento);
     const f = botFilaDeEvento_(cita.idEvento);
     if (f) f.sheet.getRange(f.fila, BOT_CAMPOS_PROSPECTO.indexOf('Estado') + 1).setValue('Cancelada');
     botAvisar_('Cita cancelada', ['+' + quien.telefono + ' canceló su cita de ' + cita.fecha + ' ' + cita.hora + '.']);
@@ -2545,6 +2596,26 @@ function promptGenerarTokenBot() {
   const token = 'bot_' + Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').slice(0, 12);
   PropertiesService.getScriptProperties().setProperty('bot_token', token);
   ui.alert('Token del bot', token + '\n\nCópialo en GitHub > Settings > Secrets and variables > Actions > BOT_TOKEN.\nEl anterior deja de servir ahora.', ui.ButtonSet.OK);
+}
+
+/** Revisa, desde el editor, lo mismo que necesita el bot para agendar. */
+function probarAgendaBot() {
+  const ui = SpreadsheetApp.getUi();
+  const lineas = [];
+  const token = String(PropertiesService.getScriptProperties().getProperty('bot_token') || '');
+  lineas.push(token.length >= 24 ? '✅ Token del bot creado (termina en …' + token.slice(-4) + '). Debe ser igual a BOT_TOKEN en GitHub.' : '❌ No hay token del bot: usa "Bot de WhatsApp: generar token" y ponlo en GitHub como BOT_TOKEN.');
+  lineas.push(typeof Calendar !== 'undefined' ? '✅ Servicio Google Calendar API activado.' : '❌ Falta activar Servicios (+) → Google Calendar API, identificador "Calendar".');
+  ['meet', 'presencial'].forEach(function (m) {
+    try {
+      const dias = botDisponibilidad_(m, Date.now(), botConfig_(), calendarioAfiliaciones_());
+      const horas = dias.reduce(function (n, d) { return n + d.horas.length; }, 0);
+      lineas.push((horas ? '✅ ' : '⚠️ ') + (m === 'meet' ? 'Google Meet' : 'Presencial') + ': ' + horas + ' horas libres en ' + dias.length + ' días.');
+    } catch (err) {
+      lineas.push('❌ ' + m + ': ' + (err && err.message || err));
+    }
+  });
+  lineas.push('', 'Si todo sale ✅ y el bot sigue fallando: Implementar → Gestionar implementaciones → editar → Nueva versión (el bot usa la versión publicada, no la del editor).');
+  ui.alert('Prueba de la agenda del bot', lineas.join('\n'), ui.ButtonSet.OK);
 }
 
 function promptAjustesBot() {

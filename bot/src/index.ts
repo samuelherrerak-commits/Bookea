@@ -68,6 +68,24 @@ export async function atenderTodos(env: Env, recibidos: Recibido[], servicios: S
   }
 }
 
+/** Envuelve los servicios para anotar por qué falló una llamada (excepción o resultado sin éxito). */
+export function conNotas(s: Servicios, notas: string[]): Servicios {
+  const envuelto = {} as Record<string, unknown>
+  for (const [nombre, fn] of Object.entries(s) as [string, (...a: unknown[]) => Promise<any>][]) {
+    envuelto[nombre] = async (...args: unknown[]) => {
+      try {
+        const r = await fn.apply(s, args)
+        if (r && r.ok === false && r.motivo === 'error') notas.push(`No se pudo ${nombre}: ${r.mensaje || 'Apps Script no dio el motivo (¿publicaste la versión nueva de Code.gs?)'}`)
+        return r
+      } catch (err) {
+        notas.push(`No se pudo ${nombre}: ${(err as Error).message}`)
+        throw err
+      }
+    }
+  }
+  return envuelto as unknown as Servicios
+}
+
 /** Un mensaje entrante: se guarda, pasa por el flujo y se envían las respuestas. */
 export async function atender(env: Env, m: Recibido, servicios: Servicios, ahora: number) {
   const nuevo = await guardarMensaje(env.DB, {
@@ -79,7 +97,8 @@ export async function atender(env: Env, m: Recibido, servicios: Servicios, ahora
   if (m.nombre) previa.nombre = m.nombre
   await marcarLeido(env, m.wamid)
 
-  const { conv, salidas } = await procesar(previa, m.entrada, ahora, servicios)
+  const notas: string[] = []
+  const { conv, salidas } = await procesar(previa, m.entrada, ahora, conNotas(servicios, notas))
   conv.ultimoEntrante = ahora
 
   let ultimo = m.resumen
@@ -90,5 +109,7 @@ export async function atender(env: Env, m: Recibido, servicios: Servicios, ahora
     await sumarUso(env.DB, ahora, 'servicio')
     ultimo = texto
   }
+  // Lo que falló en Apps Script queda como nota interna en el chat: solo se ve en la bandeja.
+  for (const n of notas) await guardarMensaje(env.DB, { telefono: m.de, sentido: 'out', autor: 'sistema', tipo: 'nota', texto: n, creado: Date.now() })
   await guardarConversacion(env.DB, conv, { ultimoMensaje: ahora, resumen: ultimo.slice(0, 140), sinLeer: conv.modo === 'humano' ? 'sumar' : undefined })
 }

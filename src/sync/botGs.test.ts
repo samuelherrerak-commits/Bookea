@@ -90,6 +90,26 @@ describe('Code.gs · rama del bot en doPost', () => {
     const af = { negocio: 'X', correo: 'x@gmail.com', modalidad: 'presencial', direccion: 'Calle 1', fecha: '2026-10-03', hora: '08:00' }
     expect(botAgendar_({ af }, { telefono: '58412', nombre: '' }, AHORA, CFG)).toEqual({ ok: false, motivo: 'ocupado' })
     expect(insert).not.toHaveBeenCalled()
-    expect(botAgendar_({ af: { ...af, correo: 'malo' } }, { telefono: '58412', nombre: '' }, AHORA, CFG)).toEqual({ ok: false, motivo: 'error' })
+    expect(botAgendar_({ af: { ...af, correo: 'malo' } }, { telefono: '58412', nombre: '' }, AHORA, CFG)).toMatchObject({ ok: false, motivo: 'error' })
+  })
+
+  it('sin el servicio avanzado de Calendar (o si falla) crea la cita igual con CalendarApp', () => {
+    const c = { ini: new Date(AHORA), fin: new Date(AHORA + 3600e3) }
+    const evento = { summary: 'Afiliación', description: 'd', location: 'Calle 1', attendees: [{ email: 'x@gmail.com' }] }
+    const ev = { getId: () => 'abc@google.com', addEmailReminder: vi.fn(), addPopupReminder: vi.fn() }
+    const cal = { getId: () => 'cal', createEvent: vi.fn(() => ev) }
+    const sin = funcionesGs<{ botCrearEvento_: Fn }>(gs, ['botCrearEvento_', 'botCalAvanzado_'], {})
+    expect(sin.botCrearEvento_(cal, evento, c)).toEqual({ id: 'abc@google.com', hangoutLink: '' })
+    expect(cal.createEvent).toHaveBeenCalledWith('Afiliación', c.ini, c.fin, expect.objectContaining({ guests: 'x@gmail.com', sendInvites: true, location: 'Calle 1' }))
+
+    const falla = funcionesGs<{ botCrearEvento_: Fn }>(gs, ['botCrearEvento_', 'botCalAvanzado_'], {
+      Calendar: { Events: { insert: () => { throw new Error('API desactivada') } } },
+    })
+    expect(falla.botCrearEvento_(cal, evento, c).id).toBe('abc@google.com')
+
+    const con = funcionesGs<{ botCrearEvento_: Fn }>(gs, ['botCrearEvento_', 'botCalAvanzado_'], {
+      Calendar: { Events: { insert: () => ({ id: 'e1', hangoutLink: 'https://meet.google.com/x' }) } },
+    })
+    expect(con.botCrearEvento_(cal, evento, c)).toEqual({ id: 'e1', hangoutLink: 'https://meet.google.com/x' })
   })
 })

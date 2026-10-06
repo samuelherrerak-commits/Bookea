@@ -15,9 +15,17 @@ async function llamar(env: EnvApps, op: string, datos: Record<string, unknown>):
     body: JSON.stringify({ accion: 'bot', token: env.BOT_TOKEN, op, ...datos }),
     redirect: 'follow',
   })
-  const json = (await r.json().catch(() => null)) as any
-  if (!r.ok || !json) throw new Error(`Apps Script ${r.status}`)
-  if (json.error) throw new Error(`Apps Script: ${json.error}`)
+  const crudo = await r.text()
+  let json: any = null
+  try {
+    json = JSON.parse(crudo)
+  } catch {}
+  if (!r.ok || !json) {
+    // Página HTML de Google: implementación sin acceso "Cualquier usuario" o URL equivocada.
+    const titulo = crudo.match(/<title>([^<]*)<\/title>/i)?.[1]?.trim()
+    throw new Error(`Apps Script respondió ${r.status} sin JSON${titulo ? ` (${titulo})` : ''}`)
+  }
+  if (json.error) throw new Error(`Apps Script: ${json.error}${json.mensaje ? ` · ${json.mensaje}` : ''}`)
   return json
 }
 
@@ -40,7 +48,7 @@ const quien = (c: Conversacion) => ({ telefono: c.telefono, nombre: c.nombre })
 
 function resultado(json: any): ResultadoCita {
   if (json.ok && json.cita) return { ok: true, cita: json.cita as Cita }
-  return { ok: false, motivo: json.motivo === 'ocupado' ? 'ocupado' : 'error' }
+  return { ok: false, motivo: json.motivo === 'ocupado' ? 'ocupado' : 'error', mensaje: json.mensaje ? String(json.mensaje) : undefined }
 }
 
 export function serviciosAppsScript(env: EnvApps): Servicios {
