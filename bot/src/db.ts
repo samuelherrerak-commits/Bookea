@@ -43,7 +43,7 @@ export async function guardarConversacion(db: D1Database, c: Conversacion, extra
 
 /** Guarda un mensaje. Devuelve false si el wamid ya estaba (Meta reintenta los webhooks). */
 export async function guardarMensaje(db: D1Database, m: {
-  telefono: string; sentido: 'in' | 'out'; autor: 'cliente' | 'bot' | 'equipo'; tipo: string; texto: string; mediaId?: string; wamid?: string; creado: number
+  telefono: string; sentido: 'in' | 'out'; autor: 'cliente' | 'bot' | 'equipo' | 'sistema'; tipo: string; texto: string; mediaId?: string; wamid?: string; creado: number
 }): Promise<boolean> {
   const r = await db.prepare(
     'INSERT OR IGNORE INTO mensajes (telefono, sentido, autor, tipo, texto, media_id, wamid, creado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',

@@ -63,6 +63,7 @@ select.filtro{border:1.5px solid var(--rule);background:var(--bg);border-radius:
 .msg.bot{background:var(--bot);color:var(--fg)}
 .msg img{display:block;max-width:100%;border-radius:8px;margin-bottom:6px}
 .msg time{display:block;font-size:11px;opacity:.6;margin-top:4px;text-align:right}
+.msg.nota{align-self:center;max-width:92%;background:transparent;border:2px dashed #d97706;color:inherit;font-size:14px}
 .msg .autor{display:block;font:700 11px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:4px}
 .escribir{grid-template-columns:minmax(0,1fr);min-width:0;border-top:1px solid var(--rule);padding:10px 16px;padding-bottom:max(10px,env(safe-area-inset-bottom));display:grid;gap:8px}
 .escribir .fila{display:flex;gap:8px;align-items:flex-end;min-width:0}
@@ -171,9 +172,10 @@ async function abrir(telefono, mantenerScroll) {
 
   const lista = el('div', { className: 'mensajes', role: 'log' })
   for (const m of mensajes) {
-    const clase = 'msg ' + (m.sentido === 'in' ? 'in' : 'out' + (m.autor === 'bot' ? ' bot' : ''))
+    const nota = m.autor === 'sistema'
+    const clase = 'msg ' + (nota ? 'nota' : m.sentido === 'in' ? 'in' : 'out' + (m.autor === 'bot' ? ' bot' : ''))
     const burbuja = el('div', { className: clase })
-    if (m.sentido === 'out') burbuja.append(el('span', { className: 'autor', textContent: m.autor === 'bot' ? 'Bot' : m.tipo === 'plantilla' ? 'Tú · plantilla' : 'Tú' }))
+    if (m.sentido === 'out') burbuja.append(el('span', { className: 'autor', textContent: nota ? '⚠️ Nota interna · el cliente no la ve' : m.autor === 'bot' ? 'Bot' : m.tipo === 'plantilla' ? 'Tú · plantilla' : 'Tú' }))
     if (m.media_id && m.tipo === 'imagen') burbuja.append(el('img', { src: '/bandeja/media/' + encodeURIComponent(m.media_id), alt: 'Imagen', loading: 'lazy' }))
     burbuja.append(...conNegritas(m.texto || ''), el('time', { textContent: hora(m.creado) }))
     lista.append(burbuja)

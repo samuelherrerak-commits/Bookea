@@ -74,7 +74,7 @@ export type Conversacion = {
   ultimoEntrante: number | null
 }
 
-export type ResultadoCita = { ok: true; cita: Cita } | { ok: false; motivo: 'ocupado' | 'error' }
+export type ResultadoCita = { ok: true; cita: Cita } | { ok: false; motivo: 'ocupado' | 'error'; mensaje?: string }
 
 /** Lo que el bot le pide al mundo (Apps Script). En las pruebas son dobles. */
 export interface Servicios {

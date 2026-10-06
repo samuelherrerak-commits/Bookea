@@ -225,3 +225,18 @@ describe('bot · soporte y persona', () => {
     expect(enHorario(Date.UTC(2026, 9, 1, 23, 30))).toBe(false)
   })
 })
+
+describe('conNotas', () => {
+  it('anota el motivo cuando agendar falla y deja pasar el resultado', async () => {
+    const { conNotas } = await import('./index')
+    const notas: string[] = []
+    const s = conNotas({
+      ...servicios(),
+      agendar: async () => ({ ok: false, motivo: 'error', mensaje: 'Calendar is not defined' }),
+      disponibilidad: async () => { throw new Error('Apps Script: no_autorizado') },
+    } as Servicios, notas)
+    expect(await s.agendar({} as any, {} as any)).toMatchObject({ ok: false, motivo: 'error' })
+    await expect(s.disponibilidad('meet')).rejects.toThrow('no_autorizado')
+    expect(notas).toEqual(['No se pudo agendar: Calendar is not defined', 'No se pudo disponibilidad: Apps Script: no_autorizado'])
+  })
+})
