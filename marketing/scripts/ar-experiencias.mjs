@@ -10,6 +10,8 @@ import { RAIZ } from './servidor.mjs'
 export const EXPERIENCIAS = {
   // La primera animación: el logo despierta sobre la tarjeta 1 ("Tu agenda, sin libreta").
   ar1: { tarjeta: 1, url: 'https://www.bookeaa.com/ar1/', nombre: 'Primera animación · tarjeta 1 (Sin libreta)' },
+  // La agenda malvada rompe la tarjeta 2 y bookee la vence. El frente va sin las esquinas.
+  ar2: { tarjeta: 2, quitar: ['.esq'], url: 'https://www.bookeaa.com/ar2/', nombre: 'La agenda malvada · tarjeta 2' },
 }
 
 export const POR_DEFECTO = Object.keys(EXPERIENCIAS).at(-1)

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "tarjeta": 2,
+  "quitar": [
+    ".esq"
+  ],
+  "ancho": 90,
+  "alto": 50,
+  "fondo": "#ffffff",
+  "logo": {
+    "x": 23.409,
+    "y": 16.418,
+    "lado": 9.657,
+    "cuerpo": "#0f0f0e",
+    "calado": "#ffffff"
+  },
+  "imagen": {
+    "ancho": 1000,
+    "alto": 556
+  },
+  "mind": {
+    "puntos": [
+      86,
+      84,
+      76,
+      87,
+      78,
+      65,
+      75,
+      67,
+      34
+    ],
+    "seguimiento": [
+      11,
+      10
+    ]
+  }
+}

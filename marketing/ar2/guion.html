@@ -1,6 +1,6 @@
 <!doctype html><meta charset="utf-8">
 <!-- Guion gráfico de ar2: la agenda malvada rompe la tarjeta 2 y bookee la vence. Los personajes
-     salen de marketing/bookee/{bookee,villana}.js; la tarjeta es su frente real (tarjeta-frente.png). -->
+     salen de marketing/bookee/{bookee,villana}.js; la tarjeta es su frente real (objetivo.png). -->
 <style>
   @font-face { font-family: 'Barlow Condensed'; font-weight: 800; src: url('/public/ar-comun/fuentes/barlow-condensed-latin-800-normal.woff2'); }
   @font-face { font-family: 'Barlow'; font-weight: 600; src: url('/public/ar-comun/fuentes/barlow-latin-600-normal.woff2'); }
@@ -31,7 +31,7 @@ const K = 0.68 // (exagerado para que se lea en la viñeta) unidades de personaj
 const tarjeta = () => {
   const [x0, y0] = pt(0, 50), [x1, y1] = pt(90, 50)
   return `<path d="M${x0} ${y0} L${x1} ${y1} L${x1} ${y1 + 1.6} L${x0} ${y0 + 1.6} Z" fill="#b9b5ad"/>
-    <image href="tarjeta-frente.png" width="90" height="50" preserveAspectRatio="none"
+    <image href="objetivo.png" width="90" height="50" preserveAspectRatio="none"
       transform="matrix(${M.a} 0 ${M.c} ${M.d} ${-45 * M.a - 25 * M.c} ${-25 * M.d})"/>`
 }
 // hueco rasgado en el centro: radio relativo 0..1

@@ -4,7 +4,8 @@
 //
 // 1. Arma un video sintético: fondo de mesa, la tarjeta (marketing/<exp>/objetivo.png) en
 //    perspectiva que se mueve un poco, sale de cuadro y vuelve.
-// 2. Abre /<exp>/ en Chromium con ese video como cámara y toca "Ver en realidad aumentada".
+// 2. Abre /<exp>/ en Chromium con ese video como cámara y toca "Ver en realidad aumentada" (si
+//    la experiencia tiene pantalla inicial; /ar2 abre la cámara sola).
 // 3. Comprueba que MindAR la reconoce, que la animación avanza, que se pausa y muestra
 //    "Apunta a la tarjeta" al perderla y que retoma al volver. Luego prueba el Plan B con el
 //    permiso de cámara negado y mide el peso de la página (con lo compartido de ar-comun).
@@ -94,7 +95,8 @@ try {
   page.on('console', (m) => m.type() === 'error' && errores.push(m.text()))
   await page.goto(`${url}/${EXP.id}/?debug`, { waitUntil: 'networkidle' })
   await page.screenshot({ path: join(SALIDA, '1-inicio.png') })
-  await page.click('#ver-ar')
+  // con pantalla inicial hay que tocar el botón; si no, la cámara se abre sola
+  if (await page.$('#ver-ar')) await page.click('#ver-ar')
   await page.waitForFunction(() => window.__ar.pantalla === 'ar' || window.__ar.modo === 'planb', null, { timeout: 90000 })
   ok(await page.evaluate(() => window.__ar.modo === 'ar'), 'se abrió la cámara y arrancó MindAR')
   await page.screenshot({ path: join(SALIDA, '2-apunta.png') })
@@ -112,11 +114,12 @@ try {
   await page.screenshot({ path: join(SALIDA, '3-anclada.png') })
 
   ok(await esperar('perdida', 30000), 'detecta que la tarjeta salió de cuadro')
+  // se mira de inmediato: en el video la tarjeta vuelve a entrar en poco más de un segundo
+  ok(await page.isVisible('#apunta'), 'muestra "Apunta a la tarjeta"')
   const p0 = await page.evaluate(() => window.__ar.t)
   await page.waitForTimeout(700)
   const p1 = await page.evaluate(() => ({ t: window.__ar.t, rastreo: window.__ar.rastreo }))
   if (p1.rastreo === 'perdida') ok(p1.t === p0, 'la animación queda en pausa mientras no la ve')
-  ok(await page.isVisible('#apunta'), 'muestra "Apunta a la tarjeta"')
   await page.screenshot({ path: join(SALIDA, '4-perdida.png') })
   ok(await esperar('encontrada', 30000), 'la vuelve a reconocer y sigue')
   await page.waitForTimeout(1200)
@@ -133,7 +136,7 @@ try {
   const ctx = await b2.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2 })
   const p2 = await ctx.newPage()
   await p2.goto(`${url}/${EXP.id}/`, { waitUntil: 'networkidle' })
-  await p2.click('#ver-ar')
+  if (await p2.$('#ver-ar')) await p2.click('#ver-ar')
   await p2.waitForFunction(() => window.__ar.modo === 'planb' && window.__ar.listo, null, { timeout: 60000 })
   const motivo = await p2.evaluate(() => window.__ar.motivo)
   ok(motivo === 'permiso', `entra el Plan B y explica que falta el permiso (${motivo})`)

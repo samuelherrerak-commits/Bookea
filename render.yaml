@@ -25,14 +25,18 @@ services:
       - key: VITE_DEFAULT_SHOP
         value: samuel-herrera
     routes:
-      # /ar y /ar1 son carpetas estaticas (public/ar*: tarjetas en realidad aumentada). Sin la
-      # barra final caerian en la app de React (pasa lo mismo con /campana): van directo a /ar/.
+      # /ar, /ar1 y /ar2 son carpetas estaticas (public/ar*: tarjetas en realidad aumentada).
+      # Sin la barra final caerian en la app de React (pasa lo mismo con /campana): van directo
+      # a la carpeta.
       - type: redirect
         source: /ar
         destination: /ar/
       - type: redirect
         source: /ar1
         destination: /ar1/
+      - type: redirect
+        source: /ar2
+        destination: /ar2/
       # El negocio se saca de la ruta (/u/<slug>), asi que /u/samuel-herrera tiene
       # que servir la app aunque no exista ese archivo. Sin esto, 404. Los archivos
       # que si existen ganan sobre la regla, asi que /assets/* sigue sirviendo.
