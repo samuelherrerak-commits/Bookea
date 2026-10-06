@@ -1,6 +1,7 @@
 <!doctype html><meta charset="utf-8">
-<!-- Boceto de la agenda malvada (segunda historia). Dibujo en SVG, mismas reglas de marca que bookee:
-     solo carbón, papel, niebla y grafito, trazos gruesos y extremidades "rubber hose". -->
+<!-- Boceto de la agenda malvada (segunda historia): la misma construcción de bookee (cuerpo
+     redondeado, argollas arriba, brazos y piernas "rubber hose"), pero más grande, con espiral de
+     agenda, ojos triangulares rojos y una boca grande con colmillos. Dibujo en SVG, de frente. -->
 <style>
   @font-face { font-family: 'Barlow Condensed'; font-weight: 800; src: url('/public/ar-comun/fuentes/barlow-condensed-latin-800-normal.woff2'); }
   @font-face { font-family: 'Barlow'; font-weight: 600; src: url('/public/ar-comun/fuentes/barlow-latin-600-normal.woff2'); }
@@ -11,135 +12,142 @@
   figure { margin: 0; text-align: center; } svg { width: 100%; height: auto; display: block; }
   figcaption { font: 800 22px/1 'Barlow Condensed'; text-transform: uppercase; letter-spacing: .04em; }
   figcaption small { display: block; font: 600 15px/1.3 'Barlow'; text-transform: none; letter-spacing: 0; color: #5b5b57; margin-top: 4px; }
-  .abajo { display: grid; grid-template-columns: 1fr 1.5fr; gap: 40px; padding: 24px 48px 48px; align-items: start; }
+  .abajo { display: grid; grid-template-columns: 1fr 1.4fr; gap: 40px; padding: 24px 48px 48px; align-items: start; }
   .comparar { background: #f4f4f2; border-radius: 16px; padding: 16px 16px 8px; }
   .notas { font-size: 17px; line-height: 1.5; columns: 2; column-gap: 36px; }
   .notas h2 { font: 800 26px/1 'Barlow Condensed'; text-transform: uppercase; margin: 0 0 6px; break-after: avoid; }
   .notas div { break-inside: avoid; margin-bottom: 18px; }
 </style>
 <header><h1>La agenda malvada · boceto</h1>
-<p>La villana de la segunda historia: la agenda de papel de siempre, llena de citas tachadas y papelitos sueltos, que persigue a bookee. Se ve de perfil: el lomo con espiral atrás y la boca adelante, donde se abren las hojas.</p></header>
+<p>La villana de la segunda historia. Está hecha como bookee (cuerpo redondeado, argollas arriba, brazos y piernas de goma), pero es una agenda de papel: más grande, con espiral, hojas a la vista, ojos rojos y colmillos.</p></header>
 <div class="fila" id="poses"></div>
 <section class="abajo">
-  <figure class="comparar"><svg id="comparar" viewBox="-80 -100 200 112"></svg>
-    <figcaption>Tamaño<small>1,5 veces bookee: tiene que verse como una amenaza</small></figcaption></figure>
+  <figure class="comparar"><svg id="comparar" viewBox="-60 -96 150 102"></svg>
+    <figcaption>Tamaño<small>1,7 veces bookee</small></figcaption></figure>
   <div class="notas">
-    <div><h2>Partes</h2>
-    Tapas gruesas carbón y bloque de hojas papel con rayas grafito. Espiral en el lomo. Elástico de cierre vertical, cerca de la boca. Pestañas niebla y papelitos sueltos asomando. La cinta marcapáginas es la lengua.</div>
+    <div><h2>Cuerpo</h2>
+    Tapa carbón de 44 × 52 con esquinas redondeadas (bookee: 28 × 30). Arriba, 7 argollas de espiral en vez de las 2 de bookee. Por el costado y abajo asoma el bloque de hojas, con rayas. Elástico de cierre vertical a la derecha.</div>
     <div><h2>Cara</h2>
-    Ojos saltones sobre la tapa de arriba, como de sapo, con cejas gruesas en V. Al cerrar la boca, el borde de las hojas forma una sonrisa en zigzag; al abrirla, las hojas son los dientes.</div>
-    <div><h2>Cómo se mueve</h2>
-    Pesada y torpe: da saltos cortos, aletea la tapa como si mordiera y se le caen papelitos a cada paso. Brazos cortos con guantes niebla y puños; botas carbón.</div>
-    <div><h2>Cómo la vence bookee</h2>
-    Propuesta: cuando abre la boca para morder, bookee salta encima, le cierra la tapa de un pisotón y le pasa su propio elástico. Queda sellada, con ojos en X, y se le escapan las hojas, que se vuelven citas digitales.</div>
+    Ojos triangulares rojos, inclinados hacia el centro, con brillo y contorno claro para que resalten sobre la tapa negra. Cejas gruesas en ángulo. Boca ancha, roja por dentro, con dos colmillos grandes arriba, dos abajo y dientes chicos entre medio.</div>
+    <div><h2>Brazos y piernas</h2>
+    Más gruesos que los de bookee. Guantes negros con garras blancas y botas pesadas. Se mueve con pasos lentos que hacen temblar la tarjeta.</div>
     <div><h2>Colores</h2>
-    Carbón #0f0f0e (tapas, contorno, botas), papel #ffffff (hojas, ojos, dientes), niebla #f4f4f2 (guantes, pestañas, lengua) y grafito #5b5b57 (rayas, espiral, interior de la boca).</div>
+    Carbón #0f0f0e, papel #ffffff y grafito #5b5b57, como bookee. El rojo #e3261c es solo de ella (ojos, boca y lengua): así se distingue de inmediato quién es el malo.</div>
   </div>
 </section>
 <script type="module">
 await document.fonts.ready
-const C = '#0f0f0e', P = '#ffffff', N = '#f4f4f2', G = '#5b5b57'
-const ns = 'http://www.w3.org/2000/svg'
+const C = '#0f0f0e', P = '#ffffff', N = '#f4f4f2', G = '#5b5b57', R = '#e3261c', RO = '#5c0b07'
 
-// La agenda de perfil, mirando a la derecha. Origen en el suelo, al centro; y hacia abajo. Bisagra (lomo) en x = -30.
-function agenda({ abre = 0, ojos = 'enojado', cuerpo = 0, piernas = 'pie', brazos = 'jarras', sellada = false, aplasta = 1 }) {
-  const lineas = (y0, y1) => { let s = ''; for (let y = y0 + 2.4; y < y1 - 0.8; y += 2.4) s += `<line x1="-27" y1="${y}" x2="29" y2="${y}" stroke="${G}" stroke-width=".55"/>`; return s }
-  const dientes = (y, dir) => { let s = `M-6 ${y}`; for (let x = -6; x < 28; x += 5) s += ` L${x + 2.5} ${y + dir * 4.2} L${x + 5} ${y}`; return `<path d="${s} Z" fill="${P}" stroke="${C}" stroke-width="1.1" stroke-linejoin="round"/>` }
-  const elastico = (y0, y1) => `<rect x="21" y="${y0}" width="3.4" height="${y1 - y0}" fill="${C}"/>`
-  // ── piernas y botas (detrás del cuerpo) ──
-  const pierna = (x, pie, atras) => {
-    const [px, py] = pie
-    const col = atras ? G : C
-    return `<path d="M${x} -10 Q${x + (px - x) * 0.2 - 3} ${py * 0.5 - 5} ${px} ${py - 2}" fill="none" stroke="${col}" stroke-width="3.6" stroke-linecap="round"/>
-      <ellipse cx="${px + 3}" cy="${py - 1.6}" rx="6.5" ry="3.4" fill="${col}"/><ellipse cx="${px + 5.5}" cy="${py - 2.8}" rx="1.8" ry=".9" fill="${P}" opacity=".8"/>`
+// De frente, origen en el suelo al centro, y hacia abajo. Cuerpo de x -22..22, y -64..-12.
+function villana({ brazos = 'amenaza', piernas = 'pie', boca = 'grande', ojos = 'malo', inclina = 0 } = {}) {
+  let s = ''
+  // ── piernas y botas ──
+  const P2 = { pie: [[-11, 0], [11, 0]], corre: [[-19, -4], [15, 0]], vencida: [[-4, 0], [5, 0]] }[piernas]
+  for (const [i, [px, py]] of P2.entries()) {
+    const x0 = i ? 9 : -9
+    s += `<path d="M${x0} -13 Q${(x0 + px) / 2 + (i ? 4 : -4)} ${(py - 13) / 2} ${px} ${py - 3}" fill="none" stroke="${C}" stroke-width="4.4" stroke-linecap="round"/>
+      <path d="M${px - 7 + (i ? 2 : -2)} ${py} q0 -6 7 -6 q8 0 8 6 Z" fill="${C}"/><rect x="${px - 8 + (i ? 2 : -2)}" y="${py - 1.4}" width="17" height="1.6" rx=".8" fill="${G}"/>`
   }
-  let pies = { pie: [[-13, 0], [9, 0]], corre: [[-24, -3], [20, 0]], vencida: [[-6, 0], [2, 0]] }[piernas]
-  let s = pierna(-12, pies[0], true) + pierna(8, pies[1], false)
-  // ── cuerpo: mandíbula de abajo fija, la de arriba gira en la bisagra ──
-  let cuerpoSvg = ''
-  const interior = abre > 0 ? `<path d="M-30 -28 L29 -28 L${-30 + 59 * Math.cos(abre * Math.PI / 180)} ${-28 - 59 * Math.sin(abre * Math.PI / 180)} Z" fill="${G}"/>` : ''
-  cuerpoSvg += interior
-  // abajo
-  cuerpoSvg += `<rect x="-27" y="-28" width="56" height="13" fill="${P}" stroke="${C}" stroke-width="1.2"/>${lineas(-28, -15)}
-    <rect x="-31" y="-16.5" width="62" height="6.5" rx="3" fill="${C}"/>
-    <rect x="29" y="-25" width="3.4" height="5" rx="1" fill="${N}" stroke="${C}" stroke-width=".8"/>
-    ${elastico(-28, -10)}`
-  if (abre > 0) {
-    cuerpoSvg += dientes(-28, -1)
-    // lengua: la cinta marcapáginas, cuelga por el labio de abajo con la punta en V
-    cuerpoSvg += `<path d="M2 -29 C14 -31 26 -30 31 -27 C35 -24 34 -17 36 -12 L33.5 -14.5 L31.5 -11.5 C30 -16 31 -23 27 -25.5 C20 -28 10 -27 2 -27 Z" fill="${N}" stroke="${C}" stroke-width="1.1" stroke-linejoin="round"/>`
+  // ── cuerpo ──
+  let cuerpo = ''
+  // bloque de hojas que asoma por la derecha y abajo
+  cuerpo += `<rect x="-20" y="-61" width="45" height="51" rx="6" fill="${P}" stroke="${C}" stroke-width="1.6"/>`
+  for (let k = 1; k <= 4; k++) cuerpo += `<path d="M${22 + k * 0.6 - 3} -58 L${22 + k * 0.6 - 3} -15" stroke="${G}" stroke-width=".5"/><path d="M-16 ${-13.6 + k * 0.6} L20 ${-13.6 + k * 0.6}" stroke="${G}" stroke-width=".5"/>`
+  // tapa
+  cuerpo += `<rect x="-22" y="-64" width="44" height="52" rx="8" fill="${C}"/>`
+  // brillo del canto
+  cuerpo += `<path d="M-18 -60 Q-19 -40 -18 -20" fill="none" stroke="${G}" stroke-width="1.2" stroke-linecap="round" opacity=".8"/>`
+  // elástico
+  cuerpo += `<rect x="14" y="-64" width="3.6" height="52" fill="${G}"/><rect x="14" y="-64" width="3.6" height="52" fill="none" stroke="${C}" stroke-width=".6"/>`
+  // pestaña
+  cuerpo += `<path d="M22 -50 h4.5 a1.5 1.5 0 0 1 1.5 1.5 v5 a1.5 1.5 0 0 1 -1.5 1.5 h-4.5 Z" fill="${N}" stroke="${C}" stroke-width="1"/>`
+  // ── ojos ──
+  const ojo = (lado) => {
+    // triángulo con el borde de arriba bajando hacia el centro
+    const pts = lado < 0 ? [[-17.5, -52], [-3.5, -46.5], [-14, -41]] : [[17.5, -52], [3.5, -46.5], [14, -41]]
+    if (ojos === 'x') {
+      const cx = lado * 10, cy = -46.5
+      return `<path d="M${cx - 4} ${cy - 4} l8 8 M${cx + 4} ${cy - 4} l-8 8" stroke="${R}" stroke-width="2.4" stroke-linecap="round"/>`
+    }
+    const d = `M${pts.map((p) => p.join(' ')).join(' L')} Z`
+    const [gx, gy] = [(pts[0][0] + pts[1][0] + pts[2][0]) / 3 + lado * 1.5, (pts[0][1] + pts[1][1] + pts[2][1]) / 3]
+    return `<path d="${d}" fill="${R}" stroke="${P}" stroke-width="1.1" stroke-linejoin="round"/>
+      <path d="${d}" fill="none" stroke="${R}" stroke-width="4" stroke-linejoin="round" opacity=".25"/>
+      <ellipse cx="${gx}" cy="${gy}" rx=".9" ry="2.2" fill="${RO}"/><circle cx="${gx - lado * 2.2}" cy="${gy - 1.6}" r=".8" fill="${P}"/>`
+  }
+  cuerpo += ojo(-1) + ojo(1)
+  // cejas
+  if (ojos === 'malo') cuerpo += `<path d="M-19 -56.5 L-3 -49.5" stroke="${G}" stroke-width="3" stroke-linecap="round"/><path d="M19 -56.5 L3 -49.5" stroke="${G}" stroke-width="3" stroke-linecap="round"/>`
+  // ── boca ──
+  const dientes = (x0, x1, y, dir, n) => { let d = ''; const w = (x1 - x0) / n; for (let k = 0; k < n; k++) d += `<path d="M${x0 + k * w} ${y} L${x0 + k * w + w / 2} ${y + dir * 2.6} L${x0 + (k + 1) * w} ${y} Z" fill="${P}" stroke="${C}" stroke-width=".5"/>`; return d }
+  const colmillo = (x, y, dir, largo) => `<path d="M${x - 2.6} ${y} Q${x - 1.4} ${y + dir * largo * 0.6} ${x + 0.3} ${y + dir * largo} Q${x + 1.4} ${y + dir * largo * 0.5} ${x + 2.6} ${y} Z" fill="${P}" stroke="${C}" stroke-width=".7" stroke-linejoin="round"/>`
+  if (boca === 'vencida') {
+    cuerpo += `<path d="M-14 -27 q3.5 -3 7 0 t7 0 t7 0 t7 0" fill="none" stroke="${P}" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M5 -26.5 q0 6 3 6.5 q3 .3 3 -6" fill="${R}" stroke="${C}" stroke-width=".7"/>`
   } else {
-    cuerpoSvg += `<path d="M-4 -28 ${Array.from({ length: 7 }, (_, i) => `L${-1.5 + i * 4.5} ${i % 2 ? -28 : -30.5}`).join(' ')} L29 -28" fill="none" stroke="${C}" stroke-width="1.3" stroke-linejoin="round"/>`
+    const [arr, aba] = boca === 'rugido' ? [-39, -16] : [-36, -21]
+    const forma = `M-19 ${arr + 1} Q0 ${arr - 3} 19 ${arr + 1} Q17 ${aba + 2} 0 ${aba} Q-17 ${aba + 2} -19 ${arr + 1} Z`
+    cuerpo += `<clipPath id="b${boca}"><path d="${forma}"/></clipPath>
+      <path d="${forma}" fill="${RO}"/>
+      <g clip-path="url(#b${boca})">
+        <ellipse cx="2" cy="${aba + 1}" rx="10" ry="${boca === 'rugido' ? 7 : 5}" fill="${R}"/>
+        <path d="M2 ${aba - 4} v4" stroke="${RO}" stroke-width=".8"/>
+        ${dientes(-18, 18, arr - 1.6, 1, 12)}${dientes(-15, 15, aba + 1.2, -1, 10)}
+      </g>
+      ${colmillo(-10, arr - 1, 1, boca === 'rugido' ? 10 : 8)}${colmillo(10, arr - 1, 1, boca === 'rugido' ? 10 : 8)}
+      ${colmillo(-14, aba + 0.5, -1, 5.5)}${colmillo(14, aba + 0.5, -1, 5.5)}
+      <path d="${forma}" fill="none" stroke="${P}" stroke-width="1.3" stroke-linejoin="round"/>`
   }
-  // arriba (gira)
-  let arriba = `<rect x="-27" y="-41" width="56" height="13" fill="${P}" stroke="${C}" stroke-width="1.2"/>${lineas(-41, -28)}
-    <rect x="-31" y="-46.5" width="62" height="6.5" rx="3" fill="${C}"/>
-    ${elastico(-46.5, -28)}
-    <path d="M6 -46 l3 -6 l8 2 l-2 5 Z" fill="${N}" stroke="${C}" stroke-width=".9"/>
-    <path d="M-10 -46.2 l1 -5 l7 .5 l-.5 4.6 Z" fill="${P}" stroke="${C}" stroke-width=".9"/><line x1="-8.6" y1="-49.2" x2="-3.8" y2="-48.9" stroke="${G}" stroke-width=".6"/>
-    <path d="M29 -37 l5.5 -1.2 l1 5 l-6 1 Z" fill="${P}" stroke="${C}" stroke-width=".9"/>`
-  if (abre > 0) arriba += dientes(-28, 1)
-  // ojos saltones sobre la tapa
-  const ojo = (cx, r) => {
-    let o = `<ellipse cx="${cx}" cy="-50" rx="${r}" ry="${r * 1.12}" fill="${P}" stroke="${C}" stroke-width="1.8"/>`
-    if (ojos === 'x') o += `<path d="M${cx - 3} -53 l6 6 M${cx + 3} -53 l-6 6" stroke="${C}" stroke-width="2" stroke-linecap="round"/>`
-    else if (ojos === 'abiertos') o += `<circle cx="${cx + 1.6}" cy="-49" r="2.2" fill="${C}"/>`
-    else o += `<circle cx="${cx + 2}" cy="-48.6" r="2.9" fill="${C}"/><circle cx="${cx + 3}" cy="-49.8" r=".8" fill="${P}"/>`
-    return o
+  // ── argollas de espiral (encima de la tapa) ──
+  for (let k = 0; k < 7; k++) {
+    const x = -16.5 + k * 5.5
+    cuerpo += `<path d="M${x} -59 V-67 a2.2 2.2 0 0 1 4.4 0 V-62" fill="none" stroke="${C}" stroke-width="2.8" stroke-linecap="round"/>
+      <path d="M${x} -60 V-67 a2.2 2.2 0 0 1 4.4 0 V-62" fill="none" stroke="${G}" stroke-width="1.1" stroke-linecap="round"/>`
   }
-  arriba += ojo(4, 6.2) + ojo(18, 6.8)
-  if (ojos === 'enojado') arriba += `<path d="M-3 -60 L10 -54.5" stroke="${C}" stroke-width="3.2" stroke-linecap="round"/><path d="M26 -61 L13 -55" stroke="${C}" stroke-width="3.2" stroke-linecap="round"/>`
-  if (ojos === 'abiertos') arriba += `<path d="M-1 -62.5 Q4 -64.5 9 -62.5" fill="none" stroke="${C}" stroke-width="2.6" stroke-linecap="round"/><path d="M12 -64 Q18 -66.5 24 -64" fill="none" stroke="${C}" stroke-width="2.6" stroke-linecap="round"/>`
-  cuerpoSvg += `<g transform="rotate(${-abre} -30 -28)">${arriba}</g>`
-  // espiral en el lomo (encima de todo)
-  for (let y = -45; y <= -12; y += 3.7) cuerpoSvg += `<ellipse cx="-31" cy="${y}" rx="2.6" ry="1.4" fill="none" stroke="${G}" stroke-width="1.3"/>`
-  if (sellada) cuerpoSvg += `<path d="M18 -48 Q22.6 -52 27 -48 L27 -9 Q22.6 -5 18 -9 Z" fill="none" stroke="${C}" stroke-width="2.2"/>
-    <path d="M12 -64 l2 -4 M32 -60 l3 -3 M37 -46 l4 0" stroke="${C}" stroke-width="1.4" stroke-linecap="round"/>`
-  s += `<g transform="translate(0 ${(1 - aplasta) * 0}) scale(1 ${aplasta}) rotate(${cuerpo} 0 -10)">${cuerpoSvg}</g>`
-  // ── brazos con guantes ──
-  const brazo = (de, a, puno, atras) => {
-    const col = atras ? G : C
-    const [x1, y1] = de, [x2, y2] = a
-    const mx = (x1 + x2) / 2 + (y2 - y1) * 0.25, my = (y1 + y2) / 2 - (x2 - x1) * 0.25
-    return `<path d="M${x1} ${y1} Q${mx} ${my} ${x2} ${y2}" fill="none" stroke="${col}" stroke-width="3.2" stroke-linecap="round"/>
-      <circle cx="${x2}" cy="${y2}" r="${puno ? 3.6 : 4.2}" fill="${N}" stroke="${C}" stroke-width="1.3"/>
-      ${puno ? '' : `<path d="M${x2 + 2.5} ${y2 - 3} l2.6 -2.4 M${x2 + 3.6} ${y2 - 0.6} l3.4 -.8 M${x2 + 3} ${y2 + 2} l3 1.4" stroke="${C}" stroke-width="1.2" stroke-linecap="round"/>`}`
+  s += `<g transform="rotate(${inclina} 0 -12)">${cuerpo}</g>`
+  // ── brazos con guantes negros y garras ──
+  const brazo = (lado, mano, garra) => {
+    const x0 = lado * 21.5, y0 = -36, [x2, y2] = mano
+    const mx = (x0 + x2) / 2 + lado * 6, my = (y0 + y2) / 2 - 4
+    let g = `<path d="M${x0} ${y0} Q${mx} ${my} ${x2} ${y2}" fill="none" stroke="${C}" stroke-width="4.2" stroke-linecap="round"/>
+      <circle cx="${x2}" cy="${y2}" r="5.2" fill="${C}"/><path d="M${x2 - lado * 3} ${y2 + 3.4} q${lado * 3} 2 ${lado * 6} 0" fill="none" stroke="${G}" stroke-width="1.1" stroke-linecap="round"/>`
+    if (garra) for (const a of [-40, 0, 40]) {
+      const ang = ((garra + a) * Math.PI) / 180, bx = x2 + Math.cos(ang) * 4.6, by = y2 + Math.sin(ang) * 4.6
+      g += `<path d="M${bx - Math.sin(ang) * 1.2} ${by + Math.cos(ang) * 1.2} L${bx + Math.cos(ang) * 4} ${by + Math.sin(ang) * 4} L${bx + Math.sin(ang) * 1.2} ${by - Math.cos(ang) * 1.2} Z" fill="${P}" stroke="${C}" stroke-width=".6" stroke-linejoin="round"/>`
+    }
+    return g
   }
   const B = {
-    jarras: [[[-20, -22], [-33, -10], true], [[16, -20], [33, -9], true]],
-    garras: [[[-20, -22], [-12, -46], false], [[16, -20], [41, -12], false]],
-    corre: [[[-20, -22], [-38, -26], true], [[10, -22], [32, -14], true]],
-    caidos: [[[-20, -22], [-30, -4], false], [[10, -22], [16, -2], false]],
+    amenaza: [[[-34, -50], -110], [[34, -50], -70]],
+    rugido: [[[-38, -62], -120], [[38, -62], -60]],
+    corre: [[[-34, -24], 160], [[33, -52], -40]],
+    vencida: [[[-27, -16], 0], [[27, -16], 0]],
   }[brazos]
-  s = brazo(...B[0], true) + s + brazo(...B[1], false)
+  s = brazo(-1, ...B[0]) + brazo(1, ...B[1]) + s
   return s
 }
-
-function lineasVelocidad() {
-  return [[-58, -40, 14], [-62, -28, 18], [-56, -16, 12]].map(([x, y, l]) => `<line x1="${x}" y1="${y}" x2="${x + l}" y2="${y}" stroke="${G}" stroke-width="1.6" stroke-linecap="round"/>`).join('') +
-    [[-40, -8, 20], [-46, -14, -15]].map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r})"><rect x="-3" y="-4" width="6" height="8" fill="${P}" stroke="${C}" stroke-width=".8"/><line x1="-1.8" y1="-1.5" x2="1.8" y2="-1.5" stroke="${G}" stroke-width=".5"/><line x1="-1.8" y1=".8" x2="1.8" y2=".8" stroke="${G}" stroke-width=".5"/></g>`).join('')
+const suelo = `<ellipse cx="0" cy=".5" rx="34" ry="2.4" fill="${C}" opacity=".12"/>`
+const extras = {
+  rugido: [[-46, -70, -32, -76], [-48, -56, -34, -58], [46, -70, 32, -76], [48, -56, 34, -58]].map(([a, b, c, d]) => `<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="${G}" stroke-width="1.6" stroke-linecap="round"/>`).join(''),
+  corre: [[-56, -50, 12], [-60, -38, 16], [-54, -26, 10]].map(([x, y, l]) => `<line x1="${x}" y1="${y}" x2="${x + l}" y2="${y}" stroke="${G}" stroke-width="1.6" stroke-linecap="round"/>`).join(''),
+  vencida: `<path d="M-8 -82 l1.5 3 l3.3 .4 l-2.4 2.3 l.6 3.3 l-3 -1.6 l-3 1.6 l.6 -3.3 l-2.4 -2.3 l3.3 -.4 Z" fill="${C}"/><path d="M14 -85 l1.2 2.4 l2.6 .3 l-1.9 1.8 l.5 2.6 l-2.4 -1.3 l-2.4 1.3 l.5 -2.6 l-1.9 -1.8 l2.6 -.3 Z" fill="${C}"/>` +
+    [[-38, -40, -20], [40, -48, 25], [-42, -14, 10]].map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r})"><rect x="-5" y="-6.5" width="10" height="13" fill="${P}" stroke="${C}" stroke-width=".9"/>${[-3.5, -1, 1.5, 4].map((yy) => `<line x1="-3.4" y1="${yy}" x2="3.4" y2="${yy}" stroke="${G}" stroke-width=".5"/>`).join('')}</g>`).join(''),
 }
-function hojasSueltas() {
-  return [[-44, -60, -25], [44, -66, 18], [52, -40, 35], [-52, -30, -12]].map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r})"><rect x="-5" y="-6.5" width="10" height="13" fill="${P}" stroke="${C}" stroke-width=".9"/>${[-3.5, -1, 1.5, 4].map((yy) => `<line x1="-3.4" y1="${yy}" x2="3.4" y2="${yy}" stroke="${G}" stroke-width=".5"/>`).join('')}</g>`).join('') +
-    `<path d="M-7 -78 l1.5 3 l3.3 .4 l-2.4 2.3 l.6 3.3 l-3 -1.6 l-3 1.6 l.6 -3.3 l-2.4 -2.3 l3.3 -.4 Z" fill="${C}"/><path d="M28 -80 l1.2 2.4 l2.6 .3 l-1.9 1.8 l.5 2.6 l-2.4 -1.3 l-2.4 1.3 l.5 -2.6 l-1.9 -1.8 l2.6 -.3 Z" fill="${C}"/>`
-}
-const suelo = `<ellipse cx="0" cy="0.5" rx="40" ry="2.2" fill="${C}" opacity=".12"/>`
 const poses = [
-  ['Acecho', 'cerrada, sonrisa en zigzag', agenda({})],
-  ['Mordida', 'las hojas son los dientes', agenda({ abre: 34, ojos: 'enojado', brazos: 'garras' })],
-  ['Persigue', 'inclinada, perdiendo papelitos', lineasVelocidad() + agenda({ abre: 16, cuerpo: 10, piernas: 'corre', brazos: 'corre' })],
-  ['Vencida', 'sellada con su propio elástico', hojasSueltas() + agenda({ ojos: 'x', piernas: 'vencida', brazos: 'caidos', sellada: true, cuerpo: -6 })],
+  ['Amenaza', 'de pie, garras listas', villana({})],
+  ['Rugido', 'boca abierta, colmillos', extras.rugido + villana({ brazos: 'rugido', boca: 'rugido' })],
+  ['Persigue', 'inclinada, a zancadas', extras.corre + villana({ brazos: 'corre', piernas: 'corre', inclina: 8 })],
+  ['Vencida', 'ojos en X, se le caen las hojas', extras.vencida + villana({ brazos: 'vencida', piernas: 'vencida', boca: 'vencida', ojos: 'x', inclina: -5 })],
 ]
 for (const [nombre, nota, dibujo] of poses) {
   const f = document.createElement('figure')
-  f.innerHTML = `<svg viewBox="-68 -90 136 96">${suelo}${dibujo}</svg><figcaption>${nombre}<small>${nota}</small></figcaption>`
+  f.innerHTML = `<svg viewBox="-62 -92 124 98">${suelo}${dibujo}</svg><figcaption>${nombre}<small>${nota}</small></figcaption>`
   document.getElementById('poses').append(f)
 }
-// comparación de tamaño con bookee (misma unidad: 1 = 1 de la grilla de 32 del logo)
-const img = await new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = 'bookee-feliz-negro.png' })
-// la imagen de bookee cubre x -29..29, y +21..-28 (unidades del personaje, y arriba)
-document.getElementById('comparar').innerHTML = `<line x1="-80" y1="0.3" x2="120" y2="0.3" stroke="${G}" stroke-width=".5"/>
-  <image href="bookee-feliz-negro.png" x="-71" y="${-49 + 3}" width="58" height="49"/>
-  <g transform="translate(55 0)">${agenda({ abre: 10, brazos: 'garras' })}</g>`
+// tamaño junto a bookee (misma unidad: la grilla de 32 del logo). La imagen de bookee cubre x -29..29, y +21..-28.
+document.getElementById('comparar').innerHTML = `<line x1="-60" y1=".3" x2="90" y2=".3" stroke="${G}" stroke-width=".5"/>
+  <image href="bookee-feliz-negro.png" x="-58" y="-46" width="58" height="49"/>
+  <g transform="translate(48 0)">${villana({ brazos: 'amenaza' })}</g>`
 window.listo = true
 </script>

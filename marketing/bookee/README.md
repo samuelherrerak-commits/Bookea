@@ -30,6 +30,7 @@ Para verla en vivo: `npm run dev` y abre http://localhost:5173/marketing/bookee/
 
 ## La agenda malvada (segunda historia)
 
-- `agenda-boceto.png` / `agenda-boceto.pdf`: boceto de la villana con 4 poses (acecho, mordida,
-  persigue, vencida), su tamaño junto a bookee y notas de partes, cara, movimiento y colores.
-- `agenda.html`: la página que lo dibuja (SVG; las poses salen de una sola función `agenda()`).
+- `agenda-boceto.png` / `agenda-boceto.pdf`: boceto de la villana, hecha como bookee pero más
+  grande, con espiral, ojos triangulares rojos y boca con colmillos. 4 poses (amenaza, rugido,
+  persigue, vencida), su tamaño junto a bookee y notas de cuerpo, cara y colores.
+- `agenda.html`: la página que la dibuja (SVG; las poses salen de una sola función `villana()`).
