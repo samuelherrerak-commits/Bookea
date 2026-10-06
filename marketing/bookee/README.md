@@ -10,3 +10,10 @@ El logo de bookeaa animado (el personaje de /ar1), como referencia para hacerlo 
 
 Para verla en vivo: `npm run dev` y abre http://localhost:5173/marketing/bookee/hoja.html
 (o cualquier servidor estático en la raíz del repo).
+
+## Bookee feliz
+
+- `bookee-feliz.pdf` / `bookee-feliz.png`: bookee feliz grande en una hoja A4 (300 dpi).
+- `bookee-feliz-negro.png` / `bookee-feliz-blanco.png`: solo el personaje con fondo transparente,
+  en sus dos versiones de color (negro para fondo claro, blanco como en /ar1).
+- `feliz.html`: la página que las genera (`?oscuro` cuerpo blanco, `?solo` sin textos ni fondo).
