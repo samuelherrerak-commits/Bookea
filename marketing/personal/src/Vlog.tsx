@@ -4,6 +4,8 @@ import { Enfasis } from './Enfasis'
 import { GANCHO_S, Gancho } from './Gancho'
 import { PERSIANA_S, Persiana } from './Persiana'
 import { Subtitulos } from './Subtitulos'
+import { Capitulo } from './Capitulo'
+import { Checklist } from './Checklist'
 import { Escena } from './Escena'
 import { aSalida, duracionSegmento, inicios, remapearCaptions } from './tiempo'
 import { CIERRE_S, type Edicion, type Segmento } from './tipos'
@@ -49,11 +51,28 @@ export const Vlog: React.FC<Edicion> = (e) => {
       ))}
 
       {/* Oscurece un poco abajo para que el subtítulo siempre se lea. */}
-      <AbsoluteFill style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.35) 100%)' }} />
+      <AbsoluteFill style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 58%, rgba(0,0,0,0.5) 82%, rgba(0,0,0,0.6) 100%)' }} />
 
       <Sequence durationInFrames={f(finCortes)}>
-        <Subtitulos captions={captions} />
+        <Subtitulos captions={captions} arriba={e.subtitulos?.arriba} tamano={e.subtitulos?.tamano} />
       </Sequence>
+
+      {(e.capitulos ?? []).map((x, i) => (
+        <Sequence key={`c${i}`} from={f(salida(x.ts))} durationInFrames={f(x.dur ?? 2.6)}>
+          <Capitulo texto={x.texto} numero={x.numero} />
+        </Sequence>
+      ))}
+
+      {e.checklist
+        ? (() => {
+            const desde = salida(e.checklist.desde)
+            return (
+              <Sequence from={f(desde)} durationInFrames={Math.max(1, f(salida(e.checklist.hasta)) - f(desde))}>
+                <Checklist titulo={e.checklist.titulo} items={e.checklist.items.map((it) => ({ texto: it.texto, en: salida(Number(it.ts)) - desde }))} />
+              </Sequence>
+            )
+          })()
+        : null}
 
       {(e.enfasis ?? []).map((x, i) => (
         <Sequence key={i} from={f(x.ts != null ? salida(x.ts) : x.t ?? 0)} durationInFrames={f(x.dur ?? 1.6)}>
@@ -96,7 +115,7 @@ export const Vlog: React.FC<Edicion> = (e) => {
 
       {e.cierre ? (
         <Sequence from={f(finCortes)} durationInFrames={f(CIERRE_S)}>
-          <Cierre />
+          <Cierre usuario={e.usuario} />
         </Sequence>
       ) : null}
 

@@ -4,13 +4,12 @@ import { duracionTotal } from './tiempo'
 import { FPS, type Edicion } from './tipos'
 import './fuentes'
 
-// Ejemplo para abrir el Studio sin video; editar.mjs siempre pasa sus propias props.
+// Ejemplo mínimo para abrir el Studio sin video. Ojo: Remotion MEZCLA estas props con las
+// que pasa editar.mjs, así que aquí no va nada opcional (gancho, cierre…) que pueda colarse.
 const ejemplo: Edicion = {
   video: '',
   segmentos: [{ desde: 0, hasta: 6 }],
   captions: [],
-  gancho: 'Así es un día emprendiendo',
-  cierre: true,
 }
 
 export const Raiz: React.FC = () => (

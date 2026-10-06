@@ -52,6 +52,14 @@ export type Edicion = {
   serie?: string
   enfasis?: Enfasis[]
   escenas?: Escena[]
+  /** Etiquetas de capítulo arriba a la izquierda (`ts` en segundos del original). */
+  capitulos?: { ts: number; texto: string; numero?: string; dur?: number }[]
+  /** Tarjeta de lista que se va marcando: aparece en `desde` y cada ítem se marca en su `ts` (original). */
+  checklist?: { desde: number; hasta: number; titulo: string; items: { ts: string | number; texto: string }[] }
+  /** Posición y tamaño de los subtítulos (por defecto arriba = 1190, tamano = 88). */
+  subtitulos?: { arriba?: number; tamano?: number }
+  /** Usuario de Instagram del cierre. */
+  usuario?: string
   /** Desde este segundo (original) la cámara no se ve: fondo negro. Por defecto, el inicio de la primera escena. */
   sinCamaraDesde?: number
   /** Pistas generadas por scripts/editar.mjs (rutas dentro de public/). */

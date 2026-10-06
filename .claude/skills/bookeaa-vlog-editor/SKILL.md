@@ -17,6 +17,15 @@ El proyecto está en `marketing/personal/` (Remotion). Lee su `README.md` y, par
 6. **Cuadros de prueba**: `--cuadros 0.5,<medio>,<final-1>`. Míralos con Read. Revisa que el subtítulo se lea, que no tape la cara y que esté en la zona segura.
 7. **Render completo**, verificar `-14 LUFS ±1` (`ffmpeg -af ebur128`) y enviar `salida/<nombre>.mp4` con SendUserFile. Propón también el texto del post (2 o 3 líneas en primera persona y una pregunta) y 3 a 5 hashtags.
 
+## Vlogs montados por Samuel (varios clips ya unidos)
+
+- No cortes por pausas: se perderían las tomas de apoyo. Usa `segmentos` a mano y recorta solo las tomas mudas muy largas (más de ~4 s).
+- Motion graphics: `enfasis` (título "DÍA 1.", hora "5:30" en tamaño reloj), `capitulos` por lugar o momento y `checklist` para lo que logró en el día. Sin "Diario del fundador" salvo que lo pida.
+- Subtítulos abajo: `subtitulos: { arriba: 1440, tamano: 76 }`.
+- Si un tramo tiene voz baja, Whisper con VAD lo salta. Transcríbelo sin VAD y sube su volumen en la entrada (`volume=enable='gte(t,X)'`).
+- Referencia: `ediciones/2026-10-05-dia-1.json`.
+- Instagram: **@bookeaa.app**.
+
 ## Videos en dos partes (a cámara + explicando la app)
 
 Cuando Samuel habla mirando la pantalla o explica cómo funciona bookeaa, usa `escenas`:

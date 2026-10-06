@@ -24,6 +24,10 @@ Copia `ediciones/ejemplo.json`. Solo hace falta `fuente`; lo demás es opcional.
 | `conMusica`, `volumenMusica` | Música de bookeaa (la de `marketing/scripts/audio.mjs`) bajo la voz. El volumen por defecto es 0.1 |
 | `sonidos` | Efectos extra `[{ t, tipo }]`: `whoosh`, `pop`, `ding`, `check`, `golpe`, `desliza`, `texto`, `tecla`, `final` |
 | `escenas` | Escenas de marca a pantalla completa (tapan la cámara y la voz sigue), para explicar la app como en los reels: `{ desde, hasta, fondo: "negro"\|"blanco", entrada?: "ola"\|"lado"\|"corte", kicker?, titulo: [líneas], tiempos?, estilo?, tamano?, texto?, textoEn?, link?, pastilla?, telefonos?: [{ img: "flujo/4-agenda.jpg", ancho?, x, y, rot?, en? }] }`. Los tiempos van en segundos del ORIGINAL. Durante una escena no se muestran subtítulos |
+| `capitulos` | `[{ ts, texto, numero?, dur? }]`: etiqueta de capítulo arriba a la izquierda (número + pastilla con borde) |
+| `checklist` | `{ desde, hasta, titulo, items: [{ ts, texto }] }`: tarjeta carbón que marca cada ítem con ✓ cuando se nombra |
+| `subtitulos` | `{ arriba?, tamano? }`: para subtítulos más abajo en un vlog, p. ej. `{ "arriba": 1440, "tamano": 76 }` |
+| `usuario` | Usuario del cierre (por defecto `@bookeaa.app`) |
 | `cierre` | Cierre de marca de 2,5 s (logo + bookeaa, @bookeaa) |
 | `segmentos` | Los salen solos al cortar silencios. Edítalos para quitar tomas malas. `bloque: true` agrega la persiana negra + golpe y `broll: "entrada/x.mp4"` tapa la cámara con un clip |
 | `umbralSilencio`, `silencioMin` | Ajuste del corte (por defecto `-32dB` y `0.45` s) |

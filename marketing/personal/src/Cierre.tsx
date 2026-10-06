@@ -4,7 +4,7 @@ import { Lineas } from './Lineas'
 import { COLOR, MARGEN, TIPO, clamp, tw } from './marca'
 
 /** Cierre como el de los reels de la marca: logo + "bookeaa" gigante, kicker, regla y @. */
-export const Cierre: React.FC = () => {
+export const Cierre: React.FC<{ usuario?: string }> = ({ usuario = '@bookeaa.app' }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   const t = frame / fps
@@ -25,7 +25,7 @@ export const Cierre: React.FC = () => {
       <div style={{ fontFamily: TEXTO, fontSize: 44, lineHeight: 1.35, marginTop: 40, opacity: texto, transform: `translateY(${(1 - texto) * 30}px)` }}>
         Tus clientes reservan solos.
         <br />
-        <b style={{ fontWeight: 600 }}>@bookeaa</b>
+        <b style={{ fontWeight: 600 }}>{usuario}</b>
       </div>
     </AbsoluteFill>
   )

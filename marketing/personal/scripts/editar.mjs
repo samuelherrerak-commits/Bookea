@@ -176,6 +176,11 @@ async function sonido() {
   // Mismos efectos que los reels de la marca: texto al entrar un titular, whoosh en la ola.
   if (e.gancho) cues.push({ t: 0.08, tipo: 'texto' }, { t: GANCHO_S - 0.45, tipo: 'whoosh' })
   for (const x of e.enfasis ?? []) cues.push({ t: (x.ts != null ? aSalida(x.ts) : x.t) + 0.04, tipo: 'texto' })
+  for (const x of e.capitulos ?? []) cues.push({ t: aSalida(x.ts), tipo: 'desliza' })
+  if (e.checklist) {
+    cues.push({ t: aSalida(e.checklist.desde), tipo: 'desliza' })
+    for (const it of e.checklist.items) cues.push({ t: aSalida(Number(it.ts)) + 0.18, tipo: 'check' })
+  }
   // Escenas de marca: whoosh en la ola/lado, texto al entrar el titular, desliza con cada
   // teléfono y teclas mientras se escribe el link (igual que los reels de la campaña).
   for (const x of e.escenas ?? []) {
