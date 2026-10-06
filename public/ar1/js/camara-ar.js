@@ -3,7 +3,7 @@
 // importa `sRGBEncoding`, que three.js quitó en la 0.162, así que aquí va la misma lógica de
 // cámara de MindARThree escrita para el three.js actual.
 
-const MINDAR = new URL('../vendor/mind-ar-1.2.5/mindar-image.prod.js', import.meta.url).href
+const MINDAR = new URL('../../ar-comun/vendor/mind-ar-1.2.5/mindar-image.prod.js', import.meta.url).href
 const OBJETIVO = new URL('../tarjeta.mind', import.meta.url).href
 
 let cargaMindAR = null

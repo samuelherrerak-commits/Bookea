@@ -3,9 +3,11 @@ import { join, resolve } from 'node:path'
 import { brotliCompressSync, constants } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 
-// La página /ar es JavaScript sin build (public/ar/js). Se importa por URL para que tsc no la revise.
-const AR = resolve(process.cwd(), 'public/ar')
-const cargar = (archivo: string) => import(/* @vite-ignore */ new URL(`../public/ar/js/${archivo}`, import.meta.url).href)
+// La página /ar1 (la primera animación) es JavaScript sin build (public/ar1/js). Se importa por URL
+// para que tsc no la revise. Las librerías y fuentes compartidas están en public/ar-comun.
+const AR = resolve(process.cwd(), 'public/ar1')
+const COMUN = resolve(process.cwd(), 'public/ar-comun')
+const cargar = (archivo: string) => import(/* @vite-ignore */ new URL(`../public/ar1/js/${archivo}`, import.meta.url).href)
 const guion = await cargar('guion.js')
 const textos = await cargar('textos.js')
 const tarjeta = JSON.parse(readFileSync(join(AR, 'tarjeta.json'), 'utf8'))
@@ -15,7 +17,7 @@ function estadoEn(t: number) {
   return guion.evaluar(t, d, guion.crearEstado())
 }
 
-describe('guion de /ar', () => {
+describe('guion de /ar1', () => {
   it('dura entre 12 y 15 s, en 5 escenas seguidas', () => {
     expect(guion.DURACION).toBeGreaterThanOrEqual(12)
     expect(guion.DURACION).toBeLessThanOrEqual(15)
@@ -70,7 +72,7 @@ describe('guion de /ar', () => {
   })
 })
 
-describe('textos de /ar', () => {
+describe('textos de /ar1', () => {
   it('incluye las frases pedidas, en líneas que se leen a tamaño de tarjeta', () => {
     const frases = (textos.FRASES as string[][]).map((l) => l.join(' '))
     expect(frases.slice(0, 3)).toEqual(['Tus clientes reservan desde tu link', 'La cita llega sola a tu Google Calendar', 'Adiós libreta'])
@@ -89,7 +91,7 @@ describe('textos de /ar', () => {
   })
 })
 
-describe('archivos de /ar', () => {
+describe('archivos de /ar1', () => {
   it('el logo medido cae dentro de la tarjeta y el objetivo compilado existe', () => {
     const { logo, ancho, alto } = tarjeta
     expect(logo.x).toBeGreaterThan(0)
@@ -114,12 +116,13 @@ describe('archivos de /ar', () => {
       }
     }
     recorrer(AR)
+    recorrer(COMUN)
     expect(transferido).toBeLessThan(3 * 1024 * 1024)
   })
 
-  it('render.yaml deja usar la cámara en el propio sitio y manda /ar a /ar/', () => {
+  it('render.yaml deja usar la cámara en el propio sitio y manda /ar1 a /ar1/', () => {
     const yaml = readFileSync(resolve(process.cwd(), 'render.yaml'), 'utf8')
     expect(yaml).toMatch(/Permissions-Policy\s+value: camera=\(self\)/)
-    expect(yaml).toMatch(/type: redirect\s+source: \/ar\s+destination: \/ar\//)
+    expect(yaml).toMatch(/type: redirect\s+source: \/ar1\s+destination: \/ar1\//)
   })
 })

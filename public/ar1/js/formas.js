@@ -1,7 +1,7 @@
 // Piezas de dibujo compartidas: colores de la marca, formas planas y trazos que se
 // recalculan en cada cuadro sin crear memoria nueva.
 
-import * as THREE from '../vendor/three-0.186.1/three.module.js'
+import * as THREE from '../../ar-comun/vendor/three-0.186.1/three.module.js'
 
 export { THREE }
 

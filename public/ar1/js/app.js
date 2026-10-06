@@ -1,9 +1,10 @@
-// /ar: pantalla inicial → realidad aumentada (o Plan B sin cámara) → animación en bucle.
+// /ar1 (la primera animación): pantalla inicial → realidad aumentada (o Plan B sin cámara) →
+// animación en bucle.
 //
-//   /ar/                 pantalla inicial con "Ver en realidad aumentada"
-//   /ar/?prueba          la animación sin cámara ni tarjeta, con controles para revisar el guion
+//   /ar1/                pantalla inicial con "Ver en realidad aumentada"
+//   /ar1/?prueba         la animación sin cámara ni tarjeta, con controles para revisar el guion
 //                        (&t=8.2 empieza en ese segundo, &escena=3 en esa escena, &pausa quieta)
-//   /ar/?debug           en modo AR muestra FPS y estado del seguimiento (&t=10 empieza en ese segundo)
+//   /ar1/?debug          en modo AR muestra FPS y estado del seguimiento (&t=10 empieza en ese segundo)
 //   &proceso=640 &minCF=0.001 &beta=100 &suavizado=22   ajustes finos del seguimiento
 
 import { DURACION, ESCENAS, SONIDOS, crearEstado, disposicion, evaluar } from './guion.js'

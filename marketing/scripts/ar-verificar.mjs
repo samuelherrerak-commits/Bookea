@@ -1,15 +1,15 @@
 // Prueba de punta a punta de /ar sin teléfono: una cámara falsa con la tarjeta.
 //
-//   npm run ar:verificar
+//   npm run ar:verificar -- --experiencia ar1
 //
-// 1. Arma un video sintético: fondo de mesa, la tarjeta (marketing/ar/objetivo.png) en
+// 1. Arma un video sintético: fondo de mesa, la tarjeta (marketing/<exp>/objetivo.png) en
 //    perspectiva que se mueve un poco, sale de cuadro y vuelve.
-// 2. Abre /ar en Chromium con ese video como cámara y toca "Ver en realidad aumentada".
+// 2. Abre /<exp>/ en Chromium con ese video como cámara y toca "Ver en realidad aumentada".
 // 3. Comprueba que MindAR la reconoce, que la animación avanza, que se pausa y muestra
 //    "Apunta a la tarjeta" al perderla y que retoma al volver. Luego prueba el Plan B con el
-//    permiso de cámara negado y mide el peso de /ar.
+//    permiso de cámara negado y mide el peso de la página (con lo compartido de ar-comun).
 //
-// Las capturas quedan en marketing/salida/ar/ (no se suben al repo). En headless WebGL corre
+// Las capturas quedan en marketing/salida/<exp>/ (no se suben al repo). En headless WebGL corre
 // por CPU (SwiftShader): los FPS de aquí no dicen nada del teléfono, pero el flujo es el real.
 
 import { execFileSync } from 'node:child_process'
@@ -18,10 +18,12 @@ import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { chromium } from 'playwright-core'
 import { RAIZ } from './servidor.mjs'
-import { PUBLICO, servirPublico } from './ar-servidor.mjs'
+import { servirPublico } from './ar-servidor.mjs'
+import { COMUN, experienciaDeArgs } from './ar-experiencias.mjs'
 
+const EXP = experienciaDeArgs()
 const CHROMIUM = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium'
-const SALIDA = join(RAIZ, 'marketing/salida/ar')
+const SALIDA = EXP.salida
 const CUADROS = join(SALIDA, 'cuadros')
 const VIDEO = join(SALIDA, 'camara-falsa.y4m')
 const FPS = 10
@@ -40,7 +42,7 @@ await mkdir(CUADROS, { recursive: true })
 // ── 1. video sintético ──
 console.log('Armando la cámara falsa…')
 {
-  const tarjeta = (await readFile(join(RAIZ, 'marketing/ar/objetivo.png'))).toString('base64')
+  const tarjeta = (await readFile(join(EXP.marketing, 'objetivo.png'))).toString('base64')
   const browser = await chromium.launch({ executablePath: CHROMIUM })
   // vertical, como entrega la cámara un teléfono en la mano
   const page = await browser.newPage({ viewport: { width: 480, height: 640 } })
@@ -90,7 +92,7 @@ try {
   const errores = []
   page.on('pageerror', (e) => errores.push(e.message))
   page.on('console', (m) => m.type() === 'error' && errores.push(m.text()))
-  await page.goto(`${url}/ar/?debug`, { waitUntil: 'networkidle' })
+  await page.goto(`${url}/${EXP.id}/?debug`, { waitUntil: 'networkidle' })
   await page.screenshot({ path: join(SALIDA, '1-inicio.png') })
   await page.click('#ver-ar')
   await page.waitForFunction(() => window.__ar.pantalla === 'ar' || window.__ar.modo === 'planb', null, { timeout: 90000 })
@@ -130,7 +132,7 @@ try {
   const b2 = await chromium.launch({ executablePath: CHROMIUM, args: [...GPU, '--use-fake-device-for-media-stream', '--deny-permission-prompts'] })
   const ctx = await b2.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2 })
   const p2 = await ctx.newPage()
-  await p2.goto(`${url}/ar/`, { waitUntil: 'networkidle' })
+  await p2.goto(`${url}/${EXP.id}/`, { waitUntil: 'networkidle' })
   await p2.click('#ver-ar')
   await p2.waitForFunction(() => window.__ar.modo === 'planb' && window.__ar.listo, null, { timeout: 60000 })
   const motivo = await p2.evaluate(() => window.__ar.motivo)
@@ -149,7 +151,8 @@ try {
       else archivos.push(ruta)
     }
   }
-  await recorrer(join(PUBLICO, 'ar'))
+  await recorrer(EXP.publico)
+  await recorrer(COMUN)
   let crudo = 0
   let comprimido = 0
   // el CDN comprime con brotli solo lo que es texto; el .mind, las fuentes y la imagen van tal cual
@@ -159,7 +162,7 @@ try {
     comprimido += /\.(js|html|json|css|svg|txt)$/.test(f) ? brotliCompressSync(await readFile(f), { params: { [constants.BROTLI_PARAM_QUALITY]: 5 } }).length : tam
   }
   const mb = (n) => (n / 1024 / 1024).toFixed(2)
-  ok(comprimido < 3 * 1024 * 1024, `peso de /ar: ${mb(comprimido)} MB transferidos (${mb(crudo)} MB sin comprimir)`)
+  ok(comprimido < 3 * 1024 * 1024, `peso de /${EXP.id}/: ${mb(comprimido)} MB transferidos (${mb(crudo)} MB sin comprimir)`)
 } finally {
   cerrar()
 }
