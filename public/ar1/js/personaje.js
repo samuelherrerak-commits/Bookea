@@ -48,23 +48,23 @@ export function crearPersonaje({ cuerpo: colorCuerpo, calado: colorCalado }) {
   const ojos = [-1, 1].map((lado) => {
     const g = new THREE.Group()
     const abierto = new THREE.Group()
-    abierto.add(elipse(2.25, 3.0, mat(COLOR.carbon), 0, 0, 0.4))
+    abierto.add(elipse(2.25, 3.0, mat(colorCalado), 0, 0, 0.4))
     // ojo "pastel" de los dibujos de los años 30: una porción blanca en diagonal
-    const brillo = malla(geo('porcion-ojo', () => new THREE.CircleGeometry(1, 12, Math.PI * 0.2, Math.PI * 0.32)), mat(COLOR.papel), 0, 0, 0.45)
+    const brillo = malla(geo('porcion-ojo', () => new THREE.CircleGeometry(1, 12, Math.PI * 0.2, Math.PI * 0.32)), mat(colorCuerpo), 0, 0, 0.45)
     brillo.scale.set(2.05, 2.8, 1)
     abierto.add(brillo)
-    const feliz = malla(geoAnillo(1.5, 2.6, 20, Math.PI * 0.12, Math.PI * 0.76), mat(COLOR.carbon), 0, -1, 0.4)
+    const feliz = malla(geoAnillo(1.5, 2.6, 20, Math.PI * 0.12, Math.PI * 0.76), mat(colorCalado), 0, -1, 0.4)
     g.add(abierto, feliz)
     cara.add(g)
     return { g, abierto, feliz, lado }
   })
   const cejas = [-1, 1].map((lado) => {
-    const m = malla(geoRrect(4.4, 1.15, 0.575), mat(COLOR.carbon), 0, 0, 0.4)
+    const m = malla(geoRrect(4.4, 1.15, 0.575), mat(colorCalado), 0, 0, 0.4)
     cara.add(m)
     return { m, lado }
   })
-  const sonrisa = malla(geoAnillo(2.9, 3.9, 24, Math.PI * 1.12, Math.PI * 0.76), mat(COLOR.carbon), 0, 0, 0.4)
-  const bocaAbierta = elipse(1, 1, mat(COLOR.carbon), 0, 0, 0.4)
+  const sonrisa = malla(geoAnillo(2.9, 3.9, 24, Math.PI * 1.12, Math.PI * 0.76), mat(colorCalado), 0, 0, 0.4)
+  const bocaAbierta = elipse(1, 1, mat(colorCalado), 0, 0, 0.4)
   cara.add(sonrisa, bocaAbierta)
 
   // ── Brazos y piernas ───────────────────────────────────────────────────────────────────
@@ -168,6 +168,7 @@ export function crearPersonaje({ cuerpo: colorCuerpo, calado: colorCalado }) {
       const pierna = piernas[i]
       const zapato = zapatos[i]
       pierna.contorno.grupo.visible = pierna.relleno.grupo.visible = zapato.visible = hay
+      if (i === 0) lapiz.visible = hay && p.lapiz > 0
       if (!hay) continue
 
       const m = p.manos[i]
@@ -189,10 +190,7 @@ export function crearPersonaje({ cuerpo: colorCuerpo, calado: colorCalado }) {
       guante.grupo.rotation.z = fin
       guante.grupo.scale.set(g, lado * g, 1)
       guante.pose(pose)
-      if (i === 0) {
-        lapiz.visible = p.lapiz > 0 && hay
-        lapiz.position.set(B.x, B.y, 0)
-      }
+      if (i === 0) lapiz.position.set(B.x, B.y, 0)
 
       const f = p.pies[i]
       A.set(CUERPO.caderas[i][0], CUERPO.caderas[i][1])

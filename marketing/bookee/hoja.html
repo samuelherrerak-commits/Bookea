@@ -1,0 +1,74 @@
+<!doctype html><meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 800; src: url('/public/ar-comun/fuentes/barlow-condensed-latin-800-normal.woff2'); }
+  @font-face { font-family: 'Barlow'; font-weight: 600; src: url('/public/ar-comun/fuentes/barlow-latin-600-normal.woff2'); }
+  body { margin: 0; width: 1600px; font-family: 'Barlow', sans-serif; color: #0f0f0e; background: #fff; }
+  header { padding: 40px 48px 8px; } h1 { font: 800 64px/0.9 'Barlow Condensed'; margin: 0; text-transform: uppercase; }
+  header p { margin: 10px 0 0; font-size: 20px; color: #5b5b57; max-width: 70ch; }
+  .fila { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; padding: 16px 48px; }
+  .fila.oscura { background: #0f0f0e; color: #fff; }
+  figure { margin: 0; text-align: center; } canvas { width: 240px; height: 300px; }
+  figcaption { font: 800 20px/1 'Barlow Condensed'; text-transform: uppercase; letter-spacing: .04em; }
+  figcaption small { display: block; font: 600 14px/1.3 'Barlow'; text-transform: none; letter-spacing: 0; opacity: .7; margin-top: 4px; }
+  .datos { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 32px; padding: 24px 48px 48px; font-size: 17px; line-height: 1.45; }
+  .datos h2 { font: 800 26px/1 'Barlow Condensed'; text-transform: uppercase; margin: 0 0 8px; }
+  code { font-size: 15px; } .muestra { display: inline-block; width: 16px; height: 16px; border: 1px solid #999; vertical-align: -3px; margin-right: 6px; }
+</style>
+<header><h1>bookee · hoja de personaje</h1>
+<p>El logo de bookeaa animado (primera animación, /ar1). Referencia para modelarlo en 3D: proporciones, partes, colores y expresiones. Medidas en unidades de la grilla de 32 del logo (public/bookeaa.svg).</p></header>
+<div class="fila" id="claro"></div>
+<div class="fila oscura" id="oscuro"></div>
+<section class="datos">
+<div><h2>Partes y medidas</h2>
+Cuerpo: rectángulo 28 × 26, radio de esquina 7 (logo). Despierto se estira a 28 × 30, con la base fija.<br>
+Argollas: 2 cápsulas de trazo 2,6, en x = ±6, sobresalen 2,8 por arriba.<br>
+«b»: asta de 12 + panza circular de radio 4, trazo 2,6. Despierto baja a la panza al 60 %.<br>
+Ojos: óvalos 4,5 × 6 en x = ±5, a 7,5 bajo el borde de arriba, con brillo en cuña. Cejas 4,4 × 1,15.<br>
+Brazos: tubos de grosor 2,8 y largo 15 desde los costados (y = 0,5). Piernas: grosor 2,8, largo 11, desde x = ±5,5 en la base.<br>
+Guantes blancos (palma radio 3, puño 2 × 4,9); zapatos óvalo 8,3 × 4,3.</div>
+<div><h2>Colores</h2>
+<span class="muestra" style="background:#0f0f0e"></span>Carbón <code>#0f0f0e</code><br>
+<span class="muestra" style="background:#fff"></span>Papel <code>#ffffff</code><br>
+<span class="muestra" style="background:#5b5b57"></span>Grafito <code>#5b5b57</code> (canto / grosor)<br><br>
+Sobre fondo claro: cuerpo carbón, «b» y guantes papel.<br>Sobre fondo oscuro (ar1): cuerpo papel, «b» carbón.<br>Contorno del color contrario para leerse sobre cualquier fondo.</div>
+<div><h2>Para el 3D</h2>
+Cuerpo: caja redondeada (bisel 7 en las 4 aristas verticales, ~1,5 en los cantos), espesor sugerido 8–10.<br>
+«b» y ojos en relieve sobre el frente.<br>
+Brazos y piernas: tubos curvos sin codos («rubber hose»), mejor animarlos por código o con huesos tipo curva.<br>
+Exportar a GLB, Y hacia arriba, 1 unidad = 1 de la grilla.</div>
+</section>
+<script type="module">
+import * as THREE from '/public/ar-comun/vendor/three-0.186.1/three.module.js'
+import { crearPersonaje } from '/public/ar1/js/personaje.js'
+import { crearEstado, POSE } from '/public/ar1/js/guion.js'
+await document.fonts.ready
+const poses = [
+  ['Logo', 'así está impreso', (p) => { p.estiro = 0; p.ojos = 0; p.extremidades = 0; p.grosor = 0 }],
+  ['Neutral', 'despierto, de pie', () => {}],
+  ['Feliz', 'ojos ^^ y sonrisa', (p) => { p.feliz = 1; mano(p, 0, -21, 5); mano(p, 1, 21, 5) }],
+  ['Enojado', 'puños en guardia', (p) => { p.enojo = 1; mano(p, 0, -15, -1, POSE.puno, 1.4); mano(p, 1, 15, -1, POSE.puno, 1.4); p.boca = 0.6 }],
+  ['Sorpresa', 'brazos arriba', (p) => { p.sorpresa = 1; mano(p, 0, -16, 13); mano(p, 1, 16, 13); p.boca = 0.5 }],
+  ['Señala', 'el botón final', (p) => { mano(p, 1, 21, -14, POSE.senala, 0.6); mano(p, 0, -16, -6.5, POSE.puno, 2); p.mirarX = 0.5; p.mirarY = -0.8 }],
+]
+function mano(p, i, x, y, pose = POSE.abierta, curva = 1) { Object.assign(p.manos[i], { x, y, pose, curva }) }
+function base() {
+  const e = crearEstado(), p = e.pj
+  Object.assign(p, { x: 0, y: 0, z: 0, lu: 1, rot: 0, squash: 1, estiro: 1, ojos: 1, extremidades: 1, grosor: 1 })
+  mano(p, 0, -17.5, -11); mano(p, 1, 17.5, -11)
+  Object.assign(p.pies[0], { x: -6.5, y: -22.8, rot: 0 }); Object.assign(p.pies[1], { x: 6.5, y: -22.8, rot: 0 })
+  return p
+}
+for (const [fila, colores] of [['claro', { cuerpo: '#0f0f0e', calado: '#ffffff' }], ['oscuro', { cuerpo: '#ffffff', calado: '#0f0f0e' }]]) {
+  for (const [nombre, nota, ajuste] of poses) {
+    const fig = document.createElement('figure'); const c = document.createElement('canvas'); c.width = 480; c.height = 600
+    fig.append(c); fig.insertAdjacentHTML('beforeend', `<figcaption>${nombre}<small>${nota}</small></figcaption>`); document.getElementById(fila).append(fig)
+    const r = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true })
+    const escena = new THREE.Scene(); const cam = new THREE.OrthographicCamera(-30, 30, 34, -32, -50, 50)
+    const pj = crearPersonaje(colores); escena.add(pj.raiz)
+    const p = base(); ajuste(p); pj.aplicar(p, 0, null)
+    if (p.extremidades === 0) pj.raiz.position.y = -6
+    r.render(escena, cam)
+  }
+}
+window.listo = true
+</script>
