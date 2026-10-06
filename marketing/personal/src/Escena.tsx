@@ -73,6 +73,38 @@ export const Escena: React.FC<{ e: TEscena; rel: (t: number) => number }> = ({ e
               </span>
             </div>
           ) : null}
+          {e.burbujas ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 22, marginTop: 70 }}>
+              {e.burbujas.map((b, i) => {
+                const a = Math.max(base, rel(b.en))
+                const k = clamp(tw(t, a, 0.35, 0, 1))
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      alignSelf: b.propia ? 'flex-end' : 'flex-start',
+                      maxWidth: 780,
+                      background: b.propia ? tinta : negro ? '#262624' : COLOR.niebla,
+                      color: b.propia ? fondo : tinta,
+                      borderRadius: b.propia ? '44px 44px 12px 44px' : '44px 44px 44px 12px',
+                      padding: '30px 40px',
+                      fontFamily: TEXTO,
+                      fontSize: 50,
+                      lineHeight: 1.25,
+                      opacity: k,
+                      transform: `translateY(${(1 - k) * 30}px) scale(${0.9 + 0.1 * k})`,
+                      transformOrigin: b.propia ? 'right bottom' : 'left bottom',
+                    }}
+                  >
+                    {b.texto}
+                  </div>
+                )
+              })}
+              {e.visto ? (
+                <div style={{ fontFamily: TEXTO, fontSize: 36, opacity: 0.6 * clamp(tw(t, Math.max(base, rel(e.visto.en)), 0.4, 0, 1)), marginTop: 6 }}>{e.visto.texto}</div>
+              ) : null}
+            </div>
+          ) : null}
           {e.pastilla ? (
             <div
               style={{

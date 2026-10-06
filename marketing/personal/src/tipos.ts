@@ -38,6 +38,10 @@ export type Escena = {
   link?: string
   pastilla?: string
   telefonos?: Telefono[]
+  /** Burbujas de chat que aparecen en su segundo `en` (original). `propia` = mensaje tuyo (blanco, a la derecha). */
+  burbujas?: { texto: string; en: number; propia?: boolean }[]
+  /** Etiqueta pequeña tipo "Visto 9:15 a. m." bajo las burbujas, en su segundo `en`. */
+  visto?: { texto: string; en: number }
 }
 
 export type Edicion = {
@@ -58,6 +62,12 @@ export type Edicion = {
   checklist?: { desde: number; hasta: number; titulo: string; items: { ts: string | number; texto: string }[] }
   /** Posición y tamaño de los subtítulos (por defecto arriba = 1190, tamano = 88). */
   subtitulos?: { arriba?: number; tamano?: number }
+  /** Efectos de la librería public/sfx (Mixkit): `t` en el video final o `ts` en el original. */
+  sfx?: { t?: number; ts?: number; nombre: string; vol?: number }[]
+  /** "mixkit": los efectos automáticos (transiciones, títulos, checks) usan public/sfx en vez de los sintetizados. */
+  kitSfx?: 'mixkit'
+  /** Generado por editar.mjs: efectos automáticos ya en tiempo del video final. */
+  sfxAuto?: { t: number; nombre: string; vol?: number }[]
   /** Usuario de Instagram del cierre. */
   usuario?: string
   /** Desde este segundo (original) la cámara no se ve: fondo negro. Por defecto, el inicio de la primera escena. */

@@ -26,6 +26,14 @@ El proyecto está en `marketing/personal/` (Remotion). Lee su `README.md` y, par
 - Referencia: `ediciones/2026-10-05-dia-1.json`.
 - Instagram: **@bookeaa.app**.
 
+## Videos de guion (cámara + MG + app) · GUIONES.md
+
+- Samuel graba con varias tomas y no siempre dice todas las líneas. Transcribe **sin VAD** (`vad_filter=False`): con VAD se pierden frases. Quédate con la mejor toma de cada frase.
+- Las líneas del guion que no grabó van como escenas MG mudas sobre un tramo silencioso del original. Los segmentos pueden ir en cualquier orden.
+- Por defecto, efectos estilo CapCut: `kitSfx: "mixkit"` + `sfx` puntuales (burbuja para chats, trombon para el fracaso, monedas para ventas, exito al reservar, impacto en el gancho).
+- `sinCamaraDesde: 9999` cuando la cámara vuelve después de las escenas.
+- Referencia: `ediciones/2026-10-06-guion-1.json`.
+
 ## Videos en dos partes (a cámara + explicando la app)
 
 Cuando Samuel habla mirando la pantalla o explica cómo funciona bookeaa, usa `escenas`:

@@ -27,9 +27,11 @@ Copia `ediciones/ejemplo.json`. Solo hace falta `fuente`; lo demás es opcional.
 | `capitulos` | `[{ ts, texto, numero?, dur? }]`: etiqueta de capítulo arriba a la izquierda (número + pastilla con borde) |
 | `checklist` | `{ desde, hasta, titulo, items: [{ ts, texto }] }`: tarjeta carbón que marca cada ítem con ✓ cuando se nombra |
 | `subtitulos` | `{ arriba?, tamano? }`: para subtítulos más abajo en un vlog, p. ej. `{ "arriba": 1440, "tamano": 76 }` |
+| `kitSfx` | `"mixkit"`: los efectos automáticos (transiciones, títulos, checks, teclas) usan la librería de `public/sfx/` en vez de los sintetizados |
+| `sfx` | `[{ ts \| t, nombre, vol? }]`: efectos puntuales de `public/sfx/`: whoosh, barrido, impacto, burbuja, mensaje, pop, pop-fuerte, click, teclado, tecla, check, exito, monedas, trombon, boing. Son de Mixkit, con licencia libre (ver `public/sfx/LICENCIA.md`) |
 | `usuario` | Usuario del cierre (por defecto `@bookeaa.app`) |
 | `cierre` | Cierre de marca de 2,5 s (logo + bookeaa, @bookeaa) |
-| `segmentos` | Los salen solos al cortar silencios. Edítalos para quitar tomas malas. `bloque: true` agrega la persiana negra + golpe y `broll: "entrada/x.mp4"` tapa la cámara con un clip |
+| `segmentos` | Pueden ir en otro orden que el original (p. ej. usar la segunda toma del gancho primero). Salen solos al cortar silencios. Edítalos para quitar tomas malas. `bloque: true` agrega la persiana negra + golpe y `broll: "entrada/x.mp4"` tapa la cámara con un clip |
 | `umbralSilencio`, `silencioMin` | Ajuste del corte (por defecto `-32dB` y `0.45` s) |
 | `motorWhisper`, `modeloWhisper` | `"faster"` + `"turbo"` da tiempos exactos por palabra (necesita huggingface.co) y corta por las pausas entre palabras. Sin eso se usa sherpa-onnx |
 

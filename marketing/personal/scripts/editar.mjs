@@ -156,6 +156,12 @@ function cortar(total, captions) {
 function aSalida(t) {
   let ini = 0
   for (const s of e.segmentos) {
+    if (t >= s.desde && t < s.hasta) return ini + t - s.desde
+    if (Math.abs(t - s.hasta) < 0.05) return ini + s.hasta - s.desde
+    ini += s.hasta - s.desde
+  }
+  ini = 0
+  for (const s of e.segmentos) {
     if (t < s.desde) return ini
     if (t < s.hasta) return ini + t - s.desde
     ini += s.hasta - s.desde
@@ -196,8 +202,16 @@ async function sonido() {
   if (e.cierre) cues.push({ t: cortes + 0.1, tipo: 'final' })
 
   mkdirSync(join(PUBLIC, 'tmp'), { recursive: true })
-  e.efectos = `tmp/${nombre}-efectos.wav`
-  await generarAudio({ duracion, cues, destino: join(PUBLIC, e.efectos), volumenMusica: 0 })
+  if (e.kitSfx === 'mixkit') {
+    // Mismos momentos, pero con la librería de public/sfx (estilo CapCut).
+    const KIT = { whoosh: ['whoosh', 0.45], desliza: ['barrido', 0.5], texto: ['pop', 0.55], golpe: ['impacto', 0.5], check: ['check', 0.45], tecla: ['tecla', 0.35], final: ['exito', 0.45], pop: ['pop-fuerte', 0.5], ding: ['mensaje', 0.5] }
+    e.sfxAuto = cues.filter((c) => KIT[c.tipo]).map((c) => ({ t: +c.t.toFixed(3), nombre: KIT[c.tipo][0], vol: KIT[c.tipo][1] }))
+    delete e.efectos
+  } else {
+    delete e.sfxAuto
+    e.efectos = `tmp/${nombre}-efectos.wav`
+    await generarAudio({ duracion, cues, destino: join(PUBLIC, e.efectos), volumenMusica: 0 })
+  }
   if (e.conMusica) {
     e.musica = `tmp/${nombre}-musica.wav`
     await generarAudio({ duracion, cues: [], destino: join(PUBLIC, e.musica), semilla: e.semillaMusica ?? 7, volumenMusica: 1 })

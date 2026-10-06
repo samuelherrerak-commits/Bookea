@@ -50,10 +50,15 @@ export function remapearCaptions(captions: Caption[], segmentos: Segmento[]): Ca
 /** Segundo del video original → segundo del video final (si cae en un corte, el inicio del tramo siguiente). */
 export function aSalida(t: number, segmentos: Segmento[]) {
   const ini = inicios(segmentos)
+  // Los tramos pueden ir en otro orden que el original (p. ej. mover una toma al inicio).
+  const dentro = segmentos.findIndex((s) => t >= s.desde && t < s.hasta)
+  if (dentro >= 0) return ini[dentro] + t - segmentos[dentro].desde
+  // Justo en el final de un tramo (p. ej. `hasta` de una escena): el final de ese tramo.
+  const fin = segmentos.findIndex((s) => Math.abs(t - s.hasta) < 0.05)
+  if (fin >= 0) return ini[fin] + duracionSegmento(segmentos[fin])
   for (let i = 0; i < segmentos.length; i++) {
     const s = segmentos[i]
     if (t < s.desde) return ini[i]
-    if (t < s.hasta) return ini[i] + t - s.desde
   }
   return ini.length ? ini[ini.length - 1] + duracionSegmento(segmentos[segmentos.length - 1]) : 0
 }

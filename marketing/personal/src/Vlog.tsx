@@ -89,9 +89,10 @@ export const Vlog: React.FC<Edicion> = (e) => {
 
       {escenas.map((x, i) => {
         const desde = salida(x.desde)
-        // Cada escena sigue visible un poco más, para que la siguiente entre ENCIMA (ola/lado)
-        // y no se vea lo de abajo durante la transición.
-        const extra = i < escenas.length - 1 ? 0.5 : 0
+        // Si la escena siguiente empieza justo donde termina esta, esta sigue visible un poco
+        // más para que la siguiente entre ENCIMA (ola/lado) y no se vea lo de abajo.
+        const sig = escenas[i + 1]
+        const extra = sig && Math.abs(salida(sig.desde) - salida(x.hasta)) < 0.05 ? 0.5 : 0
         return (
           <Sequence key={`e${i}`} from={f(desde)} durationInFrames={Math.max(1, f(Math.min(finCortes, salida(x.hasta) + extra)) - f(desde))}>
             <Escena e={x} rel={(t) => salida(t) - desde} />
@@ -118,6 +119,12 @@ export const Vlog: React.FC<Edicion> = (e) => {
           <Cierre usuario={e.usuario} />
         </Sequence>
       ) : null}
+
+      {[...(e.sfx ?? []).map((x) => ({ t: x.ts != null ? salida(x.ts) : x.t ?? 0, nombre: x.nombre, vol: x.vol })), ...(e.sfxAuto ?? [])].map((x, i) => (
+        <Sequence key={`s${i}`} from={Math.max(0, f(x.t))} layout="none">
+          <Audio src={staticFile(`sfx/${x.nombre}.mp3`)} volume={x.vol ?? 0.6} />
+        </Sequence>
+      ))}
 
       {e.musica ? <Audio src={staticFile(e.musica)} volume={e.volumenMusica ?? 0.1} /> : null}
       {e.efectos ? <Audio src={staticFile(e.efectos)} volume={0.55} /> : null}
