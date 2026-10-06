@@ -34,3 +34,11 @@ Para verla en vivo: `npm run dev` y abre http://localhost:5173/marketing/bookee/
   grande, con espiral, ojos triangulares rojos y boca con colmillos. 4 poses (amenaza, rugido,
   persigue, vencida), su tamaño junto a bookee y notas de cuerpo, cara y colores.
 - `agenda.html`: la página que la dibuja (SVG; las poses salen de una sola función `villana()`).
+
+## El nuevo bookee
+
+- `bookee-nuevo-boceto.png` / `.pdf`: boceto de bookee rediseñado para conectar: antes y
+  después, 5 expresiones (feliz, orgulloso, asustado, decidido y su firma: guiño + pulgar), la
+  mirada que sigue a la persona y su contraste con la villana.
+- `bookee-nuevo.html`: la página que lo dibuja (SVG, función `bookee()`); `villana.js` es el
+  dibujo de la agenda malvada que comparten las dos hojas.
