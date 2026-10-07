@@ -26,6 +26,12 @@ El proyecto está en `marketing/personal/` (Remotion). Lee su `README.md` y, par
 - Referencia: `ediciones/2026-10-05-dia-1.json`.
 - Instagram: **@bookeaa.app**.
 
+## Videos FYP de 15 s (marketing/personal/fyp)
+
+- **Fuente única:** `fyp/octubre.py`. `python3 -I fyp/generar.py` genera `FYP-15S.md`, `CALENDARIO-OCTUBRE.csv` y `fyp/guiones.json`; `node fyp/word.cjs` genera el Word.
+- **Cada video es independiente:** nunca "parte 1/2/3", ni "mira el siguiente". Estructura: gancho → conexión con el problema del negocio → bookeaa como lo que usan los negocios que saben organizar su tiempo → llamado a la acción.
+- **Archivos:** `FYP-Sxx-DIA-MG` (lo armo yo), `-VOZ.m4a` (audio de Samuel) y `-CAM.mp4` (Samuel a cámara).
+
 ## Regla: en cámara solo hablando
 
 Samuel no quiere verse en cámara callado ni mirando la pantalla (leyendo la siguiente línea). En los tramos donde se ve la cámara, quita todas las pausas de 0,22 s o más, detectadas con `silencedetect=noise=-42dB:d=0.22` sobre el audio YA limpio. Deja 0,07 s de margen. Si un momento callado tiene que quedar, tápalo con una escena MG en negro o blanco. Referencia: `ediciones/2026-10-07-dia-2-*.json`.
