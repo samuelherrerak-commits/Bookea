@@ -26,6 +26,10 @@ El proyecto está en `marketing/personal/` (Remotion). Lee su `README.md` y, par
 - Referencia: `ediciones/2026-10-05-dia-1.json`.
 - Instagram: **@bookeaa.app**.
 
+## Regla: en cámara solo hablando
+
+Samuel no quiere verse en cámara callado ni mirando la pantalla (leyendo la siguiente línea). En los tramos donde se ve la cámara, quita todas las pausas de 0,22 s o más, detectadas con `silencedetect=noise=-42dB:d=0.22` sobre el audio YA limpio. Deja 0,07 s de margen. Si un momento callado tiene que quedar, tápalo con una escena MG en negro o blanco. Referencia: `ediciones/2026-10-07-dia-2-*.json`.
+
 ## Luz y ruido
 
 - **Ruido:** usa siempre `scripts/mejorar.mjs` (RNNoise). En el día 2 el ruido de fondo bajó 11 dB y la voz perdió solo 1 dB.
