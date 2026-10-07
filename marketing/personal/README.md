@@ -11,6 +11,15 @@ node scripts/editar.mjs ediciones/2026-10-05-lanzamiento.json --cuadros 1,8  # P
 npm run studio                                                              # vista previa interactiva
 ```
 
+## Mejorar el video crudo (luz y ruido)
+
+```bash
+node scripts/mejorar.mjs <entrada> public/entrada/<nombre>-luz.mp4 --luz   # corrección de color + luz en la cara + luz cálida detrás + voz limpia
+node scripts/mejorar.mjs <entrada> public/entrada/<nombre>-natural.mp4     # solo voz limpia (RNNoise) y nitidez
+```
+
+Después, en la edición pon `"video": "entrada/<nombre>-luz.mp4"`. Para entregar las dos versiones, duplica la edición (y su `.captions.json`) cambiando solo `video`.
+
 ## La edición (`ediciones/<fecha>-<slug>.json`)
 
 Copia `ediciones/ejemplo.json`. Solo hace falta `fuente`; lo demás es opcional.

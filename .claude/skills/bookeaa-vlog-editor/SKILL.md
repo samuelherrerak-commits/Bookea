@@ -26,6 +26,12 @@ El proyecto está en `marketing/personal/` (Remotion). Lee su `README.md` y, par
 - Referencia: `ediciones/2026-10-05-dia-1.json`.
 - Instagram: **@bookeaa.app**.
 
+## Luz y ruido
+
+- **Ruido:** usa siempre `scripts/mejorar.mjs` (RNNoise). En el día 2 el ruido de fondo bajó 11 dB y la voz perdió solo 1 dB.
+- **Si pide luz o corrección de color:** `--luz`, y entrega también la versión natural para comparar.
+- **Si grabó con la cámara tapada:** es la marca de dónde van los MG. Detecta esos tramos con `blackdetect`. Si no hay negro, ubica los MG según el guion.
+
 ## Videos de guion (cámara + MG + app) · GUIONES.md
 
 - Samuel graba con varias tomas y no siempre dice todas las líneas. Transcribe **sin VAD** (`vad_filter=False`): con VAD se pierden frases. Quédate con la mejor toma de cada frase.

@@ -1,0 +1,515 @@
+{
+  "motorWhisper": "faster",
+  "conMusica": true,
+  "volumenMusica": 0.09,
+  "cierre": true,
+  "usuario": "@bookeaa.app",
+  "kitSfx": "mixkit",
+  "sinCamaraDesde": 9999,
+  "subtitulos": {
+    "arriba": 1440,
+    "tamano": 76
+  },
+  "segmentos": [
+    {
+      "desde": 0,
+      "hasta": 11.5
+    },
+    {
+      "desde": 12.45,
+      "hasta": 17.65
+    },
+    {
+      "desde": 19,
+      "hasta": 23.75
+    },
+    {
+      "desde": 24.8,
+      "hasta": 31.75
+    },
+    {
+      "desde": 32.95,
+      "hasta": 39
+    },
+    {
+      "desde": 39.55,
+      "hasta": 44.9
+    },
+    {
+      "desde": 45.85,
+      "hasta": 48.5
+    },
+    {
+      "desde": 51.75,
+      "hasta": 56.3
+    },
+    {
+      "desde": 57.05,
+      "hasta": 60.4
+    },
+    {
+      "desde": 60.8,
+      "hasta": 66.8
+    }
+  ],
+  "enfasis": [
+    {
+      "ts": 0.05,
+      "texto": "Día 2.",
+      "kicker": "Como emprendedor",
+      "dur": 2.5
+    },
+    {
+      "ts": 10.85,
+      "texto": "Un caos.",
+      "dur": 1.3
+    },
+    {
+      "ts": 19.85,
+      "texto": "bookeaa.",
+      "kicker": "Por eso creé",
+      "dur": 1.5
+    },
+    {
+      "ts": 21.5,
+      "texto": "Con tu nombre.",
+      "kicker": "Tu página de reservas",
+      "dur": 2.2
+    },
+    {
+      "ts": 54.75,
+      "texto": "Agenda llena.",
+      "dur": 1.6
+    },
+    {
+      "ts": 61.5,
+      "texto": "1 mes gratis.",
+      "kicker": "Link en mi perfil",
+      "dur": 2.6
+    }
+  ],
+  "escenas": [
+    {
+      "desde": 12.45,
+      "hasta": 17.65,
+      "fondo": "negro",
+      "titulo": [
+        "RESPONDES TARDE.",
+        "SE TE OLVIDA.",
+        "2 CLIENTES. 1 HORA."
+      ],
+      "tiempos": [
+        12.6,
+        14.6,
+        16.18
+      ],
+      "estilo": "grande",
+      "tamano": 96
+    },
+    {
+      "desde": 24.8,
+      "hasta": 28.72,
+      "fondo": "blanco",
+      "kicker": "Funciona así · 01",
+      "titulo": [
+        "COMPARTE",
+        "TU LINK."
+      ],
+      "link": "barberia-norte",
+      "telefonos": [
+        {
+          "img": "flujo/1-inicio.jpg",
+          "ancho": 600,
+          "x": 240,
+          "y": 930,
+          "en": 27.45
+        }
+      ]
+    },
+    {
+      "desde": 28.72,
+      "hasta": 32.95,
+      "fondo": "negro",
+      "entrada": "lado",
+      "kicker": "02 · Tu cliente elige",
+      "titulo": [
+        "SERVICIO",
+        "Y HORA."
+      ],
+      "telefonos": [
+        {
+          "img": "flujo/2-servicios.jpg",
+          "ancho": 500,
+          "x": 40,
+          "y": 760,
+          "rot": -5,
+          "en": 29.85
+        },
+        {
+          "img": "flujo/4-agenda.jpg",
+          "ancho": 500,
+          "x": 540,
+          "y": 820,
+          "rot": 5,
+          "en": 30.8
+        }
+      ]
+    },
+    {
+      "desde": 32.95,
+      "hasta": 39,
+      "fondo": "blanco",
+      "kicker": "03 · Listo",
+      "titulo": [
+        "Y LISTO."
+      ],
+      "telefonos": [
+        {
+          "img": "flujo/6-listo.jpg",
+          "ancho": 520,
+          "x": 70,
+          "y": 620,
+          "rot": -4,
+          "en": 34.3
+        }
+      ],
+      "evento": {
+        "titulo": "Corte y barba",
+        "cuando": "Mié 8 oct · 2:00 – 2:45 p. m.",
+        "quien": "Carlos M.",
+        "en": 36.7,
+        "x": 230,
+        "y": 1180
+      }
+    },
+    {
+      "desde": 45.85,
+      "hasta": 48.5,
+      "fondo": "blanco",
+      "kicker": "8 estilos",
+      "titulo": [
+        "TU MARCA.",
+        "TU ESTILO."
+      ],
+      "telefonos": [
+        {
+          "img": "plantillas/audaz.jpg",
+          "ancho": 440,
+          "x": 60,
+          "y": 880,
+          "rot": -6,
+          "en": 46.4
+        },
+        {
+          "img": "plantillas/moderno.jpg",
+          "ancho": 440,
+          "x": 320,
+          "y": 800,
+          "en": 46.65
+        },
+        {
+          "img": "plantillas/retro.jpg",
+          "ancho": 440,
+          "x": 580,
+          "y": 880,
+          "rot": 6,
+          "en": 46.9
+        }
+      ]
+    },
+    {
+      "desde": 57.05,
+      "hasta": 60.4,
+      "fondo": "negro",
+      "titulo": [
+        "MÁS CLIENTES.",
+        "MÁS ORDEN.",
+        "CERO CRUCES."
+      ],
+      "tiempos": [
+        57.16,
+        58.32,
+        59.54
+      ],
+      "estilo": "grande",
+      "tamano": 124
+    }
+  ],
+  "sfx": [
+    {
+      "ts": 0.05,
+      "nombre": "impacto",
+      "vol": 0.3
+    },
+    {
+      "ts": 11,
+      "nombre": "boing",
+      "vol": 0.35
+    },
+    {
+      "ts": 12.65,
+      "nombre": "mensaje",
+      "vol": 0.45
+    },
+    {
+      "ts": 14.65,
+      "nombre": "mensaje",
+      "vol": 0.45
+    },
+    {
+      "ts": 16.2,
+      "nombre": "pop-fuerte",
+      "vol": 0.45
+    },
+    {
+      "ts": 34.35,
+      "nombre": "exito",
+      "vol": 0.35
+    },
+    {
+      "ts": 36.75,
+      "nombre": "check",
+      "vol": 0.4
+    },
+    {
+      "ts": 57.3,
+      "nombre": "monedas",
+      "vol": 0.35
+    },
+    {
+      "ts": 58.4,
+      "nombre": "check",
+      "vol": 0.35
+    },
+    {
+      "ts": 59.6,
+      "nombre": "check",
+      "vol": 0.35
+    }
+  ],
+  "video": "entrada/2026-10-07-dia-2-natural.mp4",
+  "fuente": "entrada/2026-10-07-dia-2-natural.mp4",
+  "sfxAuto": [
+    {
+      "t": 0.09,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 10.89,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 17.59,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 19.24,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 45.49,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 51.09,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 11.5,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 11.85,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 13.7,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 15.28,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 21.45,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 21.8,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 24.1,
+      "nombre": "barrido",
+      "vol": 0.5
+    },
+    {
+      "t": 22.5,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 22.571,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 22.643,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 22.714,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 22.786,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 22.857,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 22.929,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 23,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 23.071,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 23.143,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 23.214,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 23.286,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 23.357,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 23.429,
+      "nombre": "tecla",
+      "vol": 0.35
+    },
+    {
+      "t": 25.37,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 25.72,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 26.5,
+      "nombre": "barrido",
+      "vol": 0.5
+    },
+    {
+      "t": 27.45,
+      "nombre": "barrido",
+      "vol": 0.5
+    },
+    {
+      "t": 28.4,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 28.75,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 29.75,
+      "nombre": "barrido",
+      "vol": 0.5
+    },
+    {
+      "t": 39.8,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 40.15,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 40.35,
+      "nombre": "barrido",
+      "vol": 0.5
+    },
+    {
+      "t": 40.6,
+      "nombre": "barrido",
+      "vol": 0.5
+    },
+    {
+      "t": 40.85,
+      "nombre": "barrido",
+      "vol": 0.5
+    },
+    {
+      "t": 47,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 47.35,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 48.32,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 49.54,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 56.45,
+      "nombre": "exito",
+      "vol": 0.45
+    }
+  ],
+  "musica": "tmp/2026-10-07-dia-2-natural-musica.wav"
+}

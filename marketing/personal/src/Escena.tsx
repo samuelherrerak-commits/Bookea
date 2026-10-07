@@ -127,6 +127,44 @@ export const Escena: React.FC<{ e: TEscena; rel: (t: number) => number }> = ({ e
             </div>
           ) : null}
         </div>
+        {e.evento
+          ? (() => {
+              const ev = e.evento
+              const a = Math.max(base, rel(ev.en))
+              const k = clamp(tw(t, a, 0.5, 0, 1))
+              return (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: ev.x ?? 200,
+                    top: ev.y ?? 1250,
+                    zIndex: 5,
+                    width: 780,
+                    background: negro ? COLOR.papel : COLOR.carbon,
+                    color: negro ? COLOR.carbon : COLOR.papel,
+                    borderRadius: 48,
+                    padding: '50px 54px',
+                    boxShadow: '0 60px 120px -40px rgb(15 15 14 / 0.6)',
+                    opacity: k,
+                    transform: `translateY(${(1 - k) * 80}px) scale(${0.94 + 0.06 * k})`,
+                  }}
+                >
+                  <p style={{ margin: 0, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, fontSize: 32, letterSpacing: '0.16em', opacity: 0.6 }}>GOOGLE CALENDAR</p>
+                  <div style={{ display: 'flex', gap: 34, marginTop: 30 }}>
+                    <span style={{ width: 10, borderRadius: 9, background: 'currentColor', flex: 'none' }} />
+                    <div>
+                      <p style={{ margin: 0, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 76, lineHeight: 1, textTransform: 'uppercase' }}>{ev.titulo}</p>
+                      <p style={{ margin: '12px 0 0', fontFamily: TEXTO, fontSize: 36, opacity: 0.72 }}>{ev.cuando}</p>
+                      <p style={{ margin: '4px 0 0', fontFamily: TEXTO, fontSize: 36, opacity: 0.72 }}>{ev.quien}</p>
+                    </div>
+                  </div>
+                  <p style={{ margin: '38px 0 0', paddingTop: 30, borderTop: '2px solid rgb(127 127 127 / 0.3)', fontFamily: TEXTO, fontSize: 36, fontWeight: 500 }}>
+                    <b>✓</b> Guardado en tu calendario y en el suyo
+                  </p>
+                </div>
+              )
+            })()
+          : null}
         {(e.telefonos ?? []).map((tel, i) => {
           const a = tel.en != null ? Math.max(base, rel(tel.en)) : base + 0.5 + i * 0.3
           const y = tw(t, a, 0.9, 1920, tel.y)

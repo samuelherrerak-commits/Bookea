@@ -40,6 +40,8 @@ export type Escena = {
   telefonos?: Telefono[]
   /** Burbujas de chat que aparecen en su segundo `en` (original). `propia` = mensaje tuyo (blanco, a la derecha). */
   burbujas?: { texto: string; en: number; propia?: boolean }[]
+  /** Tarjeta de Google Calendar (como en los reels) que aparece en su segundo `en` (original). */
+  evento?: { titulo: string; cuando: string; quien: string; en: number; x?: number; y?: number }
   /** Etiqueta pequeña tipo "Visto 9:15 a. m." bajo las burbujas, en su segundo `en`. */
   visto?: { texto: string; en: number }
 }
