@@ -1,0 +1,160 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Estructura de costos en tres fases · bookeaa</title><style>
+@font-face{font-family:'Barlow Condensed';font-weight:800;src:url(../../../../public/ar-comun/fuentes/barlow-condensed-latin-800-normal.woff2)}
+@font-face{font-family:'Barlow';font-weight:500;src:url(../../../../public/ar-comun/fuentes/barlow-latin-500-normal.woff2)}
+@font-face{font-family:'Barlow';font-weight:600 700;src:url(../../../../public/ar-comun/fuentes/barlow-latin-600-normal.woff2)}
+@page{size:1920px 1080px;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Barlow,sans-serif;font-weight:500;color:#0f0f0e;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+section{width:1920px;height:1080px;padding:88px 110px 0;position:relative;overflow:hidden;page-break-after:always;background:#fff}
+section.oscura{background:#0f0f0e;color:#fff}
+h1,h2,h3,h4,.num,.cifra b,.tarjeta b,.marca span,.pasos i,.recs li::before{font-family:'Barlow Condensed',sans-serif;font-weight:800;text-transform:uppercase}
+h1{font-size:190px;line-height:.86;letter-spacing:-.01em}
+h2{font-size:112px;line-height:.88;margin:18px 0 46px}
+h3{font-size:44px;line-height:.95}
+.kicker{font:600 22px/1 Barlow;letter-spacing:.22em;text-transform:uppercase;color:#5b5b57}
+.oscura .kicker{color:#a3a39e}
+.marca{display:flex;align-items:center;gap:14px}.marca svg{width:44px;height:44px}.marca span{font-size:48px;text-transform:none;letter-spacing:-.02em;line-height:.8}
+footer{position:absolute;left:110px;right:110px;bottom:48px;display:flex;align-items:center;gap:22px;font-size:20px;color:#5b5b57}
+footer .marca svg{width:26px;height:26px}footer .marca span{font-size:28px;color:#0f0f0e}
+.oscura footer{color:#a3a39e}.oscura footer .marca span{color:#fff}
+footer b{margin-left:auto;font:800 28px 'Barlow Condensed';color:inherit}
+/* portada */
+.portada{padding-top:80px}.portada .pt-texto{margin-top:120px;max-width:1100px}
+.portada h1{margin:30px 0 40px}.lead{font-size:34px;line-height:1.35;color:#c3c2b7;max-width:900px}
+.bookee-portada{position:absolute;right:70px;bottom:120px;width:720px}
+.autores{position:absolute;left:110px;bottom:60px;font-size:22px;color:#a3a39e}
+/* columnas */
+.dos{display:grid;grid-template-columns:1fr 520px;gap:90px}
+.d-neg{grid-template-columns:1fr;max-width:1180px}
+.texto{font-size:32px;line-height:1.4;max-width:900px}
+.cifras{display:flex;gap:22px;margin-top:36px}
+.cifra,.tarjeta{background:#f4f4f2;border-radius:28px;padding:28px 32px;flex:1;display:flex;flex-direction:column;gap:10px}
+.cifra b,.tarjeta b{font-size:72px;line-height:.9}.cifra span,.tarjeta span{font-size:22px;line-height:1.3;color:#5b5b57}
+.inv{background:#0f0f0e!important;color:#fff}.inv span{color:#c3c2b7!important}
+.pasos{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:22px}
+.pasos li{border:2px solid #e3e3df;border-radius:24px;padding:22px 24px;display:flex;flex-direction:column;gap:6px}
+.pasos li.inv{border-color:#0f0f0e}.pasos i{font-style:normal;font-size:44px;line-height:1}.pasos b{font-size:24px;font-weight:600}.pasos span{font-size:20px;color:#5b5b57}
+.telefono{position:absolute;right:110px;top:80px;width:450px;height:870px;border-radius:70px;background:#0f0f0e;padding:16px;box-shadow:0 40px 80px rgba(15,15,14,.18)}
+.pantalla{width:100%;height:100%;border-radius:56px;overflow:hidden;background:#fff}.pantalla img{width:100%;display:block}
+/* fases */
+.tres{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+.fase{background:#f4f4f2;border-radius:36px;padding:44px 44px;height:620px;display:flex;flex-direction:column}
+.fase .num{font-size:130px;line-height:.85;margin-bottom:34px}.fase h3{font-size:52px}.fase .periodo{font-size:22px;color:#5b5b57;margin:14px 0 26px}.fase.inv .periodo{color:#a3a39e}
+.fase p{font-size:27px;line-height:1.38}.chip{margin-top:auto;align-self:flex-start;border-radius:999px;padding:14px 26px;background:#0f0f0e;color:#fff;font-size:21px;font-weight:600}
+.fase.inv .chip{background:#fff;color:#0f0f0e!important}.fase.inv .num{color:#fff!important}
+/* gráfico */
+.d-graf{grid-template-columns:1fr 600px}
+figure{border:2px solid #e3e3df;border-radius:36px;padding:30px 30px 10px}
+.leyenda{display:flex;gap:32px;font-size:22px;color:#5b5b57;padding-left:20px}.leyenda i,h4 i{display:inline-block;width:18px;height:18px;border-radius:5px;margin-right:10px;vertical-align:-2px}
+.grafico{width:100%;height:560px;display:block}.eje{font:500 20px Barlow;fill:#5b5b57}.cat{font:600 24px Barlow;fill:#0f0f0e}.val{font:700 23px Barlow;fill:#0f0f0e}.val.claro{fill:#fff}
+.pila{display:flex;flex-direction:column;gap:24px}.pila .tarjeta{flex:none;height:196px;justify-content:center}
+/* fase 3 */
+.d-f3{grid-template-columns:1fr 860px}
+.listas{display:grid;gap:34px}h4{font-size:34px;margin-bottom:16px}
+.listas ul{list-style:none}.listas li{font-size:26px;line-height:1.2;padding:10px 0;border-bottom:2px solid #f0f0ec}.listas em{color:#5b5b57;font-style:normal}
+.rejilla{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-content:start}.rejilla .ancha{grid-column:span 2}.rejilla .tarjeta{min-height:170px;justify-content:center}
+/* cierre */
+.concl article{background:#1f1f1d;border-radius:32px;padding:40px 42px;min-height:290px}.concl h3{font-size:46px;margin-bottom:18px}.concl p{font-size:27px;line-height:1.38;color:#c3c2b7}
+.cierre{display:flex;justify-content:space-between;align-items:flex-end;margin-top:54px}
+.recs{list-style:none;counter-reset:r;display:grid;grid-template-columns:repeat(2,640px);gap:22px 36px;margin-top:26px}
+.recs li{counter-increment:r;display:flex;align-items:center;gap:20px;font-size:28px}
+.recs li::before{content:counter(r);width:54px;height:54px;flex:none;border-radius:50%;background:#fff;color:#0f0f0e;display:grid;place-items:center;font-size:30px}
+.bookee-cierre{width:330px;margin:0 -10px 70px 0}
+</style></head><body><section class="oscura portada">
+  <div class="marca"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="28" height="26" rx="7" fill="#fff"/><path d="M10 2.5v5M22 2.5v5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="#0f0f0e" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span>bookeaa</span></div>
+  <div class="pt-texto">
+    <p class="kicker">Contabilidad VI · Contabilidad de costos</p>
+    <h1>Estructura<br>de costos<br>en tres fases</h1>
+    <p class="lead">Cómo cambian los costos de una empresa de software por suscripción según sus proyecciones de ventas.</p>
+  </div>
+  <img class="bookee-portada" src="../../../../marketing/bookee/bookee-feliz-blanco.png" alt="">
+  <p class="autores">[Nombres de los estudiantes] · Prof. [Nombre del docente] · Octubre de 2026</p>
+</section>
+<section>
+  <p class="kicker">El negocio</p>
+  <h2>Un negocio por<br>suscripción</h2>
+  <div class="dos d-neg">
+    <div>
+      <p class="texto">Una plataforma para que salones de belleza, barberías y centros de estética reciban reservas en línea. El ingreso se acumula mes a mes con cada cliente que se queda.</p>
+      <div class="cifras">
+        <div class="cifra"><b>1 mes</b><span>de prueba sin costo</span></div>
+        <div class="cifra"><b>$12</b><span>cuota mensual fija</span></div>
+        <div class="cifra inv"><b>40</b><span>negocios, meta del primer trimestre</span></div>
+      </div>
+      <p class="kicker" style="margin-top:44px">Cómo se proyectan las ventas</p>
+      <ol class="pasos">
+        <li><i>1</i><b>Se incorpora</b><span>Mes de prueba</span></li>
+        <li><i>2</i><b>Pasa a pagar</b><span>70 % de conversión</span></li>
+        <li><i>3</i><b>Se mantiene</b><span>5 % se retira al mes</span></li>
+        <li class="inv"><i>4</i><b>Genera ingreso</b><span>Clientes × cuota</span></li>
+      </ol>
+    </div>
+    <div class="telefono"><div class="pantalla"><img src="../../../../public/landing/plantillas/audaz.jpg" alt="Página de reservas de un negocio"></div></div>
+  </div>
+  <footer><div class="marca"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="28" height="26" rx="7" fill="#0f0f0e"/><path d="M10 2.5v5M22 2.5v5" stroke="#0f0f0e" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="#fff" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span>bookeaa</span></div><span>Contabilidad VI · Estructura de costos</span><b>02</b></footer>
+</section>
+<section>
+  <p class="kicker">La propuesta</p>
+  <h2>La ruta en tres fases</h2>
+  <div class="tres">
+    <article class="fase">
+      <span class="num">01</span><h3>Estructura base</h3><p class="periodo">Oct. a dic. 2026</p><p>Costos mínimos, presupuestados como montos mensuales, para arrancar y validar el mercado.</p><span class="chip">Presupuesto estático</span>
+    </article>
+    <article class="fase">
+      <span class="num">02</span><h3>Análisis y ajustes</h3><p class="periodo">Ene. a sep. 2027</p><p>Con los datos del trimestre se separan los costos fijos y variables y se mide el costo por cliente.</p><span class="chip">Presupuesto flexible · CVU</span>
+    </article>
+    <article class="fase inv">
+      <span class="num">03</span><h3>Estructura objetivo</h3><p class="periodo">Oct. 2027 a sep. 2028</p><p>Estructura completa: remuneración de la dirección, servicios contables y procesos más eficientes.</p><span class="chip">Costeo por actividades</span>
+    </article></div>
+  <footer><div class="marca"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="28" height="26" rx="7" fill="#0f0f0e"/><path d="M10 2.5v5M22 2.5v5" stroke="#0f0f0e" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="#fff" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span>bookeaa</span></div><span>Contabilidad VI · Estructura de costos</span><b>03</b></footer>
+</section>
+<section>
+  <p class="kicker">Fase 2 · Meses 4 a 12</p>
+  <h2>Los costos siguen a las ventas</h2>
+  <div class="dos d-graf">
+    <figure>
+      <div class="leyenda"><span><i style="background:#2a78d6"></i>Costos fijos</span><span><i style="background:#eb6834"></i>Costos variables</span></div>
+      <svg viewBox="0 0 900 560" class="grafico" role="img" aria-label="Costos fijos y variables de los meses 4 a 12 por escenario"><line x1="90" x2="880" y1="490" y2="490" stroke="#8a8a85"/><text x="74" y="498" text-anchor="end" class="eje">$0</text><line x1="90" x2="880" y1="413.33333333333337" y2="413.33333333333337" stroke="#ebebe7"/><text x="74" y="421.33333333333337" text-anchor="end" class="eje">$1.000</text><line x1="90" x2="880" y1="336.6666666666667" y2="336.6666666666667" stroke="#ebebe7"/><text x="74" y="344.6666666666667" text-anchor="end" class="eje">$2.000</text><line x1="90" x2="880" y1="260" y2="260" stroke="#ebebe7"/><text x="74" y="268" text-anchor="end" class="eje">$3.000</text><line x1="90" x2="880" y1="183.33333333333337" y2="183.33333333333337" stroke="#ebebe7"/><text x="74" y="191.33333333333337" text-anchor="end" class="eje">$4.000</text><line x1="90" x2="880" y1="106.66666666666663" y2="106.66666666666663" stroke="#ebebe7"/><text x="74" y="114.66666666666663" text-anchor="end" class="eje">$5.000</text><line x1="90" x2="880" y1="30" y2="30" stroke="#ebebe7"/><text x="74" y="38" text-anchor="end" class="eje">$6.000</text><rect x="146.66666666666666" y="366.47999500000003" width="150" height="123.52000499999997" fill="#2a78d6"/><path d="M146.66666666666666,362.47999500000003V290.0687567065411Q146.66666666666666,280.0687567065411 156.66666666666666,280.0687567065411H286.66666666666663Q296.66666666666663,280.0687567065411 296.66666666666663,290.0687567065411V362.47999500000003Z" fill="#eb6834"/><text x="221.66666666666666" y="438.2399975" text-anchor="middle" class="val claro">$1.611</text><text x="221.66666666666666" y="333.27437585327056" text-anchor="middle" class="val claro">$1.127</text><text x="221.66666666666666" y="262.0687567065411" text-anchor="middle" class="val">$2.738</text><text x="221.66666666666666" y="532" text-anchor="middle" class="cat">Conservador</text><rect x="410" y="366.47999500000003" width="150" height="123.52000499999997" fill="#2a78d6"/><path d="M410,362.47999500000003V209.82599796415428Q410,199.82599796415428 420,199.82599796415428H550Q560,199.82599796415428 560,209.82599796415428V362.47999500000003Z" fill="#eb6834"/><text x="485" y="438.2399975" text-anchor="middle" class="val claro">$1.611</text><text x="485" y="293.1529964820771" text-anchor="middle" class="val claro">$2.174</text><text x="485" y="181.82599796415428" text-anchor="middle" class="val">$3.785</text><text x="485" y="532" text-anchor="middle" class="cat">Base</text><rect x="673.3333333333333" y="363.581995" width="150" height="126.418005" fill="#2a78d6"/><path d="M673.3333333333333,359.581995V116.36258270310668Q673.3333333333333,106.36258270310668 683.3333333333333,106.36258270310668H813.3333333333333Q823.3333333333333,106.36258270310668 823.3333333333333,116.36258270310668V359.581995Z" fill="#eb6834"/><text x="748.3333333333333" y="436.7909975" text-anchor="middle" class="val claro">$1.649</text><text x="748.3333333333333" y="244.97228885155334" text-anchor="middle" class="val claro">$3.355</text><text x="748.3333333333333" y="88.36258270310668" text-anchor="middle" class="val">$5.004</text><text x="748.3333333333333" y="532" text-anchor="middle" class="cat">Optimista</text></svg>
+    </figure>
+    <div class="pila">
+      <div class="tarjeta"><b>$9,89</b><span>margen de contribución por cliente (82 % de la cuota)</span></div>
+      <div class="tarjeta"><b>34</b><span>negocios: punto de equilibrio con crecimiento, escenario base</span></div>
+      <div class="tarjeta inv"><b>GAO 6,6</b><span>en el escenario conservador: opera cerca del equilibrio</span></div>
+    </div>
+  </div>
+  <footer><div class="marca"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="28" height="26" rx="7" fill="#0f0f0e"/><path d="M10 2.5v5M22 2.5v5" stroke="#0f0f0e" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="#fff" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span>bookeaa</span></div><span>Contabilidad VI · Estructura de costos</span><b>04</b></footer>
+</section>
+<section>
+  <p class="kicker">Fase 3 · Segundo año</p>
+  <h2>La estructura objetivo</h2>
+  <div class="dos d-f3">
+    <div class="listas">
+      <div><h4><i style="background:#eb6834"></i>Costos variables</h4><ul><li>Incorporación asistida de cada negocio</li><li>Visitas comerciales selectivas</li><li>Atención y soporte por cliente</li><li>Tributos sobre ventas y cobros</li></ul></div>
+      <div><h4><i style="background:#2a78d6"></i>Costos fijos</h4><ul><li>Remuneración de la dirección</li><li>Mantenimiento y desarrollo</li><li>Infraestructura en la nube <em>(escalonada)</em></li><li>Servicios contables externos</li><li>Publicidad y marketing</li></ul></div>
+    </div>
+    <div class="rejilla">
+      <div class="tarjeta ancha"><b>$7.104</b><span>resultado del año 2, escenario base</span></div>
+      <div class="tarjeta"><b>$1,41</b><span>costo variable por cliente (fase 2: $2,11)</span></div>
+      <div class="tarjeta"><b>12,5×</b><span>valor del cliente sobre su costo de captación</span></div>
+      <div class="tarjeta ancha inv"><b>Por volumen</b><span>la fase 3 se activa al superar unos 60 negocios pagando</span></div>
+    </div>
+  </div>
+  <footer><div class="marca"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="28" height="26" rx="7" fill="#0f0f0e"/><path d="M10 2.5v5M22 2.5v5" stroke="#0f0f0e" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="#fff" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span>bookeaa</span></div><span>Contabilidad VI · Estructura de costos</span><b>05</b></footer>
+</section>
+<section class="oscura">
+  <p class="kicker">Para cerrar</p>
+  <h2>Conclusiones</h2>
+  <div class="tres concl">
+    <article><h3>En el total</h3><p>Desde la fase 2, los costos crecen con el número de clientes por la parte variable.</p></article>
+    <article><h3>En el costo unitario</h3><p>A más clientes, menor costo por cliente: $5,11 en el base y $3,53 en el optimista.</p></article>
+    <article><h3>En el riesgo</h3><p>Con menos ventas la empresa opera cerca del equilibrio y necesita una estructura austera.</p></article>
+  </div>
+  <div class="cierre">
+    <div>
+      <p class="kicker">Recomendaciones</p>
+      <ol class="recs"><li>Registrar desde el inicio las horas por cliente</li><li>Presupuesto flexible y comparación mensual</li><li>Activar la fase 3 por volumen</li><li>Seguir cuota, conversión y cancelación</li></ol>
+    </div>
+    <img class="bookee-cierre" src="../../../../marketing/bookee/bookee-feliz-blanco.png" alt="">
+  </div>
+  <footer><div class="marca"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="28" height="26" rx="7" fill="#fff"/><path d="M10 2.5v5M22 2.5v5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="#0f0f0e" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span>bookeaa</span></div><span>Contabilidad VI · Estructura de costos</span><b>06</b></footer>
+</section></body></html>
