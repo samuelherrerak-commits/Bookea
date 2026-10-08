@@ -1,8 +1,8 @@
 import copy, json
-BASE=dict(meta=50,precio=10,mesesGratis=1,conversion=70,churn=5,cajaInicial=0,
- nuevos=[10,15,25,12,12,15,15,15,18,18,20,20],dominio=15,tarjetas=30,tarjetasCada=3,
- googleOne=1.99,workspace=0,render=0,telefono=10,transporte=20,otros=0,ads=20,adsDesde=2,
- videoGratis=True,precioVideo=40,videosMes=1,videoDesde=2,sueldo=0,comision=0,impuesto=0,imprevistos=5)
+BASE=dict(meta=40,precio=12,mesesGratis=1,conversion=70,churn=5,cajaInicial=0,
+ nuevos=[8,12,20,10,10,12,12,12,14,14,16,16],dominio=18,tarjetas=36,tarjetasCada=3,
+ googleOne=2.99,workspace=0,render=0,telefono=14,transporte=24,otros=0,ads=25,adsDesde=2,
+ videoGratis=True,precioVideo=45,videosMes=1,videoDesde=2,sueldo=0,comision=0,impuesto=0,imprevistos=5)
 ESC=dict(conservador=(0.6,55,8),base=(1,70,5),optimista=(1.4,80,3))
 ETQ=['Oct 26','Nov 26','Dic 26','Ene 27','Feb 27','Mar 27','Abr 27','May 27','Jun 27','Jul 27','Ago 27','Sep 27']
 def esc(nombre,**kw):

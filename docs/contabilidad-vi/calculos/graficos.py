@@ -1,39 +1,44 @@
-import matplotlib; matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from ajustado import *
+import json, matplotlib; matplotlib.use('Agg')
+import matplotlib.pyplot as plt, numpy as np
+from matplotlib.ticker import FuncFormatter, MaxNLocator
+D=json.load(open('datos.json'))
 plt.rcParams.update({'font.family':'Liberation Serif','font.size':11,'axes.spines.top':False,'axes.spines.right':False,
  'axes.edgecolor':'#8a8a85','axes.labelcolor':'#333','xtick.color':'#555','ytick.color':'#555','axes.grid':True,'grid.color':'#e6e6e2','axes.axisbelow':True})
 C={'conservador':'#eb6834','base':'#2a78d6','optimista':'#1baf7a'}
 NOM={'conservador':'Conservador','base':'Base','optimista':'Optimista'}
-R={n:calc2(esc(n)) for n in ESC}; R0={n:calc(esc(n)) for n in ESC}
-x=list(range(12))
-from matplotlib.ticker import FuncFormatter
+ESC=list(C)
 def es(v,d=0):
-    t=f'{v:,.{d}f}'; return t.replace(',','X').replace('.',',').replace('X','.')
-def lineas(key,fn,ylabel,fmt=None,src=R,ref=None,leg='upper left',nud=None):
-    fig,ax=plt.subplots(figsize=(6.5,3.6),dpi=200)
+    t=f'{abs(v):,.{d}f}'.replace(',','X').replace('.',',').replace('X','.'); return ('−' if v<0 else '')+t
+ET=[p['et'] for p in D['base']['plan']]; x=np.arange(24)
+def fases(ax):
+    ax.axvspan(-0.5,2.5,color='#f1f1ee',zorder=0); ax.axvspan(11.5,23.5,color='#f7f7f5',zorder=0)
+    for xc,t in ((1,'Fase 1'),(7,'Fase 2'),(17.5,'Fase 3')):
+        ax.text(xc,1.0,t,transform=ax.get_xaxis_transform(),ha='center',va='bottom',fontsize=9.5,color='#444')
+def lineas(key,fn,ylabel,fmt,dec=0,ref=None,leg='upper left',nud=None):
+    fig,ax=plt.subplots(figsize=(6.5,3.7),dpi=200); fases(ax)
     for n in ESC:
-        y=[f[key] for f in src[n]['filas']]
-        ax.plot(x,y,color=C[n],lw=2,marker='o',ms=4,label=NOM[n])
-        ax.annotate(fmt(y[-1]) if fmt else es(y[-1]),(11,y[-1]),xytext=(6,(nud or {}).get(n,0)),textcoords='offset points',va='center',fontsize=9.5,color='#222')
+        y=[p[key] for p in D[n]['plan']]
+        ax.plot(x,y,color=C[n],lw=2,marker='o',ms=3,label=NOM[n])
+        ax.annotate(fmt(y[-1]),(23,y[-1]),xytext=(6,(nud or {}).get(n,0)),textcoords='offset points',va='center',fontsize=9.5,color='#222')
     if ref is not None: ax.axhline(ref,color='#555',lw=1)
-    ax.set_xticks(x); ax.set_xticklabels(ETQ,rotation=45,ha='right',fontsize=9); ax.set_ylabel(ylabel)
-    ax.legend(frameon=False,ncol=3,loc=leg,fontsize=9.5); ax.yaxis.set_major_formatter(FuncFormatter(lambda v,_:es(v,1 if key=='cu' else 0))); ax.set_xlim(-0.4,12.2)
+    ax.set_xticks(x[::2]); ax.set_xticklabels(ET[::2],rotation=45,ha='right',fontsize=9); ax.set_ylabel(ylabel)
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True)); ax.yaxis.set_major_formatter(FuncFormatter(lambda v,_:es(v,dec))); ax.set_xlim(-0.5,25.5); ax.grid(axis='x',visible=False)
+    ax.legend(frameon=False,ncol=3,loc=leg,fontsize=9.5,bbox_to_anchor=(0,0.97) if leg=='upper left' else None)
     fig.tight_layout(); fig.savefig(fn); plt.close(fig)
-lineas('pag','fig1.png','Negocios pagando')
-lineas('cu','fig3.png','Costo total por negocio activo (USD)',fmt=lambda v:'$'+es(v,2),leg='upper right',nud={'base':5,'optimista':-5})
-lineas('caja','fig4.png','Caja acumulada (USD)',fmt=lambda v:('−' if v<0 else '')+'$'+es(abs(v)),ref=0)
-# fig2: costos anuales actual vs ajustado
-fig,ax=plt.subplots(figsize=(6.5,3.6),dpi=200)
-import numpy as np
-xs=np.arange(3); w=0.34
-act=[R0[n]['eg'] for n in ESC]; cf=[R[n]['cf'] for n in ESC]; cv=[R[n]['cv'] for n in ESC]
-ax.bar(xs-w/2-0.01,act,w,color='#9a9a94',label='Modelo actual (todo fijo)')
-ax.bar(xs+w/2+0.01,cf,w,color='#2a78d6',label='Ajustado: costos fijos')
-ax.bar(xs+w/2+0.01,cv,w,bottom=[a+8 for a in cf],color='#eb6834',label='Ajustado: costos variables')
-for i in range(3):
-    ax.text(xs[i]-w/2,act[i]+60,'$'+es(act[i]),ha='center',fontsize=9)
-    ax.text(xs[i]+w/2,cf[i]+cv[i]+70,'$'+es(cf[i]+cv[i]),ha='center',fontsize=9)
-ax.yaxis.set_major_formatter(FuncFormatter(lambda v,_:es(v))); ax.set_xticks(xs); ax.set_xticklabels([NOM[n] for n in ESC]); ax.set_ylabel('Costos del año (USD)')
-ax.legend(frameon=False,fontsize=9,loc='upper left'); ax.set_ylim(0,max(a+b for a,b in zip(cf,cv))*1.25); ax.grid(axis='x',visible=False)
+lineas('pag','fig1.png','Negocios pagando',lambda v:es(v))
+lineas('cu','fig3.png','Costo por negocio activo (USD)',lambda v:'$'+es(v,2),dec=0,leg='upper right',nud={'base':4,'optimista':-4})
+lineas('caja','fig4.png','Caja acumulada (USD)',lambda v:('−' if v<0 else '')+'$'+es(abs(v)),ref=0)
+# fig2: costo mensual promedio por fase, fijo y variable
+fig,ax=plt.subplots(figsize=(6.5,3.7),dpi=200)
+w=0.26; xs=np.arange(3)
+for j,f in enumerate((1,2,3)):
+    cf=[np.mean([p['cf'] for p in D[n]['plan'] if p['fase']==f]) for n in ESC]
+    cv=[np.mean([p['cv'] for p in D[n]['plan'] if p['fase']==f]) for n in ESC]
+    xx=xs+(j-1)*(w+0.03)
+    ax.bar(xx,cf,w,color='#2a78d6',label='Costos fijos' if j==0 else None)
+    ax.bar(xx,cv,w,bottom=[a+3 for a in cf],color='#eb6834',label='Costos variables' if j==0 else None)
+    for i in range(3):
+        ax.text(xx[i],cf[i]+cv[i]+12,f'F{f}',ha='center',fontsize=8.5,color='#333')
+ax.set_xticks(xs); ax.set_xticklabels([NOM[n] for n in ESC]); ax.set_ylabel('Costo mensual promedio (USD)')
+ax.yaxis.set_major_formatter(FuncFormatter(lambda v,_:es(v))); ax.legend(frameon=False,fontsize=9.5,loc='upper left'); ax.grid(axis='x',visible=False)
 fig.tight_layout(); fig.savefig('fig2.png'); plt.close(fig)

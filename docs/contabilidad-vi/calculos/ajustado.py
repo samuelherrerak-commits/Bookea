@@ -1,5 +1,5 @@
 from modelo import *
-P=dict(hora=3.0,hAlta=2,hSoporte=0.5,transpAlta=1.30,hMant=20,isae=2,cobro=1,ws=7.20,wsUmbral=100)
+P=dict(hora=3.5,hAlta=2,hSoporte=0.5,transpAlta=1.60,hMant=20,isae=2,cobro=1,ws=7.20,wsUmbral=100)
 def calc2(s,p=P):
     N=12;conv=s['conversion']/100;churn=s['churn']/100;pag=0;caja=0;filas=[]
     for m in range(N):
