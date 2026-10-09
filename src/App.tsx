@@ -7,6 +7,7 @@ import { eleccionValida, opcionesLugar } from './lib/lugar'
 import { spring } from './lib/motion'
 import { summarize } from './lib/pricing'
 import { applyBranding } from './lib/theme'
+import { aplicarBorrador, esVistaPrevia, useBorradorVista } from './lib/vistaPrevia'
 import { useOrder } from './state/order'
 import type { DatosTicket } from './lib/ticket'
 import type { Modalidad } from './types'
@@ -28,7 +29,10 @@ const STEP: Record<View, number> = { catalogo: 0, agenda: 1, pago: 2, listo: 3 }
 const EMPTY_CATALOG = { servicios: [], promociones: [], tasa: null }
 
 export default function App() {
-  const { status, catalog, error, retry, refresh } = useCatalog()
+  const { status, catalog: catalogoReal, error, retry, refresh } = useCatalog()
+  // Vista previa del configurador: el borrador va encima del catálogo real, sin guardarse.
+  const borrador = useBorradorVista()
+  const catalog = useMemo(() => (catalogoReal && borrador ? aplicarBorrador(catalogoReal, borrador) : catalogoReal), [catalogoReal, borrador])
 
   // Con el catálogo en pantalla, se bajan los pasos siguientes sin apuro.
   useEffect(() => {
@@ -58,6 +62,8 @@ export default function App() {
   )
 
   const show = useCallback((next: View) => {
+    // En la vista previa del configurador no se reserva de verdad.
+    if (next !== 'catalogo' && esVistaPrevia()) return
     setView((current) => {
       if (current === 'catalogo') catalogScroll.current = window.scrollY
       setDirection(STEP[next] >= STEP[current] ? 1 : -1)

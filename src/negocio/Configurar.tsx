@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { formatTime12 } from '../lib/format'
 import { LUGAR_TIPOS } from '../lib/lugar'
 import { ESTILO_DEF, ESTILOS, PALETAS } from '../lib/theme'
 import * as api from './api'
+import { MENSAJE_VISTA, VISTA_LISTA, type Borrador } from '../lib/vistaPrevia'
 import { dibujarQr, linkDelNegocio, MODOS_QR, PLANTILLAS_QR, type ModoQr, type PlantillaQr } from './qr'
 
 /**
@@ -82,7 +83,7 @@ export function Configurar({ sesion, slug, alSalir }: Props) {
 
   if (abierta) {
     const s = SECCIONES.find((x) => x.id === abierta)!
-    const props = { datos, guardar }
+    const props = { datos, guardar, slug }
     return (
       <div className="mt-1">
         <button type="button" onClick={cerrar} className="-ml-2 flex items-center gap-1 rounded-full px-2 py-2 text-[15px] text-muted">
@@ -131,7 +132,7 @@ export function Configurar({ sesion, slug, alSalir }: Props) {
 
 // ---------- Piezas ----------
 
-type SecProps = { datos: api.Configuracion; guardar: (s: api.Seccion, d: api.DatosSeccion) => Promise<string[]> }
+type SecProps = { datos: api.Configuracion; guardar: (s: api.Seccion, d: api.DatosSeccion) => Promise<string[]>; slug: string }
 
 const claseInput = 'w-full min-w-0 rounded-2xl bg-surface px-3.5 py-3 text-[16px] ring-1 ring-line outline-none focus:ring-2 focus:ring-ink'
 
@@ -224,15 +225,113 @@ function useConfig(datos: api.Configuracion, claves: string[]) {
 
 const minutos = (h: string) => (/^\d{1,2}:\d{2}$/.test(h) ? Number(h.split(':')[0]) * 60 + Number(h.split(':')[1]) : NaN)
 
+// ---------- Vista previa ----------
+
+/** Ancho del teléfono que se simula; la página se ve como en un celular. */
+const ANCHO_TELEFONO = 390
+
+/**
+ * La página real del negocio (/u/<slug>?vista=1) con el borrador encima, en vivo y sin
+ * guardar. `compacta` muestra solo el botón (para secciones largas como Servicios).
+ */
+function VistaPrevia({ slug, borrador, compacta = false }: { slug: string; borrador: Borrador; compacta?: boolean }) {
+  const [grande, setGrande] = useState(false)
+  const [abierta, setAbierta] = useState(true)
+  const [lado, setLado] = useState(0)
+  const caja = useRef<HTMLDivElement>(null)
+  const marcos = useRef(new Set<HTMLIFrameElement>())
+  const ultimo = useRef(borrador)
+  ultimo.current = borrador
+  const src = `/u/${encodeURIComponent(slug)}?vista=1`
+
+  const enviar = (destino?: Window | null) => {
+    const mensaje = { tipo: MENSAJE_VISTA, borrador: ultimo.current }
+    if (destino) destino.postMessage(mensaje, location.origin)
+    else for (const f of marcos.current) f.contentWindow?.postMessage(mensaje, location.origin)
+  }
+
+  // Cada cambio se manda (con una pausa corta para no repintar en cada tecla).
+  useEffect(() => {
+    const t = setTimeout(() => enviar(), 200)
+    return () => clearTimeout(t)
+  }, [borrador])
+
+  // La página avisa cuando está lista: se le manda el borrador de inmediato.
+  useEffect(() => {
+    const alMensaje = (e: MessageEvent) => {
+      if (e.origin === location.origin && e.data?.tipo === VISTA_LISTA) enviar(e.source as Window)
+    }
+    window.addEventListener('message', alMensaje)
+    return () => window.removeEventListener('message', alMensaje)
+  }, [])
+
+  useEffect(() => {
+    if (!caja.current) return
+    const medir = () => setLado(caja.current?.clientWidth ?? 0)
+    medir()
+    const ro = new ResizeObserver(medir)
+    ro.observe(caja.current)
+    return () => ro.disconnect()
+  }, [compacta])
+
+  const registrar = (f: HTMLIFrameElement | null) => {
+    if (f) marcos.current.add(f)
+  }
+  const escala = lado ? Math.min(1, lado / ANCHO_TELEFONO) : 0.8
+  const alto = 640
+
+  return (
+    <>
+      {compacta ? (
+        <button type="button" onClick={() => setGrande(true)} className="mt-3 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-[15px] font-semibold ring-1 ring-line">
+          <span aria-hidden>👁</span> Ver cómo queda mi página
+        </button>
+      ) : (
+        // Fija arriba mientras se edita: al bajar a los colores se sigue viendo el cambio.
+        <section className="sticky top-[76px] z-[6] mt-4 overflow-hidden rounded-3xl bg-sand shadow-card ring-1 ring-line">
+          <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+            <button type="button" onClick={() => setAbierta(!abierta)} aria-expanded={abierta} className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
+              Vista previa
+              <svg viewBox="0 0 24 24" className={'size-4 transition-transform ' + (abierta ? '' : '-rotate-90')} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <button type="button" onClick={() => setGrande(true)} className="rounded-full bg-surface px-3 py-1.5 text-[13px] font-semibold ring-1 ring-line">Ver en grande</button>
+          </div>
+          <div ref={caja} className="relative overflow-hidden transition-[height] duration-200" style={{ height: abierta ? Math.round(alto * escala * 0.42) : 0 }}>
+            <iframe
+              ref={registrar}
+              src={src}
+              title="Vista previa de tu página"
+              className="absolute left-0 top-0 origin-top-left border-0 bg-bg"
+              style={{ width: ANCHO_TELEFONO, height: alto, transform: `scale(${escala})` }}
+            />
+          </div>
+          {abierta && <p className="px-4 py-2 text-[12px] text-muted">En vivo con tus cambios. Se publican al tocar Guardar.</p>}
+        </section>
+      )}
+      {grande && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-bg" role="dialog" aria-modal="true" aria-label="Vista previa de tu página">
+          <div className="flex items-center justify-between gap-3 border-b border-line px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+            <span className="text-[15px] font-semibold">Vista previa</span>
+            <button type="button" onClick={() => setGrande(false)} className="rounded-full bg-ink px-4 py-2 text-[14px] font-semibold text-bg">Seguir editando</button>
+          </div>
+          <iframe ref={registrar} src={src} title="Vista previa de tu página a pantalla completa" className="w-full flex-1 border-0" />
+          <p className="px-4 py-2 text-center text-[12px] text-muted">Vista previa: aquí no se hacen reservas.</p>
+        </div>
+      )}
+    </>
+  )
+}
+
 // ---------- Servicios ----------
 
-function Servicios({ datos, guardar }: SecProps) {
+function Servicios({ datos, guardar, slug }: SecProps) {
   const [lista, setLista, cambios] = useBorrador(datos.servicios)
   const editar = (i: number, c: Partial<api.Servicio>) => setLista(lista.map((s, j) => (j === i ? { ...s, ...c } : s)))
   const categorias = [...new Set(lista.map((s) => s.categoria).filter(Boolean))]
   return (
     <>
       <p className="mt-2 text-[14px] text-muted">Los adicionales se suman a un servicio principal (por ejemplo, lavado o diseño).</p>
+      <VistaPrevia slug={slug} borrador={{ servicios: lista }} compacta />
       <datalist id="categorias">{categorias.map((c) => <option key={c} value={c} />)}</datalist>
       <div className="mt-4 space-y-3">
         {lista.map((s, i) => (
@@ -420,16 +519,18 @@ export async function comprimirLogo(archivo: File): Promise<string> {
   throw new Error('La imagen es muy pesada. Prueba con una más simple o recortada.')
 }
 
-function Pagina({ datos, guardar }: SecProps) {
+function Pagina({ datos, guardar, slug }: SecProps) {
   const [m, setM, cambiosM] = useConfig(datos, CLAVES_MARCA)
   const [e, setE, cambiosE] = useConfig(datos, CLAVES_ESTILO)
   const [logo, setLogo] = useState(datos.logo)
   const [errorLogo, setErrorLogo] = useState('')
   const cambiosLogo = logo !== datos.logo
   const estilo = (e.tema_estilo || 'elegante') as keyof typeof ESTILO_DEF
+  const borrador = useMemo<Borrador>(() => ({ config: { ...datos.config, ...m, ...e }, logo }), [datos.config, m, e, logo])
 
   return (
     <>
+      <VistaPrevia slug={slug} borrador={borrador} />
       <h3 className="mt-6 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Nombre y textos</h3>
       <Tarjeta className="mt-2">
         <Campo etiqueta="Nombre de tu negocio" ayuda="Así sale en tu página y en los mensajes.">
