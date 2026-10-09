@@ -175,6 +175,7 @@ export const DEFAULT_CONFIG: BusinessConfig = {
   heroTitulo: 'Reserva tu cita en minutos',
   heroSubtitulo: 'Elige tus servicios, escoge el horario que prefieras y confirma por WhatsApp.',
   facturacionModo: 'interno',
+  ticketReserva: true,
 }
 
 /** Pestaña Sedes: Nombre, Direccion, Maps_URL, Activa. Las inactivas y sin nombre se ignoran. */
@@ -347,6 +348,8 @@ export function normalizeConfig(
     heroTitulo: map.hero_titulo || d.heroTitulo,
     heroSubtitulo: map.hero_subtitulo || d.heroSubtitulo,
     facturacionModo: (map.facturacion_modo ?? '').trim().toLowerCase() === 'fiscal' ? 'fiscal' : 'interno',
+    // Por defecto sí: solo "no" (o falso/0) lo apaga.
+    ticketReserva: !/^(no|false|0|off)$/i.test((map.ticket_reserva ?? '').trim()),
   }
 }
 

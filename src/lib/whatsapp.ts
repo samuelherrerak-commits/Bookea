@@ -18,7 +18,7 @@ export interface WhatsAppInput {
   plantilla?: string
   tasa: Tasa | null
   reservaId?: string
-  /** Número del comprobante de cita (no fiscal), si se emitió. */
+  /** Número del ticket de reserva (no fiscal), si se emitió. */
   recibo?: number | null
   comprobanteUrl?: string | null
   calendarUrl?: string | null
@@ -58,7 +58,7 @@ export function variablesMensaje(input: WhatsAppInput): VariablesMensaje {
     comprobante: pagoMovil ? comprobanteUrl || 'adjunto en la reserva' : '',
     calendario: calendarUrl ?? '',
     reserva: reservaId
-      ? `#${reservaId.slice(0, 8).toUpperCase()}${recibo ? ` · comprobante N.º ${String(recibo).padStart(6, '0')}` : ''}`
+      ? `#${reservaId.slice(0, 8).toUpperCase()}${recibo ? ` · ticket N.º ${String(recibo).padStart(6, '0')}` : ''}`
       : '',
   }
 }

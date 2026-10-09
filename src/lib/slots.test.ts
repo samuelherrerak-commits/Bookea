@@ -23,6 +23,7 @@ const config: BusinessConfig = {
   heroTitulo: '',
   heroSubtitulo: '',
   facturacionModo: 'interno',
+  ticketReserva: true,
 }
 
 describe('zonedParts', () => {

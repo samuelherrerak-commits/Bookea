@@ -8,7 +8,7 @@ import { spring } from './lib/motion'
 import { summarize } from './lib/pricing'
 import { applyBranding } from './lib/theme'
 import { useOrder } from './state/order'
-import type { DatosComprobante } from './lib/comprobante'
+import type { DatosTicket } from './lib/ticket'
 import type { Modalidad } from './types'
 import { CatalogView } from './views/CatalogView'
 
@@ -48,7 +48,7 @@ export default function App() {
     whatsappUrl: string
     calendarUrl: string
     modalidad: Modalidad
-    comprobante: DatosComprobante | null
+    ticket: DatosTicket | null
   } | null>(null)
   const catalogScroll = useRef(0)
 
@@ -131,7 +131,7 @@ export default function App() {
     dispatch({ type: 'setSchedule', schedule: { fecha: fechaCita, hora: horaCita } })
   }
 
-  const onSuccess = (result: { whatsappUrl: string; calendarUrl: string; modalidad: Modalidad; comprobante: DatosComprobante | null }) => {
+  const onSuccess = (result: { whatsappUrl: string; calendarUrl: string; modalidad: Modalidad; ticket: DatosTicket | null }) => {
     setDone(result)
     dispatch({ type: 'reset' })
     window.history.replaceState({ view: 'listo' }, '')

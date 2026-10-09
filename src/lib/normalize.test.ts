@@ -236,3 +236,12 @@ describe('logo del negocio', () => {
     expect(logoDirecto(undefined)).toBe('')
   })
 })
+
+describe('ticket de reserva en la configuración', () => {
+  it('viene activo por defecto y "no" lo apaga', () => {
+    expect(normalizeConfig({}).ticketReserva).toBe(true)
+    expect(normalizeConfig({ ticket_reserva: 'si' }).ticketReserva).toBe(true)
+    expect(normalizeConfig({ ticket_reserva: 'no' }).ticketReserva).toBe(false)
+    expect(normalizeConfig({ ticket_reserva: 'NO ' }).ticketReserva).toBe(false)
+  })
+})
