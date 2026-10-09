@@ -22,9 +22,18 @@ if (estatica) window.location.replace(`/${estatica[1]}/index.html`)
 const slug = slugFromLocation()
 const root = createRoot(document.getElementById('root')!)
 
-// La raíz del dominio (sin /u/<slug>) es la landing de bookeaa. Va en su propio
-// chunk para que quien reserva en un negocio no descargue la landing.
-if (!slug) {
+// /negocio: la app de cada dueño ("Mi negocio"). Su propio chunk.
+if (/^\/negocio\/?$/.test(window.location.pathname)) {
+  void import('./negocio/NegocioApp').then(({ default: NegocioApp }) => {
+    root.render(
+      <StrictMode>
+        <NegocioApp />
+      </StrictMode>,
+    )
+  })
+} else if (!slug) {
+  // La raíz del dominio (sin /u/<slug>) es la landing de bookeaa. Va en su propio
+  // chunk para que quien reserva en un negocio no descargue la landing.
   void import('./landing/Landing').then(({ default: Landing }) => {
     root.render(
       <StrictMode>

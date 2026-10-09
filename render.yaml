@@ -24,6 +24,10 @@ services:
       # Negocio al que entra quien abre la raiz del dominio, sin /u/<slug>.
       - key: VITE_DEFAULT_SHOP
         value: samuel-herrera
+      # "Entrar con Google" de /negocio (la app de cada dueño): ID de cliente OAuth tipo
+      # Web de Google Cloud. Es público (va en el navegador), pero se fija en Render.
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
     routes:
       # /ar, /ar1 y /ar2 son carpetas estaticas (public/ar*: tarjetas en realidad aumentada).
       # Sin la barra final caerian en la app de React (pasa lo mismo con /campana): van directo

@@ -967,6 +967,14 @@ function doPost(e) {
     return json_({ error: 'datos_invalidos', mensaje: 'Solicitud inválida.' });
   }
   // El bot de WhatsApp tiene su propio token (no el público de la web) y no es de un negocio.
+  if (data && data.accion === 'dueno') {
+    try {
+      return json_(atenderDueno_(data, Date.now()));
+    } catch (err) {
+      console.error('dueno: ' + err);
+      return json_({ error: 'servidor', mensaje: 'Error del servidor. Intenta de nuevo.' });
+    }
+  }
   if (data && data.accion === 'bot') {
     // Si algo revienta (permisos de Calendar, servicio sin activar), el bot recibe el motivo
     // en JSON en vez de la página de error de Google.
@@ -1227,7 +1235,8 @@ function doPost(e) {
     sumar_(claveTelefono, 86400);
 
     hecha = { ss: ss, id: id, orden: orden, moneda: moneda, tasa: tasa, totalBs: totalBs, comprobanteUrl: comprobanteUrl,
-      conBs: conBs, esPagoMovil: esPagoMovil, recibo: recibo };
+      conBs: conBs, esPagoMovil: esPagoMovil, recibo: recibo,
+      cita: { cliente: cliente, servicios: serviciosTexto, fecha: fechaCita, hora: horaCita } };
   } catch (err) {
     console.error(err);
     return json_({ error: 'servidor', mensaje: 'No se pudo guardar la reserva. Intenta de nuevo.' });
@@ -1252,6 +1261,16 @@ function doPost(e) {
     } catch (err) {
       console.warn('No se pudo actualizar la tasa: ' + err);
     }
+  }
+
+  // Notificación al dueño (la manda el Worker del bot). No puede tumbar la reserva.
+  try {
+    avisarReserva_(tenant.slug, {
+      id: hecha.id, cliente: hecha.cita.cliente, servicios: hecha.cita.servicios, fecha: hecha.cita.fecha, hora: hecha.cita.hora,
+      estado: hecha.esPagoMovil ? ESTADO_POR_VERIFICAR : 'Confirmada',
+    });
+  } catch (err) {
+    console.warn('Aviso al dueño: ' + err);
   }
 
   return json_({
@@ -2402,6 +2421,7 @@ function atenderBot_(data, ahoraMs) {
   if (op === 'reprogramar') return botReprogramar_(data, quien, ahoraMs, cfg);
   if (op === 'cancelar') return botCancelar_(data, quien);
   if (op === 'soporte' || op === 'persona') return botSoporte_(op, data, quien);
+  if (op === 'agenda') return agendaParaWorker_(data, ahoraMs);
   return { error: 'op_desconocida' };
 }
 
@@ -2639,4 +2659,224 @@ function promptAjustesBot() {
   if (b.getSelectedButton() === ui.Button.OK && b.getResponseText().trim()) props.setProperty('bot_bandeja_url', b.getResponseText().trim());
   calendarioAfiliaciones_();
   ui.alert('Listo. El calendario "Afiliaciones bookeaa" ya existe: ahí caen las citas y, si bloqueas una hora, el bot no la ofrece.');
+}
+
+// ============================================================================
+// Mi negocio: la app de cada dueño (bookeaa.com/negocio)
+// ============================================================================
+// El dueño entra con Google: el navegador manda el ID token, acá se verifica con
+// Google (aud = google_client_id) y el correo se busca en la columna Email de
+// Tenants. Después se usa una sesión propia firmada (30 días) para no pedir Google
+// en cada consulta. Propiedades del script:
+//   google_client_id  ID de cliente OAuth (tipo Web) de Google Cloud
+//   dueno_admins      correos que ven todos los negocios (separados por coma)
+//   sesion_secreto    lo crea el script la primera vez; cambiarlo cierra todas las sesiones
+// Las notificaciones las manda el Worker del bot (bot_bandeja_url sin /bandeja).
+
+const SESION_DIAS = 30;
+const ESTADO_POR_VERIFICAR = 'Pago por verificar';
+
+function secretoSesion_() {
+  const props = PropertiesService.getScriptProperties();
+  let s = props.getProperty('sesion_secreto');
+  if (!s) {
+    s = Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty('sesion_secreto', s);
+  }
+  return s;
+}
+
+function firmar_(texto) {
+  return Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(texto, secretoSesion_())).replace(/=+$/, '');
+}
+
+/** Sesión "correo|vence(ms)|firma". */
+function crearSesion_(email, ahoraMs) {
+  const cuerpo = String(email).toLowerCase() + '|' + (ahoraMs + SESION_DIAS * 86400000);
+  return cuerpo + '|' + firmar_(cuerpo);
+}
+
+/** El correo de una sesión válida, o null. */
+function leerSesion_(sesion, ahoraMs) {
+  const partes = String(sesion || '').split('|');
+  if (partes.length !== 3) return null;
+  const cuerpo = partes[0] + '|' + partes[1];
+  if (firmar_(cuerpo) !== partes[2]) return null;
+  if (!(Number(partes[1]) > ahoraMs)) return null;
+  return partes[0];
+}
+
+/** Verifica el ID token con Google. Devuelve el correo verificado o null. */
+function correoDeGoogle_(credencial, ahoraMs) {
+  const clientId = String(PropertiesService.getScriptProperties().getProperty('google_client_id') || '').trim();
+  if (!clientId || !credencial) return null;
+  const r = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(credencial), { muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) return null;
+  const t = JSON.parse(r.getContentText());
+  if (t.aud !== clientId) return null;
+  if (String(t.email_verified) !== 'true' || !t.email) return null;
+  if (!(Number(t.exp) * 1000 > ahoraMs)) return null;
+  if (['accounts.google.com', 'https://accounts.google.com'].indexOf(String(t.iss)) === -1) return null;
+  return String(t.email).toLowerCase();
+}
+
+function esAdminDueno_(email) {
+  const lista = String(PropertiesService.getScriptProperties().getProperty('dueno_admins') || '');
+  return lista.split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean).indexOf(email) !== -1;
+}
+
+/** Negocios activos de un correo (la columna Email de Tenants admite varios, separados por coma). */
+function negociosDe_(email, tenants) {
+  const admin = esAdminDueno_(email);
+  return tenants.filter(function (t) {
+    if (!t.slug || !tenantActivo_(t)) return false;
+    if (admin) return true;
+    return String(t.email || '').toLowerCase().split(/[,;\s]+/).indexOf(email) !== -1;
+  });
+}
+
+function horaTexto_(v) {
+  if (v && typeof v.getTime === 'function' && !isNaN(v.getTime())) return Utilities.formatDate(v, ZONA, 'HH:mm');
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(v || '').trim());
+  return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : '';
+}
+
+/** Citas de Reservaciones con fecha entre `desde` y `hasta` (yyyy-MM-dd, ambas incluidas), por fecha y hora. */
+function citasEntre_(filas, desde, hasta) {
+  return filas
+    .map(function (r) {
+      return {
+        id: String(r.ID || ''),
+        cliente: String(r.Cliente || ''),
+        telefono: String(r.Telefono || ''),
+        servicios: String(r.Servicios || ''),
+        total: toNumber_(r.Total),
+        totalBs: r.Total_Bs === '' || r.Total_Bs == null ? null : toNumber_(r.Total_Bs),
+        fecha: ymd_(r.Fecha_Cita) || '',
+        hora: horaTexto_(r.Hora_Cita),
+        metodo: String(r.Metodo_Pago || ''),
+        estado: String(r.Estado || ''),
+        lugar: String(r.Modalidad || ''),
+        direccion: String(r.Direccion || ''),
+        capture: /^https:\/\//.test(String(r.Comprobante || '')) ? String(r.Comprobante) : '',
+        recibo: r.Recibo_N === '' || r.Recibo_N == null ? null : toNumber_(r.Recibo_N),
+      };
+    })
+    .filter(function (c) { return c.id && c.fecha && c.fecha >= desde && c.fecha <= hasta; })
+    .sort(function (a, b) { return (a.fecha + a.hora).localeCompare(b.fecha + b.hora); });
+}
+
+function sumarDias_(ymd, n) {
+  const p = ymd.split('-').map(Number);
+  return Utilities.formatDate(new Date(Date.UTC(p[0], p[1] - 1, p[2] + n, 12)), 'UTC', 'yyyy-MM-dd');
+}
+
+/** Base del Worker del bot (de bot_bandeja_url) o '' si no está configurada. */
+function urlWorker_() {
+  return String(PropertiesService.getScriptProperties().getProperty('bot_bandeja_url') || '').trim().replace(/\/bandeja\/?$/, '');
+}
+
+/** POST al Worker con el token del bot. Nunca lanza: los avisos no pueden tumbar nada. */
+function llamarWorker_(ruta, datos) {
+  const base = urlWorker_();
+  const token = String(PropertiesService.getScriptProperties().getProperty('bot_token') || '');
+  if (!/^https:\/\//.test(base) || !token) return null;
+  try {
+    const r = UrlFetchApp.fetch(base + ruta, {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(datos),
+      headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true,
+    });
+    return r.getResponseCode() === 200 ? JSON.parse(r.getContentText()) : null;
+  } catch (err) {
+    console.warn('Worker ' + ruta + ': ' + err);
+    return null;
+  }
+}
+
+/** Clave pública VAPID del Worker (para suscribirse a las notificaciones). */
+function claveVapid_() {
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('vapid_publica');
+  if (hit) return hit;
+  const base = urlWorker_();
+  if (!/^https:\/\//.test(base)) return '';
+  try {
+    const r = UrlFetchApp.fetch(base + '/push/clave', { muteHttpExceptions: true });
+    const clave = r.getResponseCode() === 200 ? String(JSON.parse(r.getContentText()).clave || '') : '';
+    if (clave) cache.put('vapid_publica', clave, 21600);
+    return clave;
+  } catch (err) {
+    return '';
+  }
+}
+
+/** Avisa al Worker de una reserva nueva (notificación al dueño). Fuera del lock. */
+function avisarReserva_(slug, cita) {
+  llamarWorker_('/push/evento', { tipo: 'reserva', slug: slug, cita: cita });
+}
+
+/** Punto de entrada desde doPost (accion: 'dueno'). */
+function atenderDueno_(data, ahoraMs) {
+  if (limite_('dueno', 600, 60)) return { error: 'limite', mensaje: 'Demasiadas consultas. Intenta en un minuto.' };
+  const op = String(data.op || '');
+  if (op === 'entrar') {
+    const email = correoDeGoogle_(data.credencial, ahoraMs);
+    if (!email) return { error: 'no_autorizado', mensaje: 'No pudimos verificar tu cuenta de Google.' };
+    const negocios = negociosDe_(email, getTenants_());
+    if (!negocios.length) return { error: 'sin_negocio', mensaje: email + ' no tiene un negocio en bookeaa. Entra con el correo que diste al afiliarte.' };
+    return {
+      sesion: crearSesion_(email, ahoraMs), email: email, vapid: claveVapid_(),
+      negocios: negocios.map(function (t) { return { slug: t.slug, nombre: t.nombre }; }),
+    };
+  }
+
+  const email = leerSesion_(data.sesion, ahoraMs);
+  if (!email) return { error: 'sesion', mensaje: 'Tu sesión venció. Entra otra vez.' };
+  const tenant = negociosDe_(email, getTenants_()).filter(function (t) { return t.slug === String(data.slug || ''); })[0];
+  if (!tenant) return { error: 'no_autorizado', mensaje: 'Ese negocio no es tuyo.' };
+
+  if (op === 'citas') {
+    const desde = /^\d{4}-\d{2}-\d{2}$/.test(String(data.desde || '')) ? String(data.desde) : Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+    const dias = Math.max(1, Math.min(62, Math.floor(Number(data.dias) || 14)));
+    const libro = openTenant_(tenant);
+    const config = getConfig_(libro);
+    return {
+      negocio: { slug: tenant.slug, nombre: config.marca || config.nombre_negocio || tenant.nombre, moneda: normalizarMoneda_(config.moneda) },
+      hoy: Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd'),
+      citas: citasEntre_(getSheetData_(libro, 'Reservaciones'), desde, sumarDias_(desde, dias - 1)),
+    };
+  }
+  if (op === 'confirmar_pago') {
+    const datos = openTenant_(tenant);
+    const cita = getSheetData_(datos, 'Reservaciones').filter(function (r) { return String(r.ID) === String(data.id || ''); })[0];
+    if (!cita) return { error: 'no_existe', mensaje: 'No encontramos esa reserva.' };
+    if (String(cita.Estado) !== ESTADO_POR_VERIFICAR) return { ok: true, estado: String(cita.Estado) };
+    actualizarReserva_(datos, cita.ID, { Estado: 'Confirmada' });
+    return { ok: true, estado: 'Confirmada' };
+  }
+  if (op === 'avisos') {
+    const s = data.suscripcion || {};
+    if (!/^https:\/\//.test(String(s.endpoint || ''))) return { error: 'datos_invalidos', mensaje: 'Suscripción inválida.' };
+    const r = llamarWorker_(data.quitar ? '/push/quitar' : '/push/suscribir', { slug: tenant.slug, email: email, suscripcion: s });
+    return r && r.ok ? { ok: true } : { error: 'servidor', mensaje: 'No se pudieron activar los avisos. Intenta de nuevo.' };
+  }
+  return { error: 'op_desconocida' };
+}
+
+/** Para el Worker (accion 'bot', op 'agenda'): las citas de un día de varios negocios. */
+function agendaParaWorker_(data, ahoraMs) {
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(data.fecha || '')) ? String(data.fecha) : Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const pedidos = (Array.isArray(data.slugs) ? data.slugs : []).map(String).slice(0, 200);
+  const agenda = {};
+  getTenants_().forEach(function (t) {
+    if (pedidos.indexOf(t.slug) === -1 || !tenantActivo_(t)) return;
+    try {
+      agenda[t.slug] = citasEntre_(getSheetData_(openTenant_(t), 'Reservaciones'), fecha, fecha)
+        .filter(function (c) { return !/cancel/i.test(c.estado); })
+        .map(function (c) { return { id: c.id, cliente: c.cliente, servicios: c.servicios, fecha: c.fecha, hora: c.hora, estado: c.estado }; });
+    } catch (err) {
+      console.warn('agenda ' + t.slug + ': ' + err);
+    }
+  });
+  return { fecha: fecha, agenda: agenda };
 }
