@@ -1,6 +1,8 @@
 import type { BusinessConfig, Tema, ThemeEstilo } from '../types'
 import { contrast, derivarNeutros } from './color'
 import { loadEstiloFonts } from './fonts'
+import { prepararApp } from './pwa'
+import { shopPath, slugFromLocation } from './tenant'
 
 export interface Paleta {
   id: string
@@ -178,6 +180,10 @@ export function pageDescription(config: BusinessConfig): string {
 /** Colores, título, descripción y favicon: todo lo que identifica al negocio en el navegador. */
 export function applyBranding(config: BusinessConfig): void {
   applyTheme(config.tema)
+  // Agregada a inicio, abre como la app del negocio y en su propia página.
+  const slug = slugFromLocation()
+  const ruta = slug ? shopPath(slug) : null
+  if (ruta) prepararApp({ nombre: config.marca || config.nombreNegocio, ruta, color: config.tema.fondo ?? '#FDFBF7' })
   document.title = pageTitle(config)
   setMeta('meta[name="description"]', 'content', pageDescription(config))
   setMeta('meta[name="theme-color"]', 'content', config.tema.fondo ?? config.tema.soft)

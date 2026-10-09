@@ -34,6 +34,9 @@ function csp(apiUrl: string): Plugin {
           // El logo de cada negocio puede estar en cualquier sitio https.
           "img-src 'self' data: blob: https:",
           "font-src 'self' data:",
+          // La página de cada negocio usa su propio manifest como data: URL (src/lib/pwa.ts).
+          "manifest-src 'self' data:",
+          "worker-src 'self'",
           // Apps Script responde con una redirección a googleusercontent.
           `connect-src ${[...new Set(["'self'", origenApi, 'https://script.google.com', 'https://script.googleusercontent.com'])].filter(Boolean).join(' ')}`,
           "object-src 'none'",

@@ -9,6 +9,7 @@ import { createRoot } from 'react-dom/client'
 import { Toaster } from 'sonner'
 import App from './App'
 import { readCatalogCache } from './lib/catalogCache'
+import { registrarServiceWorker } from './lib/pwa'
 import { applyBranding } from './lib/theme'
 import { slugFromLocation } from './lib/tenant'
 import { OrderProvider } from './state/order'
@@ -69,3 +70,5 @@ if (!slug) {
     </StrictMode>,
   )
 }
+
+registrarServiceWorker()
