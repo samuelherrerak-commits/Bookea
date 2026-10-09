@@ -11,3 +11,6 @@ marketing/salida/
 # Bot de WhatsApp (local)
 bot/.dev.vars
 bot/.wrangler/
+
+# caché de Python de los scripts de docs/
+__pycache__/
