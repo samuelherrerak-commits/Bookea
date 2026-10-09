@@ -4,6 +4,7 @@ import { capitalize, formatLongDate, formatTime12 } from '../lib/format'
 import { prepararApp } from '../lib/pwa'
 import { formatMonto } from '../lib/ticket'
 import * as api from './api'
+import { Configurar } from './Configurar'
 import { botonGoogle } from './google'
 import { activarAvisos, apagarAvisos, esIOS, estadoAvisos, instalada, type EstadoAvisos } from './push'
 
@@ -123,7 +124,7 @@ function Entrar({ alEntrar }: { alEntrar: (s: api.Sesion) => void }) {
 
 // ---------- Panel ----------
 
-type Pestana = 'hoy' | 'proximas' | 'ajustes'
+type Pestana = 'hoy' | 'proximas' | 'configurar' | 'ajustes'
 
 function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void }) {
   const pedido = new URLSearchParams(location.search).get('n')
@@ -207,26 +208,29 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
         )}
         {pestana === 'hoy' && <Hoy agenda={agenda} onConfirmar={confirmar} />}
         {pestana === 'proximas' && <Proximas agenda={agenda} onConfirmar={confirmar} />}
+        {pestana === 'configurar' && <Configurar sesion={sesion.sesion} slug={slug} alSalir={alSalir} />}
         {pestana === 'ajustes' && (
           <Ajustes sesion={sesion} slug={slug} onSlug={setSlug} onSalir={alSalir} />
         )}
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur" aria-label="Secciones">
-        <div className="mx-auto grid max-w-xl grid-cols-3">
+        <div className="mx-auto grid max-w-xl grid-cols-4">
           <BotonPestana activa={pestana === 'hoy'} onClick={() => setPestana('hoy')} icono="hoy">Hoy</BotonPestana>
           <BotonPestana activa={pestana === 'proximas'} onClick={() => setPestana('proximas')} icono="proximas">Próximas</BotonPestana>
-          <BotonPestana activa={pestana === 'ajustes'} onClick={() => setPestana('ajustes')} icono="ajustes">Avisos y más</BotonPestana>
+          <BotonPestana activa={pestana === 'configurar'} onClick={() => setPestana('configurar')} icono="configurar">Configurar</BotonPestana>
+          <BotonPestana activa={pestana === 'ajustes'} onClick={() => setPestana('ajustes')} icono="ajustes">Avisos</BotonPestana>
         </div>
       </nav>
     </div>
   )
 }
 
-function BotonPestana({ activa, onClick, icono, children }: { activa: boolean; onClick: () => void; icono: 'hoy' | 'proximas' | 'ajustes'; children: ReactNode }) {
+function BotonPestana({ activa, onClick, icono, children }: { activa: boolean; onClick: () => void; icono: 'hoy' | 'proximas' | 'configurar' | 'ajustes'; children: ReactNode }) {
   const d = {
     hoy: 'M4 7h16M4 7v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2M8 2v4M16 2v4M9 14l2 2 4-4',
     proximas: 'M4 6h16M4 12h16M4 18h10',
+    configurar: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
     ajustes: 'M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0',
   }[icono]
   return (
@@ -386,7 +390,7 @@ function TarjetaCita({ c, moneda, pasada, onConfirmar }: { c: api.Cita; moneda: 
   )
 }
 
-// ---------- Avisos y más ----------
+// ---------- Avisos ----------
 
 function Ajustes({ sesion, slug, onSlug, onSalir }: { sesion: api.Sesion; slug: string; onSlug: (s: string) => void; onSalir: () => void }) {
   const [estado, setEstado] = useState<EstadoAvisos | null>(null)

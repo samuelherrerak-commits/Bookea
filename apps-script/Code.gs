@@ -2854,6 +2854,8 @@ function atenderDueno_(data, ahoraMs) {
     actualizarReserva_(datos, cita.ID, { Estado: 'Confirmada' });
     return { ok: true, estado: 'Confirmada' };
   }
+  if (op === 'config') return duenoLeerConfig_(openTenant_(tenant), tenant, ahoraMs);
+  if (op === 'guardar') return duenoGuardar_(openTenant_(tenant), tenant, String(data.seccion || ''), data.datos, ahoraMs);
   if (op === 'avisos') {
     const s = data.suscripcion || {};
     if (!/^https:\/\//.test(String(s.endpoint || ''))) return { error: 'datos_invalidos', mensaje: 'Suscripción inválida.' };
@@ -2879,4 +2881,314 @@ function agendaParaWorker_(data, ahoraMs) {
     }
   });
   return { fecha: fecha, agenda: agenda };
+}
+
+// ---------- Mi negocio: configuración (lo mismo que la ventana de la hoja) ----------
+// Igual que CLAVES_POR_SECCION de apps-script/cliente/Configurador.gs (un test las compara).
+const CLAVES_DUENO = {
+  marca: ['nombre_negocio', 'marca', 'logo_url', 'hero_titulo', 'hero_subtitulo'],
+  estilo: ['tema_estilo', 'color_principal', 'color_fondo', 'paleta'],
+  lugar: ['lugar_tipo', 'lugar_nombre', 'permite_domicilio', 'recargo_domicilio_pct', 'minutos_extra_domicilio'],
+  mensaje: ['mensaje_plantilla'],
+  horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria', 'recordatorio_minutos'],
+  pagos: ['whatsapp', 'moneda', 'metodos_pago', 'pm_banco', 'pm_telefono', 'pm_cedula', 'tasa_eur_manual', 'tasa_usd_manual'],
+  comprobantes: ['facturacion_modo', 'ticket_reserva', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
+};
+/** Secciones que solo tocan tablas (sin claves de Configuracion). */
+const TABLAS_DUENO = ['servicios', 'bloqueos', 'logo', 'cupones'];
+const MAX_CUPONES = 200;
+const MAX_SERVICIOS = 120;
+
+/** Filas de datos como texto visible (las horas no se vuelven fechas). */
+function cfgFilas_(ss, nombre, columnas) {
+  const sheet = ss.getSheetByName(nombre);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, columnas).getDisplayValues()
+    .filter(function (r) { return r.some(function (c) { return String(c).trim() !== ''; }); });
+}
+
+function cfgHora_(v) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(v || '').trim());
+  return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : '';
+}
+
+function cfgActiva_(v) {
+  return ['false', 'falso', 'no', '0'].indexOf(String(v).trim().toLowerCase()) === -1;
+}
+
+/** recordatorio_minutos: vacío, "no" o hasta 5 números (0–40320) separados por comas. */
+function cfgAlertas_(valor) {
+  const v = String(valor == null ? '' : valor).trim().toLowerCase();
+  if (v === '' || v === 'no') return true;
+  const partes = v.split(/[\s,;]+/);
+  return partes.length <= 5 && partes.every(function (t) { return /^\d{1,5}$/.test(t) && Number(t) <= 40320; });
+}
+
+function cfgReemplazar_(sheet, columnas, filas) {
+  const ultima = sheet.getLastRow();
+  if (ultima > 1) sheet.getRange(2, 1, ultima - 1, columnas).clearContent();
+  if (filas.length) sheet.getRange(2, 1, filas.length, columnas).setValues(filas);
+}
+
+function cfgHoja_(ss, nombre) {
+  const sheet = ss.getSheetByName(nombre);
+  if (sheet) return sheet;
+  const def = SHEETS.filter(function (s) { return s.name === nombre; })[0];
+  const nueva = ss.insertSheet(nombre);
+  if (def) nueva.getRange(1, 1, 1, def.headers.length).setValues([def.headers]);
+  return nueva;
+}
+
+/** Todo lo que la pestaña Configurar muestra, en una sola llamada. */
+function duenoLeerConfig_(ss, tenant, ahoraMs) {
+  const todo = getConfig_(ss);
+  const config = {};
+  Object.keys(CLAVES_DUENO).forEach(function (s) {
+    CLAVES_DUENO[s].forEach(function (k) { config[k] = todo[k] == null ? '' : todo[k]; });
+  });
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const bloqueos = [];
+  const bs = ss.getSheetByName('Bloqueos');
+  if (bs && bs.getLastRow() >= 2) {
+    const n = bs.getLastRow() - 1;
+    const fechas = bs.getRange(2, 1, n, 1).getValues();
+    const resto = bs.getRange(2, 2, n, 3).getDisplayValues();
+    for (let i = 0; i < n; i++) {
+      const fecha = ymd_(fechas[i][0]);
+      if (!fecha || fecha < hoy) continue;
+      bloqueos.push({ fecha: fecha, inicio: cfgHora_(resto[i][0]), fin: cfgHora_(resto[i][1]), motivo: String(resto[i][2] || '').trim() });
+    }
+    bloqueos.sort(function (a, b) { return (a.fecha + a.inicio).localeCompare(b.fecha + b.inicio); });
+  }
+  return {
+    config: config,
+    paginaUrl: /^https?:\/\//.test(String(todo.pagina_url || '')) ? String(todo.pagina_url) : '',
+    servicios: cfgFilas_(ss, 'Servicios', 5).map(function (r) {
+      const tipo = String(r[4] || '').trim();
+      const adicional = /adic|extra/i.test(tipo);
+      return {
+        id: String(r[0] || '').trim(), nombre: String(r[1] || '').trim(), precio: toNumber_(r[2]),
+        duracion: toNumber_(r[3]) || 60, adicional: adicional,
+        categoria: adicional || /^base$/i.test(tipo) ? '' : tipo,
+      };
+    }).filter(function (s) { return s.nombre; }),
+    horarios: cfgFilas_(ss, 'Horarios', 3).map(function (r) {
+      return { dia: String(r[0]).trim(), inicio: cfgHora_(r[1]), fin: cfgHora_(r[2]) };
+    }),
+    sedes: cfgFilas_(ss, 'Sedes', 4).map(function (r) {
+      return { nombre: String(r[0]).trim(), direccion: String(r[1]).trim(), mapsUrl: String(r[2]).trim(), activa: cfgActiva_(r[3]) };
+    }).filter(function (s) { return s.nombre || s.direccion; }),
+    mensajes: cfgFilas_(ss, 'Mensajes', 2).map(function (r) {
+      return { nombre: String(r[0]).trim(), texto: String(r[1]) };
+    }).filter(function (m) { return m.nombre; }),
+    bloqueos: bloqueos,
+    // Usos vacío = ilimitado (como lo lee buscarCupon_ al reservar).
+    cupones: cfgFilas_(ss, 'Cupones', 4).map(function (r) {
+      return {
+        codigo: String(r[0] || '').trim().toUpperCase(),
+        porcentaje: String(r[1]).trim() === '' ? 0 : toNumber_(r[1]),
+        monto: String(r[2]).trim() === '' ? 0 : toNumber_(r[2]),
+        usos: String(r[3]).trim() === '' ? null : Math.max(0, Math.floor(toNumber_(r[3]))),
+      };
+    }).filter(function (c) { return c.codigo; }),
+    logo: leerLogoHoja_(ss),
+  };
+}
+
+/** Los mismos errores que la ventana de la hoja, más servicios y días libres. */
+function duenoValidar_(seccion, datos) {
+  const c = datos.config || {};
+  const errores = [];
+  const hex = /^#?(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+  const hora = /^\d{1,2}:\d{2}$/;
+  const numero = function (k, min, max, nombre) {
+    if (!(k in c) || String(c[k]).trim() === '') return;
+    const n = Number(String(c[k]).replace(',', '.'));
+    if (!isFinite(n) || n < min || n > max) errores.push((nombre || k) + ': escribe un número entre ' + min + ' y ' + max + '.');
+  };
+  if (seccion === 'estilo') {
+    ['color_principal', 'color_fondo'].forEach(function (k) {
+      if (c[k] && !hex.test(String(c[k]).trim())) errores.push('Escribe el color en hex, como #1F6F5C.');
+    });
+  }
+  if (seccion === 'marca') {
+    if (!String(c.marca || c.nombre_negocio || '').trim()) errores.push('Escribe el nombre de tu negocio.');
+    if (c.logo_url && !/^https?:\/\//i.test(String(c.logo_url).trim())) errores.push('El logo tiene que ser un enlace que empiece por https://');
+  }
+  if (seccion === 'lugar') {
+    numero('recargo_domicilio_pct', 0, 300, 'Recargo a domicilio');
+    numero('minutos_extra_domicilio', 0, 240, 'Minutos de traslado');
+    const sedes = (datos.sedes || []).filter(function (s) { return String(s.nombre || '').trim(); });
+    if (!sedes.some(function (s) { return s.activa !== false; })) errores.push('Deja al menos una sede activa.');
+    const nombres = sedes.map(function (s) { return normKey_(s.nombre); });
+    if (nombres.some(function (n, i) { return nombres.indexOf(n) !== i; })) errores.push('Dos sedes tienen el mismo nombre.');
+    sedes.forEach(function (s) {
+      if (s.mapsUrl && !/^https?:\/\//i.test(String(s.mapsUrl).trim())) errores.push('El enlace de Maps de "' + s.nombre + '" tiene que empezar por https://');
+    });
+    if (normKey_(c.lugar_tipo || '') === 'otro' && !String(c.lugar_nombre || '').trim()) errores.push('Con "Otro", escribe cómo se llama tu lugar.');
+  }
+  if (seccion === 'mensaje') {
+    const mensajes = (datos.mensajes || []).filter(function (m) { return String(m.nombre || '').trim(); });
+    if (!mensajes.length) errores.push('Deja al menos una plantilla de mensaje.');
+    if (!mensajes.some(function (m) { return normKey_(m.nombre) === normKey_(c.mensaje_plantilla || ''); })) errores.push('Elige cuál plantilla se usa.');
+  }
+  if (seccion === 'horario') {
+    numero('intervalo_min', 5, 240, 'Cada cuántos minutos');
+    numero('dias_anticipacion', 1, 365, 'Días a mostrar');
+    numero('anticipacion_min_horas', 0, 168, 'Horas mínimas de aviso');
+    if (!cfgAlertas_(c.recordatorio_minutos)) errores.push('Alerta: elige hasta 5 tiempos, de 0 minutos a 4 semanas antes de la cita.');
+    (datos.horarios || []).forEach(function (h) {
+      if (!h.inicio && !h.fin) return;
+      if (!hora.test(h.inicio || '') || !hora.test(h.fin || '') || toMinutes_(h.fin) <= toMinutes_(h.inicio)) {
+        errores.push(h.dia + ': la hora de cierre va después de la de apertura.');
+      }
+    });
+  }
+  if (seccion === 'comprobantes') {
+    const modo = String(c.facturacion_modo || 'interno').trim().toLowerCase();
+    if (modo !== 'interno' && modo !== 'fiscal') errores.push('Elige un modo: control interno o facturación fiscal.');
+    const ticket = String(c.ticket_reserva || 'si').trim().toLowerCase();
+    if (ticket !== 'si' && ticket !== 'no') errores.push('Ticket de reserva: elige si se emite o no.');
+    if (modo === 'fiscal') {
+      if (!/^[VJEGP]-?\d{6,9}-?\d$/i.test(String(c.facturacion_rif || '').trim())) errores.push('Escribe tu RIF completo, por ejemplo J-12345678-9.');
+      if (!String(c.facturacion_razon_social || '').trim()) errores.push('Escribe tu nombre o razón social como sale en el RIF.');
+    }
+  }
+  if (seccion === 'pagos') {
+    if (c.whatsapp && String(c.whatsapp).replace(/\D/g, '').length < 10) errores.push('El WhatsApp necesita el código de país, por ejemplo 584121234567.');
+    if ('metodos_pago' in c && !String(c.metodos_pago || '').trim()) errores.push('Deja al menos un método de pago.');
+  }
+  if (seccion === 'servicios') {
+    const lista = datos.servicios || [];
+    if (lista.length > MAX_SERVICIOS) errores.push('Máximo ' + MAX_SERVICIOS + ' servicios.');
+    if (!lista.some(function (s) { return String(s.nombre || '').trim() && !s.adicional; })) errores.push('Deja al menos un servicio principal (que no sea adicional).');
+    const vistos = [];
+    lista.forEach(function (s) {
+      const nombre = String(s.nombre || '').trim();
+      if (!nombre) return errores.push('Hay un servicio sin nombre.');
+      if (vistos.indexOf(normKey_(nombre)) !== -1) errores.push('"' + nombre + '" está repetido.');
+      vistos.push(normKey_(nombre));
+      if (!(Number(s.precio) >= 0) || !isFinite(Number(s.precio))) errores.push(nombre + ': revisa el precio.');
+      if (!(Number(s.duracion) >= 5 && Number(s.duracion) <= 720)) errores.push(nombre + ': la duración va de 5 a 720 minutos.');
+    });
+  }
+  if (seccion === 'bloqueos') {
+    (datos.bloqueos || []).forEach(function (b) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(b.fecha || ''))) return errores.push('Hay un día libre sin fecha.');
+      const parcial = b.inicio || b.fin;
+      if (parcial && (!hora.test(b.inicio || '') || !hora.test(b.fin || '') || toMinutes_(b.fin) <= toMinutes_(b.inicio))) {
+        errores.push(b.fecha + ': la hora de fin va después de la de inicio (o deja las dos vacías para todo el día).');
+      }
+    });
+  }
+  if (seccion === 'cupones') {
+    const lista = datos.cupones || [];
+    if (lista.length > MAX_CUPONES) errores.push('Máximo ' + MAX_CUPONES + ' cupones.');
+    const codigos = [];
+    lista.forEach(function (c) {
+      const codigo = String(c.codigo || '').trim().toUpperCase();
+      if (!/^[A-Z0-9][A-Z0-9_-]{2,19}$/.test(codigo)) return errores.push((codigo || 'Un cupón') + ': el código lleva de 3 a 20 letras o números, sin espacios.');
+      if (codigos.indexOf(codigo) !== -1) errores.push(codigo + ' está repetido.');
+      codigos.push(codigo);
+      const pct = Number(c.porcentaje) || 0, monto = Number(c.monto) || 0;
+      if (pct && monto) errores.push(codigo + ': elige porcentaje o monto, no los dos.');
+      else if (!pct && !monto) errores.push(codigo + ': escribe cuánto descuenta.');
+      if (pct && !(pct > 0 && pct <= 100)) errores.push(codigo + ': el porcentaje va de 1 a 100.');
+      if (monto && !(monto > 0)) errores.push(codigo + ': revisa el monto.');
+      if (c.usos !== null && c.usos !== undefined && c.usos !== '' && !(Number(c.usos) >= 0 && Number(c.usos) <= 100000)) errores.push(codigo + ': revisa los usos.');
+    });
+  }
+  if (seccion === 'logo' && datos.logo && !logoValido_(datos.logo)) errores.push('La imagen no se pudo guardar. Prueba con un PNG o JPG más liviano.');
+  return errores;
+}
+
+/** Guarda una sección en la hoja del negocio. Devuelve { ok, errores } y la configuración nueva. */
+function duenoGuardar_(ss, tenant, seccion, datos, ahoraMs) {
+  const permitidas = CLAVES_DUENO[seccion];
+  if (!permitidas && TABLAS_DUENO.indexOf(seccion) === -1) return { ok: false, errores: ['Sección desconocida.'] };
+  datos = datos || {};
+  const errores = duenoValidar_(seccion, datos);
+  if (errores.length) return { ok: false, errores: errores };
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { ok: false, errores: ['La hoja está ocupada. Intenta de nuevo.'] };
+  try {
+    const valores = datos.config || {};
+    if (permitidas) {
+      const hojaConfig = ss.getSheetByName('Configuracion');
+      permitidas.forEach(function (k) {
+        if (k in valores) setConfigKey_(hojaConfig, k, paraCelda_(String(valores[k] == null ? '' : valores[k]).trim()));
+      });
+    }
+    if (seccion === 'lugar' && Array.isArray(datos.sedes)) {
+      const filas = datos.sedes.filter(function (s) { return String(s.nombre || '').trim(); }).map(function (s) {
+        return [paraCelda_(limpiarTexto_(s.nombre, 80)), paraCelda_(limpiarTexto_(s.direccion, 200)), paraCelda_(String(s.mapsUrl || '').trim().slice(0, 500)), s.activa !== false];
+      });
+      const hojaSedes = cfgHoja_(ss, 'Sedes');
+      cfgReemplazar_(hojaSedes, 4, filas);
+      if (filas.length) hojaSedes.getRange(2, 4, filas.length, 1).insertCheckboxes();
+    }
+    if (seccion === 'mensaje' && Array.isArray(datos.mensajes)) {
+      cfgReemplazar_(cfgHoja_(ss, 'Mensajes'), 2, datos.mensajes.filter(function (m) { return String(m.nombre || '').trim(); })
+        .map(function (m) { return [paraCelda_(limpiarTexto_(m.nombre, 60)), paraCelda_(String(m.texto || '').slice(0, 2000))]; }));
+    }
+    if (seccion === 'horario' && Array.isArray(datos.horarios)) {
+      const filas = [];
+      [1, 2, 3, 4, 5, 6, 0].map(function (d) { return DIAS_SEMANA[d]; }).forEach(function (dia) {
+        const tramos = datos.horarios.filter(function (h) { return normKey_(h.dia) === normKey_(dia) && h.inicio && h.fin; });
+        if (!tramos.length) filas.push([dia, '', '']);
+        tramos.forEach(function (t) { filas.push([dia, cfgHora_(t.inicio), cfgHora_(t.fin)]); });
+      });
+      const hojaHorarios = cfgHoja_(ss, 'Horarios');
+      hojaHorarios.getRange('A:C').setNumberFormat('@');
+      cfgReemplazar_(hojaHorarios, 3, filas);
+    }
+    if (seccion === 'servicios') {
+      cfgReemplazar_(cfgHoja_(ss, 'Servicios'), 5, (datos.servicios || []).map(function (s) {
+        const tipo = s.adicional ? 'Adicional' : paraCelda_(limpiarTexto_(s.categoria || '', 40));
+        return [paraCelda_(limpiarTexto_(s.id || '', 60)), paraCelda_(limpiarTexto_(s.nombre, 80)), round2_(Number(s.precio) || 0), Math.round(Number(s.duracion)), tipo];
+      }));
+    }
+    if (seccion === 'bloqueos') {
+      // Se reemplazan solo los de hoy en adelante: los días pasados quedan como historia.
+      const hojaBloqueos = cfgHoja_(ss, 'Bloqueos');
+      const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+      const pasados = [];
+      if (hojaBloqueos.getLastRow() >= 2) {
+        const n = hojaBloqueos.getLastRow() - 1;
+        const fechas = hojaBloqueos.getRange(2, 1, n, 1).getValues();
+        const resto = hojaBloqueos.getRange(2, 2, n, 3).getDisplayValues();
+        for (let i = 0; i < n; i++) {
+          const f = ymd_(fechas[i][0]);
+          if (f && f < hoy) pasados.push([f, resto[i][0], resto[i][1], resto[i][2]]);
+        }
+      }
+      const nuevos = (datos.bloqueos || []).filter(function (b) { return String(b.fecha) >= hoy; }).map(function (b) {
+        return [String(b.fecha), b.inicio ? cfgHora_(b.inicio) : '', b.fin ? cfgHora_(b.fin) : '', paraCelda_(limpiarTexto_(b.motivo || '', 80))];
+      });
+      hojaBloqueos.getRange('A:C').setNumberFormat('@');
+      cfgReemplazar_(hojaBloqueos, 4, pasados.concat(nuevos));
+    }
+    if (seccion === 'cupones') {
+      cfgReemplazar_(cfgHoja_(ss, 'Cupones'), 4, (datos.cupones || []).map(function (c) {
+        const usos = c.usos === null || c.usos === undefined || c.usos === '' ? '' : Math.floor(Number(c.usos));
+        return [String(c.codigo).trim().toUpperCase(), Number(c.porcentaje) || '', Number(c.monto) ? round2_(Number(c.monto)) : '', usos];
+      }));
+    }
+    if (seccion === 'logo') {
+      let hojaLogo = ss.getSheetByName('Logo');
+      if (!hojaLogo) {
+        hojaLogo = ss.insertSheet('Logo');
+        hojaLogo.getRange('A1').setValue('Logo (lo maneja la configuración; no lo edites)');
+        hojaLogo.hideSheet();
+      }
+      if (datos.logo) hojaLogo.getRange('A2').setValue(String(datos.logo).trim());
+      else hojaLogo.getRange('A2').clearContent();
+    }
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
+  }
+  limpiarCacheCatalogo_(tenant.slug); // la página muestra el cambio en la próxima carga
+  return { ok: true, errores: [], datos: duenoLeerConfig_(ss, tenant, ahoraMs) };
 }

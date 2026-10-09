@@ -7,6 +7,8 @@ describe('app en la pantalla de inicio', () => {
     expect(m.start_url).toBe('https://www.bookeaa.com/u/barberia-norte')
     expect(m.id).toBe(m.start_url)
     expect(m.display).toBe('standalone')
+    // Su propio alcance: no choca con bookeaa.com ni con otros negocios instalados.
+    expect(m.scope).toBe('https://www.bookeaa.com/u/barberia-norte')
     expect(m.name).toBe('Barbería Norte del Este')
     expect(m.short_name.length).toBeLessThanOrEqual(14)
     expect(m.icons.every((i) => i.src.startsWith('https://www.bookeaa.com/icon-'))).toBe(true)

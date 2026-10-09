@@ -6,14 +6,49 @@
     <meta name="theme-color" content="#FDFBF7" />
     <meta name="description" content="bookeaa: agenda online para negocios. Tus clientes reservan desde tu link y la cita queda en Google Calendar. 1 mes gratis, luego $10/mes." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- Agregar a inicio: abre como app (sin la barra del navegador). La página de un
-         negocio cambia el manifest por uno propio (src/lib/pwa.ts). -->
-    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icon-180.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="bookeaa" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!--
+      Agregar a inicio: abre como app (sin la barra del navegador). El manifest se elige
+      AQUÍ, antes de que cargue nada, porque Safari lo lee al abrir la página: si la de un
+      negocio arrancara con el de bookeaa (start_url "/"), el ícono abriría bookeaa.com.
+      Cada negocio (/u/<slug>) y "Mi negocio" (/negocio) llevan uno propio, con su página
+      como inicio y su propio id, así se pueden instalar varios en el mismo teléfono.
+      src/lib/pwa.ts lo actualiza después con el nombre real del negocio.
+    -->
+    <script>
+      ;(function () {
+        var p = location.pathname, m = /^\/u\/([a-z0-9-]{1,40})\/?$/i.exec(p)
+        var ruta = m ? '/u/' + m[1].toLowerCase() : /^\/negocio\/?$/.test(p) ? '/negocio' : ''
+        var link = document.createElement('link')
+        link.rel = 'manifest'
+        if (!ruta) {
+          link.href = '/manifest.webmanifest'
+        } else {
+          var nombre = m
+            ? m[1].split('-').filter(Boolean).map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1) }).join(' ')
+            : 'Mi negocio'
+          var o = location.origin
+          var abs = function (x) { return o + x }
+          link.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify({
+            id: abs(ruta), name: nombre, short_name: nombre.slice(0, 14).trim(), lang: 'es',
+            start_url: abs(ruta), scope: abs(ruta), display: 'standalone',
+            background_color: '#FDFBF7', theme_color: '#FDFBF7',
+            icons: [
+              { src: abs('/icon-192.png'), sizes: '192x192', type: 'image/png', purpose: 'any' },
+              { src: abs('/icon-512.png'), sizes: '512x512', type: 'image/png', purpose: 'any' },
+              { src: abs('/icon-512.png'), sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+            ]
+          }))
+          var t = document.querySelector('meta[name="apple-mobile-web-app-title"]')
+          if (t) t.setAttribute('content', nombre)
+        }
+        document.head.appendChild(link)
+      })()
+    </script>
     <!-- El catálogo llega de Apps Script: Abre la conexión TLS antes de que React monte. -->
     <link rel="preconnect" href="https://script.google.com" />
     <link rel="preconnect" href="https://script.googleusercontent.com" />
