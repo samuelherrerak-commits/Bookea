@@ -28,14 +28,19 @@ function csp(apiUrl: string): Plugin {
         )
         const politica = [
           "default-src 'self'",
-          `script-src 'self' ${hashes.join(' ')}`.trim(),
+          // accounts.google.com/gsi: "Entrar con Google" de /negocio (Google Identity Services).
+          `script-src 'self' ${hashes.join(' ')} https://accounts.google.com/gsi/client`.trim(),
           // sonner y framer-motion escriben estilos en línea.
-          "style-src 'self' 'unsafe-inline'",
+          "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
+          'frame-src https://accounts.google.com/gsi/',
           // El logo de cada negocio puede estar en cualquier sitio https.
           "img-src 'self' data: blob: https:",
           "font-src 'self' data:",
+          // La página de cada negocio usa su propio manifest como data: URL (src/lib/pwa.ts).
+          "manifest-src 'self' data:",
+          "worker-src 'self'",
           // Apps Script responde con una redirección a googleusercontent.
-          `connect-src ${[...new Set(["'self'", origenApi, 'https://script.google.com', 'https://script.googleusercontent.com'])].filter(Boolean).join(' ')}`,
+          `connect-src ${[...new Set(["'self'", origenApi, 'https://script.google.com', 'https://script.googleusercontent.com', 'https://accounts.google.com/gsi/'])].filter(Boolean).join(' ')}`,
           "object-src 'none'",
           "base-uri 'self'",
           "form-action 'self'",

@@ -6,6 +6,14 @@
     <meta name="theme-color" content="#FDFBF7" />
     <meta name="description" content="bookeaa: agenda online para negocios. Tus clientes reservan desde tu link y la cita queda en Google Calendar. 1 mes gratis, luego $10/mes." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Agregar a inicio: abre como app (sin la barra del navegador). La página de un
+         negocio cambia el manifest por uno propio (src/lib/pwa.ts). -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="bookeaa" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <!-- El catálogo llega de Apps Script: Abre la conexión TLS antes de que React monte. -->
     <link rel="preconnect" href="https://script.google.com" />
     <link rel="preconnect" href="https://script.googleusercontent.com" />

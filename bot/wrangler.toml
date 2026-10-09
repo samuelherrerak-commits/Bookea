@@ -4,6 +4,10 @@ main = "src/index.ts"
 compatibility_date = "2026-09-01"
 workers_dev = true
 
+# Recordatorios de citas y resumen de la mañana de "Mi negocio" (src/avisos.ts).
+[triggers]
+crons = ["*/5 * * * *"]
+
 [observability]
 enabled = true
 
@@ -16,3 +20,4 @@ migrations_dir = "migrations"
 
 # Secretos (no van aquí): WA_TOKEN, WA_PHONE_ID, WA_WABA_ID, APP_SECRET, VERIFY_TOKEN,
 # BANDEJA_CLAVE, APPS_SCRIPT_URL, BOT_TOKEN. Los carga la Action desde los secretos de GitHub.
+# Las claves VAPID de los avisos de "Mi negocio" las crea el Worker y las guarda en D1.

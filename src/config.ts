@@ -23,3 +23,6 @@ export const METODO_LABEL = {
   lugar: 'Pago en la cita',
   pago_movil: 'Bolívares (Pago Móvil)',
 } as const
+
+/** ID de cliente OAuth (Web) de Google Cloud para "Entrar con Google" en /negocio. Se fija en Render. */
+export const GOOGLE_CLIENT_ID: string = (env.VITE_GOOGLE_CLIENT_ID ?? '').trim()

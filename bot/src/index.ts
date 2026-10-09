@@ -3,8 +3,11 @@
  *   GET  /webhook   verificación de Meta
  *   POST /webhook   mensajes entrantes (firmados con el App Secret)
  *   /bandeja        bandeja web para atender los chats
+ *   /push/*         avisos de "Mi negocio" (Web Push): los llama el Apps Script
+ *   cron            recordatorios y resumen de la mañana (cada 5 minutos)
  */
 import { serviciosAppsScript, type EnvApps } from './apps'
+import { clavesVapid, nuevaReserva, quitar, repasar, suscribir } from './avisos'
 import { manejarBandeja } from './bandeja'
 import { guardarConversacion, guardarMensaje, leerConversacion, nueva, sumarUso } from './db'
 import { firmaMetaValida } from './firma'
@@ -28,10 +31,50 @@ export default {
       return new Response('Método no permitido', { status: 405 })
     }
     if (url.pathname === '/bandeja' || url.pathname.startsWith('/bandeja/')) return manejarBandeja(req, env)
+    if (url.pathname.startsWith('/push/')) return manejarPush(req, url.pathname, env)
     if (url.pathname === '/favicon.ico') return new Response(null, { status: 204 })
     if (url.pathname === '/') return Response.redirect(`${url.origin}/bandeja`, 302)
     return new Response('No encontrado', { status: 404 })
   },
+
+  async scheduled(_evento: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(repasar(env, Date.now()))
+  },
+}
+
+function json(datos: unknown, status = 200): Response {
+  return new Response(JSON.stringify(datos), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+/** Compara sin filtrar por tiempo cuántos caracteres coinciden. */
+function iguales(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let d = 0
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return d === 0
+}
+
+/**
+ * Avisos de "Mi negocio". La clave pública es pública; lo demás solo lo llama el
+ * Apps Script con el token del bot (él ya comprobó la sesión del dueño).
+ */
+export async function manejarPush(req: Request, ruta: string, env: Env): Promise<Response> {
+  if (ruta === '/push/clave' && req.method === 'GET') return json({ clave: (await clavesVapid(env.DB)).publica })
+  if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405)
+  const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '')
+  if (!env.BOT_TOKEN || !iguales(token, env.BOT_TOKEN)) return json({ error: 'No autorizado' }, 401)
+  const cuerpo = (await req.json().catch(() => null)) as any
+  const slug = String(cuerpo?.slug || '')
+  if (!/^[a-z0-9-]{1,40}$/.test(slug)) return json({ error: 'Negocio inválido' }, 400)
+  try {
+    if (ruta === '/push/suscribir') await suscribir(env.DB, slug, String(cuerpo.email || ''), cuerpo.suscripcion || {}, Date.now())
+    else if (ruta === '/push/quitar') await quitar(env.DB, String(cuerpo.suscripcion?.endpoint || ''))
+    else if (ruta === '/push/evento' && cuerpo.tipo === 'reserva') await nuevaReserva(env.DB, slug, cuerpo.cita || {})
+    else return json({ error: 'No encontrado' }, 404)
+  } catch (err) {
+    return json({ error: String((err as Error).message) }, 400)
+  }
+  return json({ ok: true })
 }
 
 function verificar(url: URL, env: Env): Response {

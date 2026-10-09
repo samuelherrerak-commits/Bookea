@@ -16,6 +16,10 @@ Quien abre la raíz del dominio, sin `/u/<slug>`, ve la landing comercial de **b
 - Tipografías: Barlow Condensed (títulos) y Barlow (texto), solo en la landing.
 - La sección **Plantillas** muestra capturas reales de la página de reservas (`public/landing/`). Para regenerarlas después de cambiar un estilo: `npm run capture:plantillas`. Usa el modo demo y Chromium (`CHROMIUM_PATH`, por defecto `/opt/pw-browsers/chromium`); qué negocio, estilo y colores sale en cada captura se define en `src/landing/plantillas.json`.
 
+## Mi negocio (`/negocio`): la app de los dueños
+
+Cada dueño entra con Google y ve sus citas de hoy y las próximas. Confirma los Pago Móvil y recibe avisos en el teléfono: reserva nueva, 30 min antes de cada cita y el resumen de las 7:00. Se agrega a inicio como app. Cómo ponerlo en marcha: [docs/MI-NEGOCIO.md](docs/MI-NEGOCIO.md).
+
 ## Estilos y colores de cada negocio
 
 Se eligen en la hoja **Configuracion** del negocio. Todos los estilos usan la misma distribución; cambian las fuentes, las esquinas y los detalles.
