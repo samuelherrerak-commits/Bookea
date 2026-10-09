@@ -23,7 +23,7 @@ const CLAVES_POR_SECCION = {
   mensaje: ['mensaje_plantilla'],
   horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria', 'recordatorio_minutos'],
   pagos: ['whatsapp', 'moneda', 'metodos_pago', 'pm_banco', 'pm_telefono', 'pm_cedula', 'tasa_eur_manual', 'tasa_usd_manual'],
-  comprobantes: ['facturacion_modo', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
+  comprobantes: ['facturacion_modo', 'ticket_reserva', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
 };
 
 /** Mismo texto que Code.gs y src/lib/mensajes.ts: "Restaurar las originales" las vuelve a escribir. */
@@ -302,6 +302,8 @@ function validar_(seccion, datos) {
   if (seccion === 'comprobantes') {
     const modo = String(c.facturacion_modo || 'interno').trim().toLowerCase();
     if (modo !== 'interno' && modo !== 'fiscal') errores.push('Elige un modo: control interno o facturación fiscal.');
+    const ticket = String(c.ticket_reserva || 'si').trim().toLowerCase();
+    if (ticket !== 'si' && ticket !== 'no') errores.push('Ticket de reserva: elige si se emite o no.');
     if (modo === 'fiscal') {
       if (!/^[VJEGP]-?\d{6,9}-?\d$/i.test(String(c.facturacion_rif || '').trim())) {
         errores.push('Escribe tu RIF completo, por ejemplo J-12345678-9.');

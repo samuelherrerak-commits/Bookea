@@ -78,8 +78,10 @@ export interface BusinessConfig {
   metodosPago: string[]
   heroTitulo: string
   heroSubtitulo: string
-  /** interno = comprobante de cita NO fiscal al reservar; fiscal = factura el negocio con su imprenta. */
+  /** interno = el negocio puede dar el ticket de reserva NO fiscal; fiscal = factura el negocio con su imprenta. */
   facturacionModo: 'interno' | 'fiscal'
+  /** Emitir el ticket de reserva (no fiscal) al reservar. Solo aplica en modo interno. */
+  ticketReserva: boolean
 }
 
 export interface Sede {
@@ -167,6 +169,6 @@ export interface ReservationResult {
   totalBs: number | null
   tasa: number | null
   comprobanteUrl: string | null
-  /** Número del comprobante de cita (no fiscal). null en modo fiscal. */
+  /** Número del ticket de reserva (no fiscal). null si el negocio no lo emite. */
   recibo: number | null
 }

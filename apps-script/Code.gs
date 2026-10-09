@@ -200,13 +200,14 @@ const CONFIG_DEFAULTS = [
   ['slug', ''], // lo escribe crearTenant; la barra lateral lo usa para refrescar la página
   ['api_url', ''], // URL /exec de este script; idem
   ['pagina_url', ''], // enlace público del negocio (propiedad del script sitio_url + /u/slug)
-  // Comprobantes: "interno" = comprobante de cita NO fiscal en PDF al reservar (por defecto).
-  // "fiscal" = el negocio factura con su imprenta digital autorizada; bookeaa no emite comprobantes.
+  // Comprobantes: "interno" = el negocio puede dar el ticket de reserva NO fiscal (por defecto).
+  // "fiscal" = el negocio factura con su imprenta digital autorizada; bookeaa no emite tickets.
   ['facturacion_modo', 'interno'],
+  ['ticket_reserva', 'si'], // "no" apaga el ticket de reserva (solo cuenta en modo interno)
   ['facturacion_rif', ''],
   ['facturacion_razon_social', ''],
   ['facturacion_proveedor', ''], // imprenta digital autorizada por el SENIAT
-  ['recibo_ultimo', '0'], // último número de comprobante interno; lo lleva el script
+  ['recibo_ultimo', '0'], // último número de ticket de reserva; lo lleva el script
 ];
 
 /**
@@ -642,10 +643,14 @@ function aplicarOpcionesConfig_(ss, configSheet) {
       celda.setDataValidation(lista(['EUR', 'USD', 'Bs']));
     } else if (clave === 'facturacionmodo') {
       celda.setDataValidation(lista(['interno', 'fiscal']));
-      celda.setNote('interno: al reservar, el cliente descarga un comprobante de cita NO fiscal (control interno). ' +
-        'fiscal: el negocio factura con su imprenta digital autorizada por el SENIAT y bookeaa no emite comprobantes.');
+      celda.setNote('interno: el negocio puede dar el ticket de reserva NO fiscal (control interno; ver ticket_reserva). ' +
+        'fiscal: el negocio factura con su imprenta digital autorizada por el SENIAT y bookeaa no emite tickets.');
+    } else if (clave === 'ticketreserva') {
+      celda.setDataValidation(lista(['si', 'no']));
+      celda.setNote('"si": al reservar, el cliente ve su ticket de reserva imprimirse y lo descarga como imagen. ' +
+        '"no": pasa directo a WhatsApp, sin ticket. Solo cuenta con facturacion_modo = interno.');
     } else if (clave === 'reciboultimo') {
-      celda.setNote('Último número de comprobante de cita. Lo lleva el script: no lo cambies a mano.');
+      celda.setNote('Último número de ticket de reserva. Lo lleva el script: no lo cambies a mano.');
     } else if (clave === 'mensajeplantilla') {
       const mensajes = ss.getSheetByName('Mensajes');
       if (mensajes) {
@@ -942,7 +947,7 @@ function doGet(e) {
 function configPublica_(config) {
   const out = {};
   Object.keys(config).forEach(function (k) {
-    // Lo interno no viaja al navegador. facturacion_modo sí: la página decide si da comprobante.
+    // Lo interno no viaja al navegador. facturacion_modo y ticket_reserva sí: la página decide si da el ticket.
     const interna = k === 'api_token' || k === 'api_url' || k === 'recibo_ultimo' ||
       (k.indexOf('facturacion_') === 0 && k !== 'facturacion_modo');
     if (!interna) out[k] = config[k];
@@ -1119,9 +1124,7 @@ function doPost(e) {
     const conBs = moneda === 'BS' || esPagoMovil;
     let tasa = moneda === 'BS' || !esPagoMovil ? null : tasaCache_(moneda, ss);
     let totalBs = moneda === 'BS' ? orden.total : esPagoMovil && tasa ? round2_(orden.total * tasa.valor) : null;
-    const recibo = String(config.facturacion_modo || '').trim().toLowerCase() === 'fiscal'
-      ? null
-      : siguienteRecibo_(ss);
+    const recibo = emiteTicket_(config) ? siguienteRecibo_(ss) : null;
 
     const id = reservaIdPedida || Utilities.getUuid();
     const serviciosTexto = orden.lineas.map(function (l) { return l.nombre; }).join(', ');
@@ -1263,9 +1266,15 @@ function doPost(e) {
 }
 
 /**
- * Siguiente número de comprobante de cita (interno, no fiscal) del negocio. Se llama
+ * Siguiente número de ticket de reserva (interno, no fiscal) del negocio. Se llama
  * dentro del lock de doPost, así dos reservas no se llevan el mismo número.
  */
+/** Ticket de reserva: activo (ticket_reserva distinto de "no") y el negocio no factura en modo fiscal. */
+function emiteTicket_(config) {
+  if (String(config.facturacion_modo || '').trim().toLowerCase() === 'fiscal') return false;
+  return !/^(no|false|0|off)$/i.test(String(config.ticket_reserva == null ? '' : config.ticket_reserva).trim());
+}
+
 function siguienteRecibo_(ss) {
   const sheet = ss.getSheetByName('Configuracion');
   const n = Math.max(0, Math.floor(toNumber_(getConfig_(ss).recibo_ultimo))) + 1;

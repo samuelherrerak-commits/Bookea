@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
   rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;600&family=Plus+Jakarta+Sans:wght@700&family=Newsreader:ital,wght@0,500;1,500&family=Source+Sans+3:wght@400;600&family=Nunito:wght@400;800&family=Playfair+Display:ital,wght@0,600;1,600&family=Lato:wght@400;700&family=DM+Sans:wght@400;500&family=Fraunces:ital,wght@0,600;1,600&family=Figtree:wght@400;600&display=swap"
+  href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;600&family=Plus+Jakarta+Sans:wght@700&family=Newsreader:ital,wght@0,500;1,500&family=Source+Sans+3:wght@400;600&family=Nunito:wght@400;800&family=Playfair+Display:ital,wght@0,600;1,600&family=Lato:wght@400;700&family=DM+Sans:wght@400;500&family=Fraunces:ital,wght@0,600;1,600&family=Figtree:wght@400;600&family=Chivo+Mono:wght@400;700&display=swap"
 />
 <style>
   :root {
@@ -3321,34 +3321,60 @@ var Logica = (function () {
       }, h('b', { text: titulo }), h('small', { text: texto }));
     }
     var modos = h('div', { class: 'plantillas-qr', style: { gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' } },
-      opcion('interno', 'Control interno', 'Al reservar, tu cliente descarga un comprobante de cita en PDF. No es una factura.'),
-      opcion('fiscal', 'Facturación fiscal (SENIAT)', 'Facturas con tu imprenta digital autorizada. bookeaa no emite comprobantes.'));
+      opcion('interno', 'Control interno', 'Puedes darle a tu cliente un ticket de reserva no fiscal al reservar.'),
+      opcion('fiscal', 'Facturación fiscal (SENIAT)', 'Facturas con tu imprenta digital autorizada. bookeaa no emite tickets.'));
 
-    var detalle;
+    var izquierda, vista = null;
     if (modo === 'interno') {
+      var activo = (cfg('ticket_reserva') || 'si').toLowerCase() !== 'no';
       var c = L.colores(S.datos.config);
-      var muestra = h('div', { class: 'preview', style: { background: '#fff', color: '#0f0f0e', padding: '14px', fontFamily: 'Helvetica, Arial, sans-serif' } },
-        h('div', { style: { border: '1.5px solid #0f0f0e', borderRadius: '6px', padding: '6px 8px', fontSize: '10.5px', fontWeight: 700, textAlign: 'center' }, text: LEYENDA_NO_FISCAL }),
-        h('div', { style: { color: c.deep, fontWeight: 700, fontSize: '18px', marginTop: '12px' }, text: 'COMPROBANTE DE CITA' }),
-        h('div', { style: { fontWeight: 700, marginTop: '2px' }, text: cfg('marca') || cfg('nombre_negocio') || 'Tu negocio' }),
-        h('div', { style: { fontSize: '12.5px', marginTop: '10px', lineHeight: 1.6 } },
-          h('div', { text: 'Comprobante N.º 000123 · Ref. #AB12CD34' }),
-          h('div', { text: 'Cliente: Carlos Méndez · 0412 555 1234' }),
-          h('div', { text: 'Cita: Jueves 15 de octubre · 2:00 p. m.' }),
-          h('div', { text: 'Corte y barba ……… 16,00 €' }),
-          h('div', { style: { fontWeight: 700 }, text: 'Total (referencia): 16,00 €' }),
-          h('div', { text: 'Forma de pago: En la cita (en bolívares, a la tasa BCV del día de la cita)' })));
-      detalle = [
+      var mono = "'Chivo Mono', ui-monospace, Menlo, Consolas, monospace";
+      var fila = function (a, b, fuerte) {
+        return h('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '10px', fontWeight: fuerte ? 700 : 400 } },
+          h('span', { style: { color: fuerte ? '#2A2926' : '#6B6860' }, text: a }), h('span', { text: b }));
+      };
+      var corte = function () { return h('div', { style: { borderTop: '1.5px dashed #C9C4B8', margin: '8px 0' } }); };
+      var barras = h('div', { style: { height: '30px', margin: '8px auto 2px', width: '190px',
+        background: 'repeating-linear-gradient(90deg,#2A2926 0 2px,transparent 2px 4px,#2A2926 4px 5px,transparent 5px 8px,#2A2926 8px 11px,transparent 11px 13px)' } });
+      var dientes = '-webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/12px 51% repeat-x,conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) top/12px 51% repeat-x;' +
+        'mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/12px 51% repeat-x,conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) top/12px 51% repeat-x;';
+      var papel = h('div', { style: { background: '#FFFDF6', color: '#2A2926', padding: '18px 16px 22px', fontFamily: mono, fontSize: '11px', lineHeight: 1.45 } },
+        h('div', { style: { textAlign: 'center', fontWeight: 700, fontSize: '16px' }, text: (cfg('marca') || cfg('nombre_negocio') || 'Tu negocio').toUpperCase() }),
+        h('div', { style: { textAlign: 'center', fontWeight: 700, fontSize: '10px', letterSpacing: '0.18em', color: c.deep }, text: 'TICKET DE RESERVA' }),
+        h('div', { style: { textAlign: 'center', fontSize: '8px', color: '#6B6860', marginTop: '4px' }, text: LEYENDA_NO_FISCAL }),
+        corte(), fila('EMITIDO', '15/10/2026 10:24'), fila('REF.', '#AB12CD34'), fila('CLIENTE', 'CARLOS MÉNDEZ'),
+        corte(),
+        h('div', { style: { display: 'grid', placeItems: 'center', padding: '4px 0' } },
+          h('div', { style: { display: 'inline-grid', justifyItems: 'center', padding: '6px 14px 4px', border: '3px double ' + c.deep, borderRadius: '10px', color: c.deep, transform: 'rotate(-7deg)' } },
+            h('small', { style: { fontSize: '9px', letterSpacing: '0.2em', fontWeight: 700 }, text: 'RESERVA' }),
+            h('strong', { style: { fontSize: '20px', lineHeight: 1 }, text: 'N° 000123' }))),
+        corte(), fila('DÍA', 'JUEVES 15 DE OCTUBRE'), fila('HORA', '2:00 P. M.'),
+        corte(), fila('CORTE Y BARBA', '16,00 €'), corte(), fila('TOTAL (REF.)', '16,00 €', true), fila('PAGO', 'EN LA CITA'),
+        barras,
+        h('div', { style: { textAlign: 'center', fontSize: '9px', letterSpacing: '0.3em', color: '#6B6860' }, text: 'RS 000123' }),
+        h('div', { style: { textAlign: 'center', fontWeight: 700, marginTop: '6px' }, text: '¡GRACIAS POR SU RESERVA!' }));
+      papel.setAttribute('style', papel.getAttribute('style') + ';' + dientes);
+      var muestra = h('div', { class: 'preview', style: { background: '#EFEDE8', padding: '18px', display: 'grid', placeItems: 'center' } },
+        h('div', { style: { width: '100%', maxWidth: '270px', filter: 'drop-shadow(0 8px 16px rgb(20 22 24 / 0.12))', opacity: activo ? 1 : 0.35 } }, papel));
+      var interruptor = h('label', { class: 'toggle', style: { marginTop: '6px' } }, h('input', {
+        type: 'checkbox', checked: activo,
+        on: { change: function (e) { setCfg('comprobantes', 'ticket_reserva', e.target.checked ? 'si' : 'no'); pintar(); } },
+      }), 'Emitir ticket de reserva');
+      izquierda = [
+        h('h3', { text: 'Ticket de reserva' }), interruptor,
+        h('p', { class: 'hint', text: activo
+          ? 'Al reservar, tu cliente ve su ticket imprimirse y lo descarga como imagen. No es una factura.'
+          : 'Apagado: al reservar, tu cliente pasa directo a WhatsApp sin ticket.' }),
         h('h3', { text: 'Cómo funciona' }),
         h('ul', { class: 'hint', style: { paddingLeft: '18px', margin: '6px 0 0' } },
-          h('li', { text: 'Cada reserva recibe un número correlativo (columna Recibo_N de Reservaciones).' }),
-          h('li', { text: 'El comprobante se llama "Comprobante de cita", lleva la leyenda de documento no fiscal y no desglosa IVA.' }),
+          h('li', { text: 'Cada ticket lleva un número correlativo (columna Recibo_N de Reservaciones).' }),
+          h('li', { text: 'Se llama "Ticket de reserva", lleva la leyenda de documento no fiscal y no desglosa IVA.' }),
           h('li', { text: 'Con pago en la cita muestra solo el valor de referencia: los bolívares dependen de la tasa del día de la cita.' }),
           h('li', { text: 'Con Pago Móvil muestra además lo que se pagó en bolívares y la tasa de ese día.' })),
-        h('h3', { text: 'Así se ve' }), muestra,
       ];
+      vista = [h('h3', { text: activo ? 'Así se ve' : 'Así se vería (apagado)' }), muestra];
     } else {
-      detalle = [
+      izquierda = [
         h('div', { class: 'aviso', style: { marginTop: '14px' }, text: 'Tus facturas las emite tu imprenta digital autorizada por el SENIAT. La conexión automática con bookeaa llegará más adelante; mientras tanto, factura desde el portal de tu proveedor. Verifica que tu proveedor aparezca en el listado oficial de imprentas digitales del SENIAT.' }),
         campo('RIF', texto('comprobantes', 'facturacion_rif', { placeholder: 'J-12345678-9' })),
         campo('Nombre o razón social', texto('comprobantes', 'facturacion_razon_social', { placeholder: 'Como sale en tu RIF' })),
@@ -3358,8 +3384,8 @@ var Logica = (function () {
     return h('section', {},
       cabecera('Comprobantes', 'Qué recibe tu cliente después de reservar.'),
       h('div', { class: 'con-vista' },
-        h('div', {}, h('h3', { text: 'Modo' }), modos, modo === 'interno' ? detalle.slice(0, 2) : detalle),
-        modo === 'interno' ? h('div', { class: 'vista' }, detalle.slice(2)) : h('div')));
+        h('div', {}, h('h3', { text: 'Modo' }), modos, izquierda),
+        vista ? h('div', { class: 'vista' }, vista) : h('div')));
   }
 
   // ---------- Código QR ----------
@@ -3650,7 +3676,7 @@ var Logica = (function () {
     mensaje: ['mensaje_plantilla'],
     horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria', 'recordatorio_minutos'],
     pagos: ['whatsapp', 'moneda', 'metodos_pago', 'pm_banco', 'pm_telefono', 'pm_cedula', 'tasa_eur_manual', 'tasa_usd_manual'],
-    comprobantes: ['facturacion_modo', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
+    comprobantes: ['facturacion_modo', 'ticket_reserva', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
   };
   function paquete(seccion) {
     var c = {};

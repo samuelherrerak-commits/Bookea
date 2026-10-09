@@ -14,7 +14,7 @@ import { ApiError, submitReservation } from '../lib/api'
 import { capitalize, formatEUR, formatLongDate, formatTime12 } from '../lib/format'
 import { servicesText, type OrderSummary as Summary } from '../lib/pricing'
 import { buildGoogleCalendarUrl } from '../lib/calendar'
-import type { DatosComprobante } from '../lib/comprobante'
+import { emiteTicket, type DatosTicket } from '../lib/ticket'
 import { splitDataUrl } from '../lib/image'
 import { buildWhatsAppMessage, buildWhatsAppUrl } from '../lib/whatsapp'
 import { useOrder } from '../state/order'
@@ -30,8 +30,8 @@ interface PaymentViewProps {
     whatsappUrl: string
     calendarUrl: string
     modalidad: Modalidad
-    /** Comprobante de cita no fiscal; null si el negocio factura en modo fiscal. */
-    comprobante: DatosComprobante | null
+    /** Ticket de reserva (no fiscal); null si el negocio no lo emite. */
+    ticket: DatosTicket | null
   }) => void
 }
 
@@ -72,11 +72,12 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
 
   const { customer, payment, schedule, coupon, modalidad, sedeId } = state
 
-  // El PDF del comprobante (jsPDF) se baja mientras la clienta llena el formulario,
+  // El dibujo del ticket se baja mientras la clienta llena el formulario,
   // así al confirmar no hay que esperarlo.
+  const conTicket = emiteTicket(catalog.config)
   useEffect(() => {
-    if (catalog.config.facturacionModo !== 'fiscal') void import('../lib/comprobantePdf').catch(() => {})
-  }, [catalog.config.facturacionModo])
+    if (conTicket) void import('../lib/ticketImagen').catch(() => {})
+  }, [conTicket])
   const lugar = modalidad ? lugarElegido(catalog.config, modalidad, sedeId) : null
   const customerErrors = validateCustomer(customer)
   const paymentError = attempted && !payment ? 'Elige cómo vas a pagar para continuar.' : null
@@ -159,8 +160,8 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
         calendarUrl,
       })
       const pagoMovil = payment.metodo === 'pago_movil'
-      const comprobante: DatosComprobante | null =
-        catalog.config.facturacionModo === 'fiscal'
+      const ticket: DatosTicket | null =
+        !emiteTicket(catalog.config)
           ? null
           : {
               negocio: catalog.config.marca || catalog.config.nombreNegocio,
@@ -184,7 +185,7 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
               tasa: pagoMovil ? result.tasa : null,
               color: catalog.config.tema.deep,
             }
-      onSuccess({ whatsappUrl: buildWhatsAppUrl(catalog.config.whatsapp, message), calendarUrl, modalidad, comprobante })
+      onSuccess({ whatsappUrl: buildWhatsAppUrl(catalog.config.whatsapp, message), calendarUrl, modalidad, ticket })
     } catch (err) {
       setSubmitting(false)
       if (err instanceof ApiError && err.code === 'cupo_ocupado') {
