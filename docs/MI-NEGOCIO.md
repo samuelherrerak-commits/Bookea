@@ -7,7 +7,16 @@
   - cuál es la próxima;
   - los pagos por verificar, con el capture y el botón **Pago recibido**, que cambia el estado a *Confirmada* en la hoja.
 - **Próximas:** las citas de los próximos 14 días, por día.
-- **Avisos y más:**
+- **Configurar:** lo mismo que la ventana de la hoja ("Configurar mi página"), desde el teléfono. Se guarda en la hoja del negocio y la página lo muestra en la próxima carga:
+  - **Servicios:** nombre, precio, minutos, categoría y adicionales (pestaña Servicios);
+  - **Horario:** días con uno o varios tramos, cada cuántos minutos, días a mostrar, aviso mínimo y alertas del calendario;
+  - **Días libres:** días completos u horas, de hoy en adelante (pestaña Bloqueos; los pasados se conservan);
+  - **Mi página:** nombre, títulos, logo, estilo y color;
+  - **Lugar:** tipo de lugar, sedes y domicilio;
+  - **Pagos y WhatsApp:** número, moneda, métodos, Pago Móvil y tasa de respaldo;
+  - **Mensaje de WhatsApp:** cuál plantilla se usa y su texto;
+  - **Ticket de reserva:** activarlo, o facturación fiscal con imprenta.
+- **Avisos:**
   - activar los avisos en el teléfono;
   - cambiar de negocio, si tiene varios;
   - ver su página de reservas;
@@ -75,7 +84,7 @@ Las claves VAPID de los avisos las crea el Worker solo y las guarda en D1.
 
 ## Probar
 1. Abre `bookeaa.com/negocio` en el teléfono y entra con un Gmail que esté en Tenants.
-2. iPhone: Safari → Compartir → **Agregar a inicio**. Abre **Mi negocio** desde el ícono → **Avisos y más → Activar avisos**.
+2. iPhone: Safari → Compartir → **Agregar a inicio**. Abre **Mi negocio** desde el ícono → **Avisos → Activar avisos**.
 3. Haz una reserva de prueba en `/u/<tu-negocio>`: llega "📅 Nueva reserva".
 
 ## Si algo falla
