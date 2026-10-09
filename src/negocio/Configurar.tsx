@@ -1,20 +1,23 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { formatTime12 } from '../lib/format'
 import { LUGAR_TIPOS } from '../lib/lugar'
 import { ESTILO_DEF, ESTILOS, PALETAS } from '../lib/theme'
 import * as api from './api'
+import { dibujarQr, linkDelNegocio, MODOS_QR, PLANTILLAS_QR, type ModoQr, type PlantillaQr } from './qr'
 
 /**
  * Configurar (Mi negocio): lo mismo que la ventana de la hoja, desde el teléfono.
  * Cada sección guarda en la hoja del negocio y la página lo muestra en la próxima carga.
  */
 
-type Id = 'servicios' | 'horario' | 'bloqueos' | 'pagina' | 'lugar' | 'pagos' | 'mensaje' | 'ticket'
+type Id = 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'qr' | 'pagina' | 'lugar' | 'pagos' | 'mensaje' | 'ticket'
 
 const SECCIONES: { id: Id; titulo: string; detalle: string; icono: string }[] = [
   { id: 'servicios', titulo: 'Servicios', detalle: 'Nombre, precio y duración', icono: '✂️' },
   { id: 'horario', titulo: 'Horario', detalle: 'Días y horas de atención', icono: '🕘' },
   { id: 'bloqueos', titulo: 'Días libres', detalle: 'Vacaciones, feriados, permisos', icono: '🌴' },
+  { id: 'cupones', titulo: 'Cupones', detalle: 'Códigos de descuento', icono: '🏷️' },
+  { id: 'qr', titulo: 'Código QR', detalle: 'Cartel, historia o tarjeta con tu QR', icono: '🔳' },
   { id: 'pagina', titulo: 'Mi página', detalle: 'Nombre, logo, textos y colores', icono: '🎨' },
   { id: 'lugar', titulo: 'Lugar', detalle: 'Sedes y servicio a domicilio', icono: '📍' },
   { id: 'pagos', titulo: 'Pagos y WhatsApp', detalle: 'Moneda, métodos y Pago Móvil', icono: '💳' },
@@ -95,6 +98,8 @@ export function Configurar({ sesion, slug, alSalir }: Props) {
         {abierta === 'pagos' && <Pagos {...props} />}
         {abierta === 'mensaje' && <MensajeSec {...props} />}
         {abierta === 'ticket' && <Ticket {...props} />}
+        {abierta === 'cupones' && <Cupones {...props} />}
+        {abierta === 'qr' && <CodigoQr datos={datos} slug={slug} />}
       </div>
     )
   }
@@ -652,6 +657,153 @@ function MensajeSec({ datos, guardar }: SecProps) {
         </Tarjeta>
       )}
       <Guardar cambios={cambiosM || cambiosC} alGuardar={() => guardar('mensaje', { config: { mensaje_plantilla: m?.nombre ?? '' }, mensajes })} />
+    </>
+  )
+}
+
+// ---------- Cupones ----------
+
+function Cupones({ datos, guardar }: SecProps) {
+  const [lista, setLista, cambios] = useBorrador(datos.cupones)
+  const moneda = (datos.config.moneda || 'EUR').toUpperCase() === 'USD' ? '$' : /^bs/i.test(datos.config.moneda) ? 'Bs.' : '€'
+  const editar = (i: number, c: Partial<api.Cupon>) => setLista(lista.map((x, j) => (j === i ? { ...x, ...c } : x)))
+  return (
+    <>
+      <p className="mt-2 text-[14px] text-muted">Tu cliente escribe el código al reservar y el descuento se aplica solo. Cada reserva gasta un uso.</p>
+      <div className="mt-4 space-y-3">
+        {lista.length === 0 && <p className="rounded-3xl bg-sand px-4 py-6 text-center text-[15px] text-muted">Todavía no tienes cupones.</p>}
+        {lista.map((c, i) => {
+          const tipo = c.monto > 0 ? 'monto' : 'porcentaje'
+          const agotado = c.usos === 0
+          return (
+            <Tarjeta key={i}>
+              <div className="flex items-start gap-2">
+                <Texto aria-label="Código" placeholder="CÓDIGO" value={c.codigo} maxLength={20} autoCapitalize="characters"
+                  onChange={(e) => editar(i, { codigo: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') })} className="font-mono font-semibold tracking-wider" />
+                <button type="button" aria-label={`Quitar ${c.codigo || 'cupón'}`} onClick={() => setLista(lista.filter((_, j) => j !== i))} className="grid size-12 shrink-0 place-items-center rounded-2xl text-muted ring-1 ring-line">×</button>
+              </div>
+              <div className="grid grid-cols-2 gap-1 rounded-2xl bg-sand p-1">
+                {(['porcentaje', 'monto'] as const).map((t) => (
+                  <button key={t} type="button" aria-pressed={tipo === t}
+                    onClick={() => editar(i, t === 'monto' ? { monto: c.monto || c.porcentaje || 1, porcentaje: 0 } : { porcentaje: c.porcentaje || Math.min(100, c.monto) || 10, monto: 0 })}
+                    className={'rounded-xl py-2 text-[14px] ' + (tipo === t ? 'bg-surface font-semibold shadow-card' : 'text-muted')}>
+                    {t === 'porcentaje' ? 'Porcentaje (%)' : `Monto (${moneda})`}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo etiqueta={tipo === 'porcentaje' ? 'Descuento (%)' : `Descuento (${moneda})`}>
+                  <Texto inputMode="decimal" value={String(tipo === 'porcentaje' ? c.porcentaje : c.monto)}
+                    onChange={(e) => { const n = Number(e.target.value.replace(',', '.')) || 0; editar(i, tipo === 'porcentaje' ? { porcentaje: n } : { monto: n }) }} />
+                </Campo>
+                <Campo etiqueta="Usos que quedan" ayuda={c.usos === null ? 'Ilimitado' : agotado ? 'Agotado' : undefined}>
+                  <Texto inputMode="numeric" placeholder="∞" value={c.usos === null ? '' : String(c.usos)}
+                    onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); editar(i, { usos: v === '' ? null : Number(v) }) }} />
+                </Campo>
+              </div>
+            </Tarjeta>
+          )
+        })}
+      </div>
+      <button type="button" onClick={() => setLista([...lista, { codigo: '', porcentaje: 10, monto: 0, usos: null }])} className="mt-3 w-full rounded-full px-5 py-3 text-[15px] font-semibold ring-1 ring-line">
+        + Crear cupón
+      </button>
+      <Guardar cambios={cambios} alGuardar={() => guardar('cupones', { cupones: lista })} />
+    </>
+  )
+}
+
+// ---------- Código QR ----------
+
+function CodigoQr({ datos, slug }: { datos: api.Configuracion; slug: string }) {
+  // El QR lleva siempre a la página del negocio: no se puede poner otro link.
+  const link = linkDelNegocio(slug)
+  const [plantilla, setPlantilla] = useState<PlantillaQr['id']>('mostrador')
+  const [modo, setModo] = useState<ModoQr>('marca')
+  const [textos, setTextos] = useState(() => Object.fromEntries(PLANTILLAS_QR.map((p) => [p.id, { titulo: p.titulo, subtitulo: p.subtitulo, llamado: p.llamado }])))
+  const [mostrarNombre, setMostrarNombre] = useState(true)
+  const [mostrarLink, setMostrarLink] = useState(true)
+  const [copiado, setCopiado] = useState(false)
+  const lienzo = useRef<HTMLCanvasElement>(null)
+  const t = textos[plantilla]
+  const p = PLANTILLAS_QR.find((x) => x.id === plantilla)!
+
+  useEffect(() => {
+    if (lienzo.current) void dibujarQr(lienzo.current, datos.config, link, { plantilla, modo, ...t, mostrarNombre, mostrarLink })
+  }, [datos.config, link, plantilla, modo, t, mostrarNombre, mostrarLink])
+
+  const archivo = () => new Promise<Blob>((ok, mal) => lienzo.current!.toBlob((b) => (b ? ok(b) : mal(new Error('No se pudo crear la imagen.'))), 'image/png'))
+  const nombre = `qr-${slug}-${plantilla}.png`
+  const descargar = async () => {
+    const url = URL.createObjectURL(await archivo())
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nombre
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 4000)
+  }
+  const compartir = async () => {
+    try {
+      await navigator.share({ files: [new File([await archivo()], nombre, { type: 'image/png' })] })
+    } catch {
+      /* canceló */
+    }
+  }
+  const puedeCompartir = typeof navigator !== 'undefined' && !!navigator.canShare?.({ files: [new File([''], 'x.png', { type: 'image/png' })] })
+
+  return (
+    <>
+      <Tarjeta className="mt-4 !space-y-2">
+        <span className="block text-[14px] font-semibold">Tu link</span>
+        <div className="flex items-center gap-2">
+          <p className="min-w-0 flex-1 truncate rounded-2xl bg-sand px-3.5 py-3 font-mono text-[14px]">{link.replace(/^https?:\/\//, '')}</p>
+          <button type="button" onClick={async () => { await navigator.clipboard?.writeText(link).catch(() => {}); setCopiado(true); setTimeout(() => setCopiado(false), 1500) }}
+            className="shrink-0 rounded-full px-4 py-3 text-[14px] font-semibold ring-1 ring-line">{copiado ? '✓ Copiado' : 'Copiar'}</button>
+        </div>
+        <p className="text-[13px] text-muted">El QR lleva siempre a tu página de reservas.</p>
+      </Tarjeta>
+
+      <div className="mt-4 -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 no-scrollbar">
+        {PLANTILLAS_QR.map((x) => (
+          <button key={x.id} type="button" aria-pressed={plantilla === x.id} onClick={() => setPlantilla(x.id)}
+            className={'shrink-0 rounded-2xl px-3.5 py-2.5 text-left ring-1 ' + (plantilla === x.id ? 'bg-ink text-bg ring-ink' : 'bg-surface ring-line')}>
+            <b className="block text-[14px]">{x.nombre}</b>
+            <span className="text-[12px] opacity-75">{x.uso}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 grid place-items-center rounded-3xl bg-sand p-4">
+        <canvas ref={lienzo} aria-label="Vista previa del QR" className="max-h-[60vh] w-auto max-w-full rounded-xl shadow-card" style={{ aspectRatio: `${p.ancho} / ${p.alto}` }} />
+      </div>
+      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: puedeCompartir ? '1fr 1fr' : '1fr' }}>
+        <button type="button" onClick={() => void descargar()} className="rounded-full bg-ink px-5 py-3.5 text-[15px] font-semibold text-bg">Descargar PNG</button>
+        {puedeCompartir && <button type="button" onClick={() => void compartir()} className="rounded-full px-5 py-3.5 text-[15px] font-semibold ring-1 ring-line">Compartir</button>}
+      </div>
+
+      <h3 className="mt-6 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Colores</h3>
+      <div className="mt-2 grid grid-cols-3 gap-1 rounded-2xl bg-sand p-1">
+        {MODOS_QR.map(([id, nombre]) => (
+          <button key={id} type="button" aria-pressed={modo === id} onClick={() => setModo(id)} className={'rounded-xl py-2 text-[14px] ' + (modo === id ? 'bg-surface font-semibold shadow-card' : 'text-muted')}>{nombre}</button>
+        ))}
+      </div>
+
+      {plantilla !== 'solo' && (
+        <>
+          <h3 className="mt-6 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Textos</h3>
+          <Tarjeta className="mt-2">
+            <Campo etiqueta="Título"><Texto value={t.titulo} onChange={(e) => setTextos({ ...textos, [plantilla]: { ...t, titulo: e.target.value } })} /></Campo>
+            <Campo etiqueta="Texto debajo"><Texto value={t.subtitulo} onChange={(e) => setTextos({ ...textos, [plantilla]: { ...t, subtitulo: e.target.value } })} /></Campo>
+            {plantilla !== 'tarjeta' && (
+              <Campo etiqueta="Frase destacada" ayuda="Déjala vacía para no mostrarla.">
+                <Texto value={t.llamado} onChange={(e) => setTextos({ ...textos, [plantilla]: { ...t, llamado: e.target.value } })} />
+              </Campo>
+            )}
+            <Interruptor activo={mostrarNombre} onChange={setMostrarNombre}>Mostrar el nombre del negocio</Interruptor>
+            <Interruptor activo={mostrarLink} onChange={setMostrarLink}>Mostrar el link escrito</Interruptor>
+          </Tarjeta>
+        </>
+      )}
     </>
   )
 }

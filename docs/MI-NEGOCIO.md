@@ -11,6 +11,8 @@
   - **Servicios:** nombre, precio, minutos, categoría y adicionales (pestaña Servicios);
   - **Horario:** días con uno o varios tramos, cada cuántos minutos, días a mostrar, aviso mínimo y alertas del calendario;
   - **Días libres:** días completos u horas, de hoy en adelante (pestaña Bloqueos; los pasados se conservan);
+  - **Cupones:** código, porcentaje o monto, y usos que quedan (vacío = ilimitado) (pestaña Cupones);
+  - **Código QR:** cartel de mostrador, historia, post, tarjeta o solo el código, con los colores y las fuentes del negocio. El link es siempre su página (`/u/<slug>`) y no se puede cambiar; se descarga en PNG o se comparte;
   - **Mi página:** nombre, títulos, logo, estilo y color;
   - **Lugar:** tipo de lugar, sedes y domicilio;
   - **Pagos y WhatsApp:** número, moneda, métodos, Pago Móvil y tasa de respaldo;

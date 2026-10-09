@@ -3427,16 +3427,15 @@ var Logica = (function () {
       return h('label', { class: 'toggle', style: { marginTop: '10px' } },
         h('input', { type: 'checkbox', checked: q[k], on: { change: function (e) { q[k] = e.target.checked; redibujar(); } } }), texto);
     }
-    var enlace = h('input', {
-      type: 'url', value: q.enlace, placeholder: 'https://…',
-      on: { input: function (e) { q.enlace = e.target.value.trim(); redibujar(); } },
-    });
+    // El QR lleva siempre a la página del negocio (pagina_url, la escribe el maestro): no se cambia.
+    q.enlace = S.datos.paginaUrl || '';
+    var enlace = h('input', { type: 'url', value: q.enlace, readonly: true, 'aria-readonly': 'true', placeholder: 'Tu hoja todavía no tiene el link' });
     var conTextos = q.plantilla !== 'solo';
     var descargar = h('button', { type: 'button', class: 'btn', text: 'Descargar PNG', on: { click: function () { descargarQr(canvas, q); } } });
 
     var nodo = h('section', {},
       cabecera('Código QR', 'Un cartel o una imagen con el QR de tu página, con tus colores. Imprímelo o súbelo a tus redes.'),
-      S.datos.paginaUrl ? null : h('div', { class: 'aviso', text: 'Tu hoja todavía no tiene el link de tu página. Pídele a bookeaa que la actualice, o escríbelo abajo.' }),
+      S.datos.paginaUrl ? null : h('div', { class: 'aviso', text: 'Tu hoja todavía no tiene el link de tu página. Pídele a bookeaa que la actualice.' }),
       h('div', { class: 'con-vista' },
         h('div', {},
           h('h3', { text: 'Formato' }), plantillas,
@@ -3452,7 +3451,7 @@ var Logica = (function () {
           h('h3', { text: 'Colores' }),
           campo('Estilo de color', modos, 'Usa los colores y las fuentes de tu página.'),
           h('h3', { text: 'Link' }),
-          campo('A dónde lleva el QR', enlace, 'Es el link de tu página. Solo cámbialo si sabes lo que haces.')),
+          campo('A dónde lleva el QR', enlace, 'Es el link de tu página de reservas. No se puede cambiar.')),
         h('div', { class: 'vista' },
           h('h3', { text: 'Así queda' }),
           h('div', { class: 'lienzo' }, canvas),
@@ -3542,7 +3541,7 @@ var Logica = (function () {
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, W, H);
         if (qr) pintarModulos(ctx, qr, 0, 0, W, col.modulos);
-        return qr ? '' : 'Escribe un link que empiece con https:// para generar el código.';
+        return qr ? '' : 'Tu hoja todavía no tiene el link de tu página: pídele a bookeaa que la actualice.';
       }
 
       ctx.fillStyle = col.fondo;
@@ -3580,7 +3579,7 @@ var Logica = (function () {
           b.lineas.forEach(function (l) { y += b.lh; ctx.fillText(l, x, y - b.lh * 0.2); });
           y += b.gap;
         });
-        return qr ? '' : 'Escribe un link que empiece con https:// para generar el código.';
+        return qr ? '' : 'Tu hoja todavía no tiene el link de tu página: pídele a bookeaa que la actualice.';
       }
 
       // Vertical: nombre, título, texto, tarjeta con el QR, frase destacada y link.
@@ -3649,7 +3648,7 @@ var Logica = (function () {
       ctx.globalAlpha = 0.8;
       ctx.fillText(marca.s, W / 2, H - margen * 0.6);
       ctx.globalAlpha = 1;
-      return qr ? '' : 'Escribe un link que empiece con https:// para generar el código.';
+      return qr ? '' : 'Tu hoja todavía no tiene el link de tu página: pídele a bookeaa que la actualice.';
     });
   }
 

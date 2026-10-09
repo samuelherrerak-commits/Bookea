@@ -2895,7 +2895,8 @@ const CLAVES_DUENO = {
   comprobantes: ['facturacion_modo', 'ticket_reserva', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
 };
 /** Secciones que solo tocan tablas (sin claves de Configuracion). */
-const TABLAS_DUENO = ['servicios', 'bloqueos', 'logo'];
+const TABLAS_DUENO = ['servicios', 'bloqueos', 'logo', 'cupones'];
+const MAX_CUPONES = 200;
 const MAX_SERVICIOS = 120;
 
 /** Filas de datos como texto visible (las horas no se vuelven fechas). */
@@ -2981,6 +2982,15 @@ function duenoLeerConfig_(ss, tenant, ahoraMs) {
       return { nombre: String(r[0]).trim(), texto: String(r[1]) };
     }).filter(function (m) { return m.nombre; }),
     bloqueos: bloqueos,
+    // Usos vacío = ilimitado (como lo lee buscarCupon_ al reservar).
+    cupones: cfgFilas_(ss, 'Cupones', 4).map(function (r) {
+      return {
+        codigo: String(r[0] || '').trim().toUpperCase(),
+        porcentaje: String(r[1]).trim() === '' ? 0 : toNumber_(r[1]),
+        monto: String(r[2]).trim() === '' ? 0 : toNumber_(r[2]),
+        usos: String(r[3]).trim() === '' ? null : Math.max(0, Math.floor(toNumber_(r[3]))),
+      };
+    }).filter(function (c) { return c.codigo; }),
     logo: leerLogoHoja_(ss),
   };
 }
@@ -3071,6 +3081,23 @@ function duenoValidar_(seccion, datos) {
       }
     });
   }
+  if (seccion === 'cupones') {
+    const lista = datos.cupones || [];
+    if (lista.length > MAX_CUPONES) errores.push('Máximo ' + MAX_CUPONES + ' cupones.');
+    const codigos = [];
+    lista.forEach(function (c) {
+      const codigo = String(c.codigo || '').trim().toUpperCase();
+      if (!/^[A-Z0-9][A-Z0-9_-]{2,19}$/.test(codigo)) return errores.push((codigo || 'Un cupón') + ': el código lleva de 3 a 20 letras o números, sin espacios.');
+      if (codigos.indexOf(codigo) !== -1) errores.push(codigo + ' está repetido.');
+      codigos.push(codigo);
+      const pct = Number(c.porcentaje) || 0, monto = Number(c.monto) || 0;
+      if (pct && monto) errores.push(codigo + ': elige porcentaje o monto, no los dos.');
+      else if (!pct && !monto) errores.push(codigo + ': escribe cuánto descuenta.');
+      if (pct && !(pct > 0 && pct <= 100)) errores.push(codigo + ': el porcentaje va de 1 a 100.');
+      if (monto && !(monto > 0)) errores.push(codigo + ': revisa el monto.');
+      if (c.usos !== null && c.usos !== undefined && c.usos !== '' && !(Number(c.usos) >= 0 && Number(c.usos) <= 100000)) errores.push(codigo + ': revisa los usos.');
+    });
+  }
   if (seccion === 'logo' && datos.logo && !logoValido_(datos.logo)) errores.push('La imagen no se pudo guardar. Prueba con un PNG o JPG más liviano.');
   return errores;
 }
@@ -3141,6 +3168,12 @@ function duenoGuardar_(ss, tenant, seccion, datos, ahoraMs) {
       });
       hojaBloqueos.getRange('A:C').setNumberFormat('@');
       cfgReemplazar_(hojaBloqueos, 4, pasados.concat(nuevos));
+    }
+    if (seccion === 'cupones') {
+      cfgReemplazar_(cfgHoja_(ss, 'Cupones'), 4, (datos.cupones || []).map(function (c) {
+        const usos = c.usos === null || c.usos === undefined || c.usos === '' ? '' : Math.floor(Number(c.usos));
+        return [String(c.codigo).trim().toUpperCase(), Number(c.porcentaje) || '', Number(c.monto) ? round2_(Number(c.monto)) : '', usos];
+      }));
     }
     if (seccion === 'logo') {
       let hojaLogo = ss.getSheetByName('Logo');

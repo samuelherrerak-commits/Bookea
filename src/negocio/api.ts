@@ -116,6 +116,15 @@ export interface Bloqueo {
   fin: string
   motivo: string
 }
+export interface Cupon {
+  codigo: string
+  /** 1–100, o 0 si descuenta un monto. */
+  porcentaje: number
+  /** En la moneda del negocio, o 0 si descuenta un porcentaje. */
+  monto: number
+  /** Usos que quedan; null = ilimitado. */
+  usos: number | null
+}
 export interface Configuracion {
   config: Record<string, string>
   paginaUrl: string
@@ -124,10 +133,11 @@ export interface Configuracion {
   sedes: Sede[]
   mensajes: Mensaje[]
   bloqueos: Bloqueo[]
+  cupones: Cupon[]
   /** data URL del logo subido ('' si no hay). */
   logo: string
 }
-export type Seccion = 'servicios' | 'horario' | 'bloqueos' | 'marca' | 'estilo' | 'logo' | 'lugar' | 'pagos' | 'mensaje' | 'comprobantes'
+export type Seccion = 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'marca' | 'estilo' | 'logo' | 'lugar' | 'pagos' | 'mensaje' | 'comprobantes'
 export interface DatosSeccion {
   config?: Record<string, string>
   servicios?: Servicio[]
@@ -135,6 +145,7 @@ export interface DatosSeccion {
   sedes?: Sede[]
   mensajes?: Mensaje[]
   bloqueos?: Bloqueo[]
+  cupones?: Cupon[]
   logo?: string
 }
 export interface Guardado {
@@ -152,7 +163,7 @@ export function guardar(sesion: string, slug: string, seccion: Seccion, datos: D
   if (DEMO_MODE) {
     const c = DEMO.configuracion
     Object.assign(c.config, datos.config ?? {})
-    for (const k of ['servicios', 'horarios', 'sedes', 'mensajes', 'bloqueos'] as const) if (datos[k]) (c[k] as unknown) = datos[k]
+    for (const k of ['servicios', 'horarios', 'sedes', 'mensajes', 'bloqueos', 'cupones'] as const) if (datos[k]) (c[k] as unknown) = datos[k]
     if (seccion === 'logo') c.logo = datos.logo ?? ''
     return new Promise((ok) => setTimeout(() => ok({ ok: true, errores: [], datos: structuredClone(c) }), 400))
   }
@@ -193,6 +204,7 @@ const DEMO = {
     sedes: [{ nombre: 'Sede Centro', direccion: 'Av. Libertador, local 12', mapsUrl: '', activa: true }],
     mensajes: [{ nombre: 'Clásica', texto: 'Hola {negocio}, soy {nombre}. Reservé {servicios} el {fecha} a las {hora}.' }],
     bloqueos: [{ fecha: sumarDias(hoyCaracas(), 6), inicio: '', fin: '', motivo: 'Vacaciones' }],
+    cupones: [{ codigo: 'OCTUBRE10', porcentaje: 10, monto: 0, usos: null }, { codigo: 'BIENVENIDA', porcentaje: 0, monto: 2, usos: 15 }],
     logo: '',
   } as Configuracion,
 

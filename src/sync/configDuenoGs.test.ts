@@ -43,7 +43,7 @@ const NOMBRES = ['duenoGuardar_', 'duenoValidar_', 'duenoLeerConfig_', 'cfgFilas
 const cargar = (extra: Record<string, unknown> = {}) => {
   let limpiado = ''
   const f = funcionesGs<Record<string, Fn>>(gs, NOMBRES, {
-    CLAVES_DUENO: constanteGs(gs, 'CLAVES_DUENO'), TABLAS_DUENO: constanteGs(gs, 'TABLAS_DUENO'), MAX_SERVICIOS: 120,
+    CLAVES_DUENO: constanteGs(gs, 'CLAVES_DUENO'), TABLAS_DUENO: constanteGs(gs, 'TABLAS_DUENO'), MAX_SERVICIOS: 120, MAX_CUPONES: 200,
     DIAS_SEMANA: constanteGs(gs, 'DIAS_SEMANA'), SHEETS: [], ZONA: 'America/Caracas',
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => undefined }) },
     SpreadsheetApp: { flush: () => undefined },
@@ -121,5 +121,35 @@ describe('Code.gs · configuración desde Mi negocio', () => {
       ['Viernes', '', ''], ['Sábado', '09:00', '12:00'], ['Domingo', '', ''],
     ].slice(0, 9))
     expect(f.duenoValidar_('horario', { config: {}, horarios: [{ dia: 'Lunes', inicio: '18:00', fin: '09:00' }] })).toHaveLength(1)
+  })
+})
+
+describe('Code.gs · cupones desde Mi negocio', () => {
+  it('guarda en mayúsculas, porcentaje o monto, y usos vacío = ilimitado', () => {
+    const { ss, hojas } = negocio()
+    hojas.Cupones = hoja([['Codigo', 'Descuento_Porcentaje', 'Descuento_Monto', 'Usos_Restantes'], ['VIEJO', 10, '', 5]])
+    const { f } = cargar({ MAX_CUPONES: 200 })
+    const r = f.duenoGuardar_(ss, { slug: 'b' }, 'cupones', { cupones: [
+      { codigo: 'octubre10', porcentaje: 10, monto: 0, usos: null },
+      { codigo: 'BIENVENIDA', porcentaje: 0, monto: 2.5, usos: 20 },
+    ] }, AHORA)
+    expect(r.ok).toBe(true)
+    expect(hojas.Cupones.datos.slice(1, 3)).toEqual([['OCTUBRE10', 10, '', ''], ['BIENVENIDA', '', 2.5, 20]])
+    expect(r.datos.cupones).toEqual([
+      { codigo: 'OCTUBRE10', porcentaje: 10, monto: 0, usos: null },
+      { codigo: 'BIENVENIDA', porcentaje: 0, monto: 2.5, usos: 20 },
+    ])
+  })
+
+  it('rechaza códigos raros, repetidos, sin descuento o con los dos', () => {
+    const { f } = cargar({ MAX_CUPONES: 200 })
+    const e = f.duenoValidar_('cupones', { cupones: [
+      { codigo: 'a b', porcentaje: 10 }, { codigo: 'DOS', porcentaje: 10, monto: 2 }, { codigo: 'CERO' },
+      { codigo: 'MUCHO', porcentaje: 150 }, { codigo: 'MUCHO', porcentaje: 5 },
+    ] })
+    expect(e).toEqual(expect.arrayContaining([
+      'A B: el código lleva de 3 a 20 letras o números, sin espacios.', 'DOS: elige porcentaje o monto, no los dos.',
+      'CERO: escribe cuánto descuenta.', 'MUCHO: el porcentaje va de 1 a 100.', 'MUCHO está repetido.',
+    ]))
   })
 })
