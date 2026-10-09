@@ -2,10 +2,11 @@
  * "Agregar a inicio": que la página abra como app (pantalla completa, sin la barra
  * de Safari o Chrome) y que abra en la página desde donde se agregó.
  *
- * index.html trae un manifest fijo de bookeaa (start_url "/"). En la página de un
- * negocio se cambia por uno propio con su nombre y su /u/<slug>: si no, el ícono
- * abriría la raíz del dominio y no el negocio. Va como data: URL porque el sitio es
- * estático (Render) y no puede servir un manifest distinto por negocio.
+ * El manifest lo elige un script de index.html antes de que cargue nada (Safari lo lee
+ * al abrir la página): bookeaa.com usa el fijo y cada negocio uno propio con su
+ * /u/<slug>. Acá solo se le pone el nombre real del negocio cuando llega la
+ * configuración. Va como data: URL porque el sitio es estático (Render) y no puede
+ * servir un manifest distinto por negocio. Mantén los dos iguales.
  */
 export interface DatosApp {
   nombre: string
@@ -22,7 +23,8 @@ export function manifestDe({ nombre, ruta, color }: DatosApp, origen: string) {
     short_name: nombre.length > 14 ? nombre.slice(0, 14).trim() : nombre,
     lang: 'es',
     start_url: abs(ruta),
-    scope: abs('/'),
+    // Alcance propio: no se pisa con bookeaa.com ni con otros negocios instalados.
+    scope: abs(ruta),
     display: 'standalone',
     background_color: color,
     theme_color: color,
