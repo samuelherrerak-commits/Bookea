@@ -32,7 +32,8 @@ function csp(apiUrl: string): Plugin {
           `script-src 'self' ${hashes.join(' ')} https://accounts.google.com/gsi/client`.trim(),
           // sonner y framer-motion escriben estilos en línea.
           "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
-          'frame-src https://accounts.google.com/gsi/',
+          // 'self': la vista previa de la página en el configurador de Mi negocio.
+          "frame-src 'self' https://accounts.google.com/gsi/",
           // El logo de cada negocio puede estar en cualquier sitio https.
           "img-src 'self' data: blob: https:",
           "font-src 'self' data:",

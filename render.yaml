@@ -50,9 +50,14 @@ services:
     headers:
       # Seguridad para todo el sitio. El CSP de la app va como <meta> en index.html
       # (lo arma vite.config.ts); acá va lo que un <meta> no puede hacer.
+      # SAMEORIGIN y no DENY: "Mi negocio" muestra la página del negocio en un iframe
+      # (vista previa del configurador). Otros sitios siguen sin poder enmarcarla.
       - path: /*
         name: X-Frame-Options
-        value: DENY
+        value: SAMEORIGIN
+      - path: /*
+        name: Content-Security-Policy
+        value: frame-ancestors 'self'
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
