@@ -152,7 +152,8 @@ const PLANTILLAS_MENSAJE = [
   },
 ];
 
-const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado'];
+// Telefono, Vence, Ultimo_Pago y Notas los usa la central (/central): el cobro mensual de bookeaa.
+const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado', 'Telefono', 'Vence', 'Ultimo_Pago', 'Notas'];
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -967,6 +968,14 @@ function doPost(e) {
     return json_({ error: 'datos_invalidos', mensaje: 'Solicitud inválida.' });
   }
   // El bot de WhatsApp tiene su propio token (no el público de la web) y no es de un negocio.
+  if (data && data.accion === 'central') {
+    try {
+      return json_(atenderCentral_(data, Date.now()));
+    } catch (err) {
+      console.error('central: ' + err);
+      return json_({ error: 'servidor', mensaje: 'Error del servidor. Intenta de nuevo.' });
+    }
+  }
   if (data && data.accion === 'dueno') {
     try {
       return json_(atenderDueno_(data, Date.now()));
@@ -2776,6 +2785,28 @@ function urlWorker_() {
   return String(PropertiesService.getScriptProperties().getProperty('bot_bandeja_url') || '').trim().replace(/\/bandeja\/?$/, '');
 }
 
+/** Como llamarWorker_, pero devuelve el código HTTP para explicar qué falló (aviso de prueba). */
+function llamarWorkerDetalle_(ruta, datos) {
+  const base = urlWorker_();
+  const token = String(PropertiesService.getScriptProperties().getProperty('bot_token') || '');
+  if (!/^https:/.test(base)) return { codigo: 0, error: 'Falta la propiedad bot_bandeja_url del Apps Script (la dirección de la bandeja del bot).' };
+  if (!token) return { codigo: 0, error: 'Falta la propiedad bot_token del Apps Script.' };
+  try {
+    const r = UrlFetchApp.fetch(base + ruta, {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(datos),
+      headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true,
+    });
+    const codigo = r.getResponseCode();
+    let json = null;
+    try { json = JSON.parse(r.getContentText()); } catch (_) { /* no es JSON */ }
+    if (codigo === 401) return { codigo: codigo, error: 'El bot_token del Apps Script no coincide con BOT_TOKEN del servidor de avisos (GitHub).' };
+    if (codigo !== 200) return { codigo: codigo, error: 'El servidor de avisos respondió ' + codigo + (json && json.error ? ': ' + json.error : '') + '.' };
+    return { codigo: codigo, json: json };
+  } catch (err) {
+    return { codigo: 0, error: 'No se pudo hablar con el servidor de avisos: ' + err };
+  }
+}
+
 /** POST al Worker con el token del bot. Nunca lanza: los avisos no pueden tumbar nada. */
 function llamarWorker_(ruta, datos) {
   const base = urlWorker_();
@@ -2856,11 +2887,21 @@ function atenderDueno_(data, ahoraMs) {
   }
   if (op === 'config') return duenoLeerConfig_(openTenant_(tenant), tenant, ahoraMs);
   if (op === 'guardar') return duenoGuardar_(openTenant_(tenant), tenant, String(data.seccion || ''), data.datos, ahoraMs);
+  if (op === 'vapid') {
+    // La app la pide cada vez que abre Avisos: la de la sesión pudo quedar vacía si se
+    // entró antes de configurar bot_bandeja_url.
+    return { vapid: claveVapid_(), servidor: /^https:/.test(urlWorker_()) };
+  }
+  if (op === 'probar_avisos') {
+    const r = llamarWorkerDetalle_('/push/evento', { tipo: 'prueba', slug: tenant.slug });
+    if (r.error) return { error: 'servidor', mensaje: r.error };
+    return { ok: true, equipos: r.json.equipos || 0, enviadas: r.json.enviadas || 0, fallos: r.json.fallos || [] };
+  }
   if (op === 'avisos') {
     const s = data.suscripcion || {};
-    if (!/^https:\/\//.test(String(s.endpoint || ''))) return { error: 'datos_invalidos', mensaje: 'Suscripción inválida.' };
-    const r = llamarWorker_(data.quitar ? '/push/quitar' : '/push/suscribir', { slug: tenant.slug, email: email, suscripcion: s });
-    return r && r.ok ? { ok: true } : { error: 'servidor', mensaje: 'No se pudieron activar los avisos. Intenta de nuevo.' };
+    if (!/^https:/.test(String(s.endpoint || ''))) return { error: 'datos_invalidos', mensaje: 'Suscripción inválida.' };
+    const r = llamarWorkerDetalle_(data.quitar ? '/push/quitar' : '/push/suscribir', { slug: tenant.slug, email: email, suscripcion: s });
+    return r.json && r.json.ok ? { ok: true } : { error: 'servidor', mensaje: 'No se pudieron activar los avisos. ' + (r.error || 'Intenta de nuevo.') };
   }
   return { error: 'op_desconocida' };
 }
@@ -3191,4 +3232,246 @@ function duenoGuardar_(ss, tenant, seccion, datos, ahoraMs) {
   }
   limpiarCacheCatalogo_(tenant.slug); // la página muestra el cambio en la próxima carga
   return { ok: true, errores: [], datos: duenoLeerConfig_(ss, tenant, ahoraMs) };
+}
+
+// ============================================================================
+// Central de bookeaa (bookeaa.com/central): administración de los negocios
+// ============================================================================
+// Solo para los correos de la propiedad dueno_admins. Entran con Google igual que en
+// "Mi negocio" (op 'entrar' de la rama dueno) y usan la misma sesión.
+// El cobro mensual vive en la pestaña Tenants (Vence, Ultimo_Pago) y cada pago queda
+// en la pestaña Pagos del archivo maestro.
+
+const PRECIO_MENSUAL = 10;
+const DIAS_PRUEBA = 30;
+const DIAS_AVISO_VENCE = 5;
+const PAGOS_HEADERS = ['Fecha', 'Slug', 'Negocio', 'Monto', 'Meses', 'Metodo', 'Referencia', 'Vence_Antes', 'Vence_Nuevo', 'Registrado_Por'];
+
+/** Estado de cobro de un negocio: suspendido, pendiente (venció), prueba, activo o sin_fecha. */
+function estadoCobro_(t, hoy) {
+  if (!tenantActivo_(t)) return 'suspendido';
+  const vence = ymd_(t.vence);
+  if (!vence) return 'sin_fecha';
+  if (vence < hoy) return 'pendiente';
+  return ymd_(t.ultimoPago) ? 'activo' : 'prueba';
+}
+
+function diasEntre_(a, b) {
+  const pa = a.split('-').map(Number), pb = b.split('-').map(Number);
+  return Math.round((Date.UTC(pb[0], pb[1] - 1, pb[2]) - Date.UTC(pa[0], pa[1] - 1, pa[2])) / 86400000);
+}
+
+/** Suma meses a una fecha yyyy-MM-dd (el 31 de enero + 1 mes = 28/29 de febrero). */
+function sumarMeses_(ymd, meses) {
+  const p = ymd.split('-').map(Number);
+  const destino = new Date(Date.UTC(p[0], p[1] - 1 + meses, 1));
+  const ultimo = new Date(Date.UTC(destino.getUTCFullYear(), destino.getUTCMonth() + 1, 0)).getUTCDate();
+  destino.setUTCDate(Math.min(p[2], ultimo));
+  return destino.toISOString().slice(0, 10);
+}
+
+/** La pestaña Tenants con los encabezados de la central (los agrega si faltan). */
+function hojaTenants_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Tenants');
+  if (!sheet) throw new Error('Falta la pestaña Tenants (ejecuta setupMaster).');
+  const actuales = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map(String);
+  TENANT_HEADERS.forEach(function (h) {
+    if (actuales.indexOf(h) === -1) {
+      actuales.push(h);
+      sheet.getRange(1, actuales.length).setValue(h);
+    }
+  });
+  return { sheet: sheet, headers: actuales };
+}
+
+/** Todas las filas de Tenants como objetos con su número de fila. */
+function filasTenants_() {
+  const t = hojaTenants_();
+  const n = t.sheet.getLastRow() - 1;
+  if (n < 1) return [];
+  const valores = t.sheet.getRange(2, 1, n, t.headers.length).getValues();
+  return valores.map(function (r, i) {
+    const o = { fila: i + 2 };
+    t.headers.forEach(function (h, j) { o[h] = r[j]; });
+    return o;
+  }).filter(function (o) { return String(o.Slug || '').trim(); });
+}
+
+/** Escribe columnas (por encabezado) de la fila de un negocio. */
+function escribirTenant_(slug, campos) {
+  const t = hojaTenants_();
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(slug); })[0];
+  if (!fila) throw new Error('No existe el negocio ' + slug + '.');
+  Object.keys(campos).forEach(function (h) {
+    const c = t.headers.indexOf(h);
+    if (c !== -1) t.sheet.getRange(fila.fila, c + 1).setValue(campos[h]);
+  });
+  limpiarCacheTenants_();
+}
+
+function negocioCentral_(o, hoy) {
+  const t = {
+    slug: String(o.Slug).trim(), nombre: String(o.Nombre || '').trim(), activo: String(o.Activo || 'si'),
+    vence: o.Vence, ultimoPago: o.Ultimo_Pago,
+  };
+  const vence = ymd_(o.Vence) || '';
+  return {
+    slug: t.slug,
+    nombre: t.nombre,
+    email: String(o.Email || '').trim(),
+    telefono: String(o.Telefono || '').replace(/[^\d+]/g, ''),
+    creado: ymd_(o.Creado) || '',
+    vence: vence,
+    ultimoPago: ymd_(o.Ultimo_Pago) || '',
+    notas: String(o.Notas || ''),
+    activo: tenantActivo_(t),
+    estado: estadoCobro_(t, hoy),
+    dias: vence ? diasEntre_(hoy, vence) : null,
+    hoja: o.Spreadsheet_Id ? 'https://docs.google.com/spreadsheets/d/' + o.Spreadsheet_Id + '/edit' : '',
+  };
+}
+
+function hojaPagos_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Pagos');
+  if (!sheet) {
+    sheet = ss.insertSheet('Pagos');
+    sheet.appendRow(PAGOS_HEADERS);
+    sheet.getRange(1, 1, 1, PAGOS_HEADERS.length).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function pagosRecientes_(limite) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Pagos');
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const n = sheet.getLastRow() - 1;
+  const desde = Math.max(2, sheet.getLastRow() - limite + 1);
+  return sheet.getRange(desde, 1, sheet.getLastRow() - desde + 1, PAGOS_HEADERS.length).getValues().map(function (r) {
+    return {
+      fecha: r[0] instanceof Date ? Utilities.formatDate(r[0], ZONA, "yyyy-MM-dd'T'HH:mm") : String(r[0]),
+      slug: String(r[1]), negocio: String(r[2]), monto: toNumber_(r[3]), meses: toNumber_(r[4]),
+      metodo: String(r[5]), referencia: String(r[6]), venceNuevo: ymd_(r[8]) || '',
+    };
+  }).reverse();
+}
+
+/** Lo que el bot agendó para afiliar (pestaña Prospectos), sin los ya convertidos en negocio. */
+function prospectosCentral_(negocios) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Prospectos');
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  const col = function (h) { return headers.indexOf(h); };
+  const correos = negocios.map(function (n) { return n.email.toLowerCase(); });
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues().map(function (r) {
+    const cita = r[col('Cita')];
+    return {
+      fecha: ymd_(r[col('Fecha')]) || '',
+      telefono: String(r[col('Teléfono')] || '').replace(/[^\d+]/g, ''),
+      nombre: String(r[col('Nombre en WhatsApp')] || ''),
+      negocio: String(r[col('Negocio')] || ''),
+      correo: String(r[col('Correo')] || '').trim(),
+      modalidad: String(r[col('Modalidad')] || ''),
+      cita: cita instanceof Date ? Utilities.formatDate(cita, ZONA, "yyyy-MM-dd'T'HH:mm") : String(cita || ''),
+      estado: String(r[col('Estado')] || ''),
+    };
+  }).filter(function (p) {
+    return p.negocio && !/cancel/i.test(p.estado) && (!p.correo || correos.indexOf(p.correo.toLowerCase()) === -1);
+  }).reverse().slice(0, 100);
+}
+
+function resumenCentral_(ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const negocios = filasTenants_().map(function (o) { return negocioCentral_(o, hoy); });
+  const cuenta = function (e) { return negocios.filter(function (n) { return n.estado === e; }).length; };
+  return {
+    hoy: hoy,
+    precio: PRECIO_MENSUAL,
+    totales: {
+      activos: cuenta('activo'), prueba: cuenta('prueba'), pendientes: cuenta('pendiente'),
+      suspendidos: cuenta('suspendido'), sinFecha: cuenta('sin_fecha'),
+      porVencer: negocios.filter(function (n) { return (n.estado === 'activo' || n.estado === 'prueba') && n.dias !== null && n.dias <= DIAS_AVISO_VENCE; }).length,
+    },
+    negocios: negocios,
+    pagos: pagosRecientes_(60),
+    prospectos: prospectosCentral_(negocios),
+  };
+}
+
+/** Registra un pago: extiende Vence desde la fecha de vencimiento (o desde hoy si ya venció). */
+function registrarPagoCentral_(data, email, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const meses = Math.max(1, Math.min(12, Math.floor(Number(data.meses) || 1)));
+  const monto = round2_(Number(String(data.monto == null ? '' : data.monto).replace(',', '.')));
+  if (!(monto >= 0)) return { error: 'datos_invalidos', mensaje: 'Revisa el monto.' };
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(data.slug || ''); })[0];
+  if (!fila) return { error: 'no_existe', mensaje: 'Ese negocio no existe.' };
+  const antes = ymd_(fila.Vence) || '';
+  const base = antes && antes >= hoy ? antes : hoy;
+  const nuevo = sumarMeses_(base, meses);
+  hojaPagos_().appendRow([new Date(ahoraMs), String(fila.Slug), String(fila.Nombre), monto, meses,
+    limpiarTexto_(data.metodo || 'Pago Móvil', 40), paraCelda_(limpiarTexto_(data.referencia || '', 60)), antes, nuevo, email]);
+  // Pagar reactiva un negocio suspendido.
+  escribirTenant_(fila.Slug, { Vence: nuevo, Ultimo_Pago: hoy, Activo: 'si' });
+  return { ok: true, vence: nuevo };
+}
+
+function crearNegocioCentral_(data, ahoraMs) {
+  const nombre = limpiarTexto_(data.nombre, 80);
+  const slug = String(data.slug || '').trim().toLowerCase();
+  const email = String(data.email || '').trim().toLowerCase();
+  if (!nombre) return { error: 'datos_invalidos', mensaje: 'Escribe el nombre del negocio.' };
+  if (email && !/^[^\s@,]+@[^\s@,]+\.[a-z]{2,}$/i.test(email)) return { error: 'datos_invalidos', mensaje: 'Revisa el correo (Gmail del dueño).' };
+  const dias = Math.max(0, Math.min(365, Math.floor(Number(data.diasPrueba == null ? DIAS_PRUEBA : data.diasPrueba))));
+  let creado;
+  try {
+    creado = crearTenant(slug, nombre, email);
+  } catch (err) {
+    return { error: 'datos_invalidos', mensaje: String(err.message || err) };
+  }
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  escribirTenant_(creado.slug, {
+    Telefono: paraCelda_(String(data.telefono || '').replace(/[^\d]/g, '').slice(0, 20)),
+    Vence: sumarDias_(hoy, dias), // primer mes gratis (o los días de prueba que se elijan)
+    Notas: paraCelda_(limpiarTexto_(data.notas || '', 300)),
+  });
+  return { ok: true, slug: creado.slug, hoja: creado.url };
+}
+
+/** Punto de entrada desde doPost (accion: 'central'). */
+function atenderCentral_(data, ahoraMs) {
+  const email = leerSesion_(data.sesion, ahoraMs);
+  if (!email) return { error: 'sesion', mensaje: 'Tu sesión venció. Entra otra vez.' };
+  if (!esAdminDueno_(email)) return { error: 'no_autorizado', mensaje: email + ' no es administrador de bookeaa (propiedad dueno_admins).' };
+  const op = String(data.op || '');
+  if (op === 'resumen') return resumenCentral_(ahoraMs);
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { error: 'servidor', mensaje: 'Hay otra operación en curso. Intenta de nuevo.' };
+  try {
+    if (op === 'pago') return registrarPagoCentral_(data, email, ahoraMs);
+    if (op === 'crear') return crearNegocioCentral_(data, ahoraMs);
+    if (op === 'activo') {
+      escribirTenant_(String(data.slug || ''), { Activo: data.activo ? 'si' : 'no' });
+      return { ok: true };
+    }
+    if (op === 'editar') {
+      const campos = {};
+      if ('email' in data) campos.Email = String(data.email || '').trim().toLowerCase();
+      if ('telefono' in data) campos.Telefono = paraCelda_(String(data.telefono || '').replace(/[^\d]/g, '').slice(0, 20));
+      if ('notas' in data) campos.Notas = paraCelda_(limpiarTexto_(data.notas || '', 300));
+      if ('vence' in data) {
+        if (data.vence && !/^\d{4}-\d{2}-\d{2}$/.test(String(data.vence))) return { error: 'datos_invalidos', mensaje: 'Revisa la fecha de vencimiento.' };
+        campos.Vence = String(data.vence || '');
+      }
+      escribirTenant_(String(data.slug || ''), campos);
+      return { ok: true };
+    }
+    return { error: 'op_desconocida' };
+  } catch (err) {
+    return { error: 'servidor', mensaje: String(err.message || err) };
+  } finally {
+    lock.releaseLock();
+  }
 }

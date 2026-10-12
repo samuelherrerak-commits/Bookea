@@ -1,0 +1,529 @@
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { capitalize, formatLongDate } from '../lib/format'
+import { prepararApp } from '../lib/pwa'
+import { Entrar, Logo } from '../negocio/NegocioApp'
+import type { Sesion } from '../negocio/api'
+import * as api from './api'
+
+/**
+ * Central de bookeaa (bookeaa.com/central): para el dueño de bookeaa. Ve todos los
+ * negocios con su estado de cobro, registra pagos, da de alta negocios nuevos,
+ * suspende o reactiva, y ve los prospectos que agendó el bot de WhatsApp.
+ */
+
+const CLAVE_SESION = 'bookeaa-central-sesion'
+
+function leerSesion(): Sesion | null {
+  try {
+    const s = JSON.parse(localStorage.getItem(CLAVE_SESION) || 'null') as Sesion | null
+    return s?.sesion ? s : null
+  } catch {
+    return null
+  }
+}
+
+function guardarSesion(s: Sesion | null) {
+  try {
+    if (s) localStorage.setItem(CLAVE_SESION, JSON.stringify(s))
+    else localStorage.removeItem(CLAVE_SESION)
+  } catch {
+    /* modo privado */
+  }
+}
+
+export default function CentralApp() {
+  const [sesion, setSesion] = useState<Sesion | null>(leerSesion)
+  useEffect(() => {
+    document.title = 'Central · bookeaa'
+    prepararApp({ nombre: 'bookeaa Central', ruta: '/central', color: '#FDFBF7' })
+  }, [])
+  const salir = useCallback(() => {
+    guardarSesion(null)
+    setSesion(null)
+  }, [])
+  if (!sesion) {
+    return (
+      <Entrar
+        titulo="Central bookeaa"
+        bajada="Tus negocios, quién está al día y quién debe, en un solo lugar."
+        nota="Solo para los administradores de bookeaa."
+        alEntrar={(s) => {
+          guardarSesion(s)
+          setSesion(s)
+        }}
+      />
+    )
+  }
+  return <Panel sesion={sesion} alSalir={salir} />
+}
+
+// ---------- Panel ----------
+
+type Pestana = 'negocios' | 'prospectos' | 'pagos'
+type Filtro = 'todos' | 'pendiente' | 'por_vencer' | 'prueba' | 'activo' | 'suspendido'
+
+const ETIQUETA: Record<api.EstadoCobro, { texto: string; clase: string }> = {
+  activo: { texto: 'Activo', clase: 'bg-ok/15 text-ok' },
+  prueba: { texto: 'En prueba', clase: 'bg-sand text-ink' },
+  pendiente: { texto: 'Por cobrar', clase: 'bg-danger/12 text-danger' },
+  suspendido: { texto: 'Suspendido', clase: 'bg-ink/10 text-muted' },
+  sin_fecha: { texto: 'Sin fecha', clase: 'bg-sand text-muted' },
+}
+
+const fechaCorta = (ymd: string) => {
+  if (!ymd) return ''
+  const [a, m, d] = ymd.split('-').map(Number)
+  return `${d} ${['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][m - 1]}${a !== new Date().getFullYear() ? ` ${a}` : ''}`
+}
+
+function textoVence(n: api.Negocio) {
+  if (n.dias === null) return 'Sin fecha de pago'
+  if (n.dias < 0) return `Venció hace ${-n.dias} ${n.dias === -1 ? 'día' : 'días'} (${fechaCorta(n.vence)})`
+  if (n.dias === 0) return 'Vence hoy'
+  return `${n.estado === 'prueba' ? 'Prueba hasta' : 'Pagado hasta'} el ${fechaCorta(n.vence)} · ${n.dias} ${n.dias === 1 ? 'día' : 'días'}`
+}
+
+function mensajeCobro(n: api.Negocio, precio: number) {
+  const nombre = n.nombre
+  if (n.estado === 'pendiente') return `Hola, ${nombre} 👋 Tu plan de bookeaa venció el ${fechaCorta(n.vence)}. Para seguir recibiendo reservas son $${precio} al mes. ¿Te paso los datos de Pago Móvil?`
+  if (n.estado === 'prueba') return `Hola, ${nombre} 👋 Tu mes gratis de bookeaa termina el ${fechaCorta(n.vence)}. Para seguir con tu página de reservas son $${precio} al mes. ¿Te paso los datos de Pago Móvil?`
+  return `Hola, ${nombre} 👋 Tu plan de bookeaa vence el ${fechaCorta(n.vence)} ($${precio} al mes). ¿Te paso los datos de Pago Móvil para renovarlo?`
+}
+
+function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
+  const [datos, setDatos] = useState<api.Resumen | null>(null)
+  const [error, setError] = useState('')
+  const [cargando, setCargando] = useState(false)
+  const [pestana, setPestana] = useState<Pestana>('negocios')
+  const [filtro, setFiltro] = useState<Filtro>('todos')
+  const [busqueda, setBusqueda] = useState('')
+  const [abierto, setAbierto] = useState<api.Negocio | null>(null)
+  const [nuevo, setNuevo] = useState<Partial<{ nombre: string; email: string; telefono: string }> | null>(null)
+
+  const cargar = useCallback(async () => {
+    setCargando(true)
+    setError('')
+    try {
+      const r = await api.resumen(sesion.sesion)
+      setDatos(r)
+      setAbierto((a) => (a ? r.negocios.find((n) => n.slug === a.slug) ?? null : a))
+    } catch (e) {
+      if (e instanceof api.ErrorCentral && e.codigo === 'sesion') return alSalir()
+      setError((e as Error).message)
+    } finally {
+      setCargando(false)
+    }
+  }, [sesion.sesion, alSalir])
+
+  useEffect(() => {
+    void cargar()
+  }, [cargar])
+
+  const lista = useMemo(() => {
+    if (!datos) return []
+    const q = busqueda.trim().toLowerCase()
+    return datos.negocios
+      .filter((n) =>
+        filtro === 'todos' ? true
+        : filtro === 'por_vencer' ? (n.estado === 'activo' || n.estado === 'prueba') && n.dias !== null && n.dias <= 5
+        : n.estado === filtro,
+      )
+      .filter((n) => !q || `${n.nombre} ${n.slug} ${n.email} ${n.telefono}`.toLowerCase().includes(q))
+      .sort((a, b) => orden(a) - orden(b) || (a.dias ?? 9999) - (b.dias ?? 9999))
+  }, [datos, filtro, busqueda])
+
+  return (
+    <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
+      <header className="sticky top-0 z-10 flex items-center gap-3 bg-bg/90 px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur">
+        <Logo className="size-9 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[17px] font-semibold leading-tight">Central bookeaa</p>
+          <p className="text-[13px] text-muted">{datos ? capitalize(formatLongDate(datos.hoy)) : ' '}</p>
+        </div>
+        <button type="button" onClick={() => void cargar()} disabled={cargando} aria-label="Actualizar" className="grid size-10 place-items-center rounded-full ring-1 ring-line disabled:opacity-50">
+          <svg viewBox="0 0 24 24" className={'size-5' + (cargando ? ' animate-spin' : '')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4" /></svg>
+        </button>
+      </header>
+
+      <main className="flex-1 px-5 pb-28">
+        {error && (
+          <div role="alert" className="mb-4 rounded-2xl bg-danger/10 px-4 py-3 text-[14px] text-danger">
+            {error}
+            {/no es administrador/.test(error) && <button type="button" onClick={alSalir} className="mt-2 block underline underline-offset-4">Entrar con otra cuenta</button>}
+          </div>
+        )}
+        {!datos && !error && <div className="mt-2 h-[420px] animate-pulse rounded-3xl bg-sand" aria-busy="true" />}
+
+        {datos && pestana === 'negocios' && (
+          <>
+            <section className="grid grid-cols-2 gap-2.5">
+              <Cifra valor={datos.totales.activos} etiqueta="Activos" activo={filtro === 'activo'} onClick={() => setFiltro(filtro === 'activo' ? 'todos' : 'activo')} />
+              <Cifra valor={datos.totales.prueba} etiqueta="En prueba" activo={filtro === 'prueba'} onClick={() => setFiltro(filtro === 'prueba' ? 'todos' : 'prueba')} />
+              <Cifra valor={datos.totales.pendientes} etiqueta="Por cobrar" alerta={datos.totales.pendientes > 0} activo={filtro === 'pendiente'} onClick={() => setFiltro(filtro === 'pendiente' ? 'todos' : 'pendiente')} />
+              <Cifra valor={datos.totales.porVencer} etiqueta="Vencen en 5 días" activo={filtro === 'por_vencer'} onClick={() => setFiltro(filtro === 'por_vencer' ? 'todos' : 'por_vencer')} />
+            </section>
+            <p className="mt-3 text-[14px] text-muted">
+              Ingreso mensual: <b className="text-ink">${datos.totales.activos * datos.precio}</b>
+              {datos.totales.prueba > 0 && <> · +${datos.totales.prueba * datos.precio} si pagan los que están en prueba</>}
+              {datos.totales.suspendidos > 0 && <> · {datos.totales.suspendidos} {datos.totales.suspendidos === 1 ? "suspendido" : "suspendidos"}</>}
+            </p>
+
+            <div className="mt-4 flex gap-2">
+              <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar negocio, correo o teléfono" aria-label="Buscar"
+                className="min-w-0 flex-1 rounded-full bg-surface px-4 py-2.5 text-[15px] ring-1 ring-line outline-none focus:ring-2 focus:ring-ink" />
+              <button type="button" onClick={() => setNuevo({})} className="shrink-0 rounded-full bg-ink px-4 py-2.5 text-[15px] font-semibold text-bg">+ Nuevo</button>
+            </div>
+            <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 no-scrollbar">
+              {(['todos', 'pendiente', 'por_vencer', 'prueba', 'activo', 'suspendido'] as Filtro[]).map((f) => (
+                <button key={f} type="button" aria-pressed={filtro === f} onClick={() => setFiltro(f)}
+                  className={'shrink-0 rounded-full px-3.5 py-1.5 text-[14px] ring-1 ' + (filtro === f ? 'bg-ink text-bg ring-ink' : 'ring-line')}>
+                  {{ todos: 'Todos', pendiente: 'Por cobrar', por_vencer: 'Por vencer', prueba: 'En prueba', activo: 'Activos', suspendido: 'Suspendidos' }[f]}
+                </button>
+              ))}
+            </div>
+
+            <ul className="mt-3 space-y-2.5">
+              {lista.map((n) => (
+                <li key={n.slug}>
+                  <button type="button" onClick={() => setAbierto(n)} className="flex w-full items-center gap-3 rounded-3xl bg-surface p-4 text-left shadow-card ring-1 ring-line">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-[16px] font-semibold">{n.nombre}</p>
+                        <span className={'shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold ' + ETIQUETA[n.estado].clase}>{ETIQUETA[n.estado].texto}</span>
+                      </div>
+                      <p className={'mt-0.5 text-[13px] ' + (n.dias !== null && n.dias <= 5 && n.estado !== 'suspendido' ? 'font-semibold text-danger' : 'text-muted')}>{textoVence(n)}</p>
+                      <p className="truncate text-[13px] text-muted">/u/{n.slug}{n.email ? ` · ${n.email}` : ''}</p>
+                    </div>
+                    <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
+                  </button>
+                </li>
+              ))}
+              {lista.length === 0 && <p className="mt-6 text-center text-[15px] text-muted">No hay negocios con ese filtro.</p>}
+            </ul>
+          </>
+        )}
+
+        {datos && pestana === 'prospectos' && (
+          <Prospectos lista={datos.prospectos} onCrear={(p) => setNuevo({ nombre: p.negocio, email: p.correo, telefono: p.telefono })} />
+        )}
+        {datos && pestana === 'pagos' && <Pagos lista={datos.pagos} hoy={datos.hoy} />}
+
+        <p className="mt-10 text-center text-[13px] text-muted">
+          {sesion.email} · <button type="button" onClick={alSalir} className="underline underline-offset-4">Cerrar sesión</button>
+        </p>
+      </main>
+
+      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur" aria-label="Secciones">
+        <div className="mx-auto grid max-w-xl grid-cols-3">
+          <Tab activa={pestana === 'negocios'} onClick={() => setPestana('negocios')} d="M4 21V8l8-5 8 5v13M9 21v-6h6v6">Negocios</Tab>
+          <Tab activa={pestana === 'prospectos'} onClick={() => setPestana('prospectos')} d="M16 21v-2a4 4 0 0 0-8 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M22 11h-6" contador={datos?.prospectos.length}>Prospectos</Tab>
+          <Tab activa={pestana === 'pagos'} onClick={() => setPestana('pagos')} d="M3 7h18v10H3zM3 11h18M7 15h3">Pagos</Tab>
+        </div>
+      </nav>
+
+      {abierto && datos && (
+        <Detalle negocio={abierto} precio={datos.precio} sesion={sesion.sesion} onCerrar={() => setAbierto(null)} onCambio={cargar} />
+      )}
+      {nuevo && <NuevoNegocio inicial={nuevo} sesion={sesion.sesion} onCerrar={() => setNuevo(null)} onCreado={async () => { setNuevo(null); await cargar() }} />}
+    </div>
+  )
+}
+
+const orden = (n: api.Negocio) => ({ pendiente: 0, prueba: 1, activo: 2, sin_fecha: 3, suspendido: 4 })[n.estado]
+
+function Cifra({ valor, etiqueta, alerta, activo, onClick }: { valor: number; etiqueta: string; alerta?: boolean; activo: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={activo}
+      className={'rounded-3xl p-4 text-left ring-1 ' + (activo ? 'bg-ink text-bg ring-ink' : 'bg-surface shadow-card ring-line')}>
+      <span className={'block font-display text-[34px] leading-none ' + (alerta && !activo ? 'text-danger' : '')}>{valor}</span>
+      <span className={'mt-1 block text-[13px] ' + (activo ? 'opacity-80' : 'text-muted')}>{etiqueta}</span>
+    </button>
+  )
+}
+
+function Tab({ activa, onClick, d, contador, children }: { activa: boolean; onClick: () => void; d: string; contador?: number; children: ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} aria-current={activa ? 'page' : undefined} className={'relative flex flex-col items-center gap-1 py-2 text-[12px] ' + (activa ? 'font-semibold text-ink' : 'text-muted')}>
+      <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={activa ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={d} /></svg>
+      {children}
+      {!!contador && <span className="absolute right-[calc(50%-22px)] top-1 grid min-w-5 place-items-center rounded-full bg-danger px-1 text-[11px] font-bold text-white">{contador}</span>}
+    </button>
+  )
+}
+
+// ---------- Hojas (detalle y alta) ----------
+
+function Hoja({ titulo, onCerrar, children }: { titulo: string; onCerrar: () => void; children: ReactNode }) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onCerrar()
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [onCerrar])
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40" role="dialog" aria-modal="true" aria-label={titulo} onClick={onCerrar}>
+      <div className="max-h-[92dvh] w-full max-w-xl overflow-y-auto rounded-t-[28px] bg-bg px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3" onClick={(e) => e.stopPropagation()}>
+        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <h2 className="font-display text-[28px] leading-tight">{titulo}</h2>
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" className="grid size-10 shrink-0 place-items-center rounded-full ring-1 ring-line">×</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+const claseInput = 'w-full min-w-0 rounded-2xl bg-surface px-3.5 py-3 text-[16px] ring-1 ring-line outline-none focus:ring-2 focus:ring-ink'
+
+function Campo({ etiqueta, ayuda, children }: { etiqueta: string; ayuda?: string; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[14px] font-semibold">{etiqueta}</span>
+      {children}
+      {ayuda && <span className="mt-1 block text-[13px] text-muted">{ayuda}</span>}
+    </label>
+  )
+}
+
+const METODOS = ['Pago Móvil', 'Zelle', 'Binance', 'Efectivo', 'Transferencia', 'Otro']
+
+function Detalle({ negocio: n, precio, sesion, onCerrar, onCambio }: { negocio: api.Negocio; precio: number; sesion: string; onCerrar: () => void; onCambio: () => Promise<void> }) {
+  const [vista, setVista] = useState<'info' | 'pago' | 'editar'>('info')
+  const [meses, setMeses] = useState(1)
+  const [monto, setMonto] = useState(String(precio))
+  const [metodo, setMetodo] = useState('Pago Móvil')
+  const [referencia, setReferencia] = useState('')
+  const [ed, setEd] = useState({ email: n.email, telefono: n.telefono, vence: n.vence, notas: n.notas })
+  const [ocupado, setOcupado] = useState(false)
+  const [error, setError] = useState('')
+  const [hecho, setHecho] = useState('')
+
+  const hacer = async (accion: () => Promise<unknown>, listo: string) => {
+    setOcupado(true)
+    setError('')
+    try {
+      await accion()
+      await onCambio()
+      setHecho(listo)
+      setVista('info')
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  const wa = n.telefono ? `https://wa.me/${api.telefonoWa(n.telefono)}?text=${encodeURIComponent(mensajeCobro(n, precio))}` : ''
+
+  return (
+    <Hoja titulo={n.nombre} onCerrar={onCerrar}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={'rounded-full px-2.5 py-1 text-[13px] font-semibold ' + ETIQUETA[n.estado].clase}>{ETIQUETA[n.estado].texto}</span>
+        <span className="text-[14px] text-muted">{textoVence(n)}</span>
+      </div>
+      {hecho && <p role="status" className="mt-3 rounded-2xl bg-ok/12 px-4 py-3 text-[14px] text-ok">{hecho}</p>}
+      {error && <p role="alert" className="mt-3 rounded-2xl bg-danger/10 px-4 py-3 text-[14px] text-danger">{error}</p>}
+
+      {vista === 'info' && (
+        <>
+          <dl className="mt-4 divide-y divide-line rounded-3xl bg-surface px-4 text-[14px] ring-1 ring-line">
+            {[
+              ['Página', `bookeaa.com/u/${n.slug}`],
+              ['Gmail', n.email || '—'],
+              ['WhatsApp', n.telefono || '—'],
+              ['Alta', n.creado ? fechaCorta(n.creado) : '—'],
+              ['Último pago', n.ultimoPago ? fechaCorta(n.ultimoPago) : 'Nunca'],
+              ...(n.notas ? [['Notas', n.notas]] : []),
+            ].map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-4 py-3">
+                <dt className="text-muted">{k}</dt>
+                <dd className="min-w-0 truncate text-right font-medium">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-4 grid gap-2">
+            <button type="button" onClick={() => { setVista('pago'); setHecho('') }} className="rounded-full bg-ink px-5 py-3.5 text-[15px] font-semibold text-bg">Registrar pago</button>
+            {wa && (
+              <a href={wa} target="_blank" rel="noopener noreferrer" className="rounded-full px-5 py-3.5 text-center text-[15px] font-semibold ring-1 ring-line">
+                {n.estado === 'pendiente' ? 'Cobrar por WhatsApp' : 'Escribir por WhatsApp'}
+              </a>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <a href={`/u/${n.slug}`} target="_blank" rel="noopener noreferrer" className="rounded-full px-4 py-3 text-center text-[14px] font-semibold ring-1 ring-line">Ver página</a>
+              {n.hoja ? <a href={n.hoja} target="_blank" rel="noopener noreferrer" className="rounded-full px-4 py-3 text-center text-[14px] font-semibold ring-1 ring-line">Abrir hoja</a> : <span />}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setVista('editar')} className="rounded-full px-4 py-3 text-[14px] font-semibold ring-1 ring-line">Editar datos</button>
+              <button type="button" disabled={ocupado} onClick={() => void hacer(() => api.cambiarActivo(sesion, n.slug, !n.activo), n.activo ? 'Página suspendida: ya no recibe reservas.' : 'Página reactivada.')}
+                className={'rounded-full px-4 py-3 text-[14px] font-semibold ring-1 disabled:opacity-50 ' + (n.activo ? 'text-danger ring-danger/40' : 'ring-line')}>
+                {n.activo ? 'Suspender' : 'Reactivar'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {vista === 'pago' && (
+        <div className="mt-4 space-y-4">
+          <div>
+            <span className="mb-1.5 block text-[14px] font-semibold">Meses</span>
+            <div className="flex items-center gap-3">
+              <button type="button" aria-label="Menos" onClick={() => { const m = Math.max(1, meses - 1); setMeses(m); setMonto(String(m * precio)) }} className="grid size-12 place-items-center rounded-2xl text-[22px] ring-1 ring-line">−</button>
+              <span className="w-10 text-center text-[24px] font-semibold tabular-nums">{meses}</span>
+              <button type="button" aria-label="Más" onClick={() => { const m = Math.min(12, meses + 1); setMeses(m); setMonto(String(m * precio)) }} className="grid size-12 place-items-center rounded-2xl text-[22px] ring-1 ring-line">+</button>
+            </div>
+          </div>
+          <Campo etiqueta="Monto (USD)"><input inputMode="decimal" value={monto} onChange={(e) => setMonto(e.target.value)} className={claseInput} /></Campo>
+          <div>
+            <span className="mb-1.5 block text-[14px] font-semibold">Método</span>
+            <div className="flex flex-wrap gap-2">
+              {METODOS.map((m) => (
+                <button key={m} type="button" aria-pressed={metodo === m} onClick={() => setMetodo(m)} className={'rounded-full px-3.5 py-2 text-[14px] ring-1 ' + (metodo === m ? 'bg-ink text-bg ring-ink' : 'ring-line')}>{m}</button>
+              ))}
+            </div>
+          </div>
+          <Campo etiqueta="Referencia" ayuda="Opcional: número de operación o nota."><input value={referencia} onChange={(e) => setReferencia(e.target.value)} className={claseInput} /></Campo>
+          <p className="rounded-2xl bg-sand px-4 py-3 text-[14px]">
+            Queda pagado hasta el <b>{fechaCorta(sumarMeses(n.vence && n.dias !== null && n.dias >= 0 ? n.vence : hoyLocal(), meses))}</b>
+            {!n.activo && ' y la página se reactiva.'}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setVista('info')} className="rounded-full px-4 py-3.5 text-[15px] font-semibold ring-1 ring-line">Cancelar</button>
+            <button type="button" disabled={ocupado} onClick={() => void hacer(() => api.registrarPago(sesion, { slug: n.slug, meses, monto: Number(monto.replace(',', '.')) || 0, metodo, referencia }), 'Pago registrado.')}
+              className="rounded-full bg-ink px-4 py-3.5 text-[15px] font-semibold text-bg disabled:opacity-50">{ocupado ? 'Guardando…' : 'Guardar pago'}</button>
+          </div>
+        </div>
+      )}
+
+      {vista === 'editar' && (
+        <div className="mt-4 space-y-4">
+          <Campo etiqueta="Gmail del dueño" ayuda="Con este correo entra a Mi negocio. Varios, separados por coma.">
+            <input inputMode="email" value={ed.email} onChange={(e) => setEd({ ...ed, email: e.target.value })} className={claseInput} />
+          </Campo>
+          <Campo etiqueta="WhatsApp" ayuda="Con código de país: 584121234567"><input inputMode="tel" value={ed.telefono} onChange={(e) => setEd({ ...ed, telefono: e.target.value })} className={claseInput} /></Campo>
+          <Campo etiqueta="Pagado / prueba hasta" ayuda="Solo si necesitas corregirlo a mano."><input type="date" value={ed.vence} onChange={(e) => setEd({ ...ed, vence: e.target.value })} className={claseInput} /></Campo>
+          <Campo etiqueta="Notas (solo las ves tú)"><textarea rows={3} value={ed.notas} onChange={(e) => setEd({ ...ed, notas: e.target.value })} className={claseInput} /></Campo>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setVista('info')} className="rounded-full px-4 py-3.5 text-[15px] font-semibold ring-1 ring-line">Cancelar</button>
+            <button type="button" disabled={ocupado} onClick={() => void hacer(() => api.editar(sesion, n.slug, ed), 'Datos guardados.')} className="rounded-full bg-ink px-4 py-3.5 text-[15px] font-semibold text-bg disabled:opacity-50">
+              {ocupado ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        </div>
+      )}
+    </Hoja>
+  )
+}
+
+const hoyLocal = () => new Date(Date.now() - 4 * 3600_000).toISOString().slice(0, 10)
+
+/** Igual que sumarMeses_ del Apps Script (respeta el fin de mes). */
+export function sumarMeses(ymd: string, meses: number): string {
+  const [a, m, d] = ymd.split('-').map(Number)
+  const destino = new Date(Date.UTC(a, m - 1 + meses, 1))
+  const ultimo = new Date(Date.UTC(destino.getUTCFullYear(), destino.getUTCMonth() + 1, 0)).getUTCDate()
+  destino.setUTCDate(Math.min(d, ultimo))
+  return destino.toISOString().slice(0, 10)
+}
+
+function NuevoNegocio({ inicial, sesion, onCerrar, onCreado }: { inicial: Partial<{ nombre: string; email: string; telefono: string }>; sesion: string; onCerrar: () => void; onCreado: () => Promise<void> }) {
+  const [nombre, setNombre] = useState(inicial.nombre ?? '')
+  const [slug, setSlug] = useState(api.slugDe(inicial.nombre ?? ''))
+  const [slugTocado, setSlugTocado] = useState(false)
+  const [email, setEmail] = useState(inicial.email ?? '')
+  const [telefono, setTelefono] = useState(inicial.telefono ?? '')
+  const [dias, setDias] = useState('30')
+  const [notas, setNotas] = useState('')
+  const [ocupado, setOcupado] = useState(false)
+  const [error, setError] = useState('')
+
+  const crear = async () => {
+    setError('')
+    if (!nombre.trim()) return setError('Escribe el nombre del negocio.')
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/.test(slug)) return setError('El link solo lleva minúsculas, números y guiones.')
+    setOcupado(true)
+    try {
+      await api.crear(sesion, { nombre: nombre.trim(), slug, email: email.trim(), telefono, diasPrueba: Number(dias) || 0, notas })
+      await onCreado()
+    } catch (e) {
+      setError((e as Error).message)
+      setOcupado(false)
+    }
+  }
+
+  return (
+    <Hoja titulo="Nuevo negocio" onCerrar={ocupado ? () => {} : onCerrar}>
+      <div className="space-y-4">
+        <Campo etiqueta="Nombre del negocio">
+          <input value={nombre} autoFocus onChange={(e) => { setNombre(e.target.value); if (!slugTocado) setSlug(api.slugDe(e.target.value)) }} className={claseInput} />
+        </Campo>
+        <Campo etiqueta="Link" ayuda={`bookeaa.com/u/${slug || '…'}`}>
+          <input value={slug} onChange={(e) => { setSlugTocado(true); setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')) }} className={claseInput + ' font-mono'} />
+        </Campo>
+        <Campo etiqueta="Gmail del dueño" ayuda="Recibe su hoja, su calendario y entra a Mi negocio con este correo.">
+          <input inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="negocio@gmail.com" className={claseInput} />
+        </Campo>
+        <Campo etiqueta="WhatsApp del dueño" ayuda="Para cobrarle y escribirle desde aquí."><input inputMode="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="584121234567" className={claseInput} /></Campo>
+        <Campo etiqueta="Días de prueba gratis"><input inputMode="numeric" value={dias} onChange={(e) => setDias(e.target.value.replace(/\D/g, ''))} className={claseInput} /></Campo>
+        <Campo etiqueta="Notas (opcional)"><textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={claseInput} /></Campo>
+        {error && <p role="alert" className="rounded-2xl bg-danger/10 px-4 py-3 text-[14px] text-danger">{error}</p>}
+        <button type="button" disabled={ocupado} onClick={() => void crear()} className="w-full rounded-full bg-ink px-5 py-3.5 text-[16px] font-semibold text-bg disabled:opacity-60">
+          {ocupado ? 'Creando hoja, calendario y carpeta… (≈ 30 s)' : 'Crear negocio'}
+        </button>
+      </div>
+    </Hoja>
+  )
+}
+
+// ---------- Prospectos y pagos ----------
+
+function Prospectos({ lista, onCrear }: { lista: api.Prospecto[]; onCrear: (p: api.Prospecto) => void }) {
+  if (!lista.length) return <p className="mt-10 text-center text-[15px] text-muted">No hay prospectos pendientes. Aquí salen los que agendan su afiliación con el bot de WhatsApp.</p>
+  return (
+    <>
+      <p className="mt-1 text-[14px] text-muted">Agendaron su afiliación con el bot y todavía no son negocio.</p>
+      <ul className="mt-3 space-y-2.5">
+        {lista.map((p, i) => (
+          <li key={i} className="rounded-3xl bg-surface p-4 shadow-card ring-1 ring-line">
+            <p className="text-[16px] font-semibold">{p.negocio}</p>
+            <p className="text-[13px] text-muted">
+              {[p.nombre, p.correo, p.modalidad].filter(Boolean).join(' · ')}
+            </p>
+            {p.cita && <p className="mt-1 text-[14px]">📅 Cita: {fechaCorta(p.cita.slice(0, 10))}{p.cita.length > 10 ? ` · ${p.cita.slice(11, 16)}` : ''} {p.estado && <span className="text-muted">· {p.estado}</span>}</p>}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {p.telefono ? (
+                <a href={`https://wa.me/${api.telefonoWa(p.telefono)}`} target="_blank" rel="noopener noreferrer" className="rounded-full px-4 py-2.5 text-center text-[14px] font-semibold ring-1 ring-line">WhatsApp</a>
+              ) : <span />}
+              <button type="button" onClick={() => onCrear(p)} className="rounded-full bg-ink px-4 py-2.5 text-[14px] font-semibold text-bg">Crear negocio</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+function Pagos({ lista, hoy }: { lista: api.Pago[]; hoy: string }) {
+  const mes = hoy.slice(0, 7)
+  const delMes = lista.filter((p) => p.fecha.slice(0, 7) === mes).reduce((t, p) => t + p.monto, 0)
+  return (
+    <>
+      <section className="rounded-3xl bg-ink px-5 py-5 text-bg">
+        <p className="text-[13px] uppercase tracking-[0.12em] opacity-70">Cobrado este mes</p>
+        <p className="mt-1 font-display text-[40px] leading-none">${delMes.toLocaleString('es-VE', { maximumFractionDigits: 2 })}</p>
+      </section>
+      <ul className="mt-4 divide-y divide-line overflow-hidden rounded-3xl bg-surface ring-1 ring-line">
+        {lista.length === 0 && <li className="px-4 py-6 text-center text-[15px] text-muted">Todavía no hay pagos registrados.</li>}
+        {lista.map((p, i) => (
+          <li key={i} className="flex items-center justify-between gap-3 px-4 py-3">
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold">{p.negocio}</p>
+              <p className="truncate text-[13px] text-muted">{fechaCorta(p.fecha.slice(0, 10))} · {p.metodo}{p.referencia ? ` · ${p.referencia}` : ''} · hasta {fechaCorta(p.venceNuevo)}</p>
+            </div>
+            <p className="shrink-0 text-[16px] font-semibold tabular-nums">${p.monto}{p.meses > 1 ? <span className="text-[12px] font-normal text-muted"> · {p.meses} m</span> : null}</p>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}

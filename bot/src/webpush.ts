@@ -75,7 +75,8 @@ export async function cifrar(mensaje: Uint8Array, p256dh: string, auth: string, 
   const asPublica = new Uint8Array((await crypto.subtle.exportKey('raw', efimera.publicKey)) as ArrayBuffer)
   const ua = await crypto.subtle.importKey('raw', uaPublica, { name: 'ECDH', namedCurve: 'P-256' }, false, [])
   // Los tipos de Workers llaman $public a este campo, pero en tiempo de ejecución es `public` (WebCrypto).
-  const compartido = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: ua } as unknown as SubtleCryptoDeriveKeyAlgorithm, efimera.privateKey, 256))
+  // Se pasan los dos nombres: el estándar (`public`) y el de los tipos de Workers (`$public`).
+  const compartido = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: ua, $public: ua } as unknown as SubtleCryptoDeriveKeyAlgorithm, efimera.privateKey, 256))
 
   const ikm = await hkdf(secreto, compartido, unir(enc.encode('WebPush: info\0'), uaPublica, asPublica), 32)
   const sal = fijos?.sal ?? crypto.getRandomValues(new Uint8Array(16))
@@ -95,7 +96,12 @@ export interface Suscripcion {
   auth: string
 }
 
-export type Resultado = 'ok' | 'vencida' | 'error'
+export interface Resultado {
+  estado: 'ok' | 'vencida' | 'error'
+  /** Código HTTP del servicio de avisos (Apple, Google, Mozilla) y su respuesta, si falló. */
+  codigo?: number
+  detalle?: string
+}
 
 /** Envía una notificación. 'vencida' = el navegador ya no la acepta (404/410): hay que borrarla. */
 export async function enviarPush(s: Suscripcion, datos: unknown, claves: ClavesVapid, contacto: string): Promise<Resultado> {
@@ -111,8 +117,9 @@ export async function enviarPush(s: Suscripcion, datos: unknown, claves: ClavesV
     },
     body: cuerpo,
   })
-  if (r.ok) return 'ok'
-  if (r.status === 404 || r.status === 410) return 'vencida'
-  console.warn('Push', r.status, await r.text().catch(() => ''))
-  return 'error'
+  if (r.ok) return { estado: 'ok', codigo: r.status }
+  const detalle = (await r.text().catch(() => '')).slice(0, 200)
+  if (r.status === 404 || r.status === 410) return { estado: 'vencida', codigo: r.status, detalle }
+  console.warn('Push', r.status, detalle)
+  return { estado: 'error', codigo: r.status, detalle }
 }

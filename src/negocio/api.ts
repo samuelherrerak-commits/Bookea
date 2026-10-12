@@ -80,6 +80,24 @@ export function confirmarPago(sesion: string, slug: string, id: string): Promise
   return llamar({ op: 'confirmar_pago', sesion, slug, id })
 }
 
+/** La clave de avisos al día (la de la sesión pudo quedar vacía) y si el servidor de avisos está configurado. */
+export function claveAvisos(sesion: string, slug: string): Promise<{ vapid: string; servidor: boolean }> {
+  if (DEMO_MODE) return Promise.resolve({ vapid: '', servidor: true })
+  return llamar({ op: 'vapid', sesion, slug })
+}
+
+export interface PruebaAvisos {
+  ok: boolean
+  equipos: number
+  enviadas: number
+  fallos: string[]
+}
+
+export function probarAvisos(sesion: string, slug: string): Promise<PruebaAvisos> {
+  if (DEMO_MODE) return Promise.resolve({ ok: true, equipos: 1, enviadas: 1, fallos: [] })
+  return llamar<PruebaAvisos>({ op: 'probar_avisos', sesion, slug })
+}
+
 export function avisos(sesion: string, slug: string, suscripcion: PushSubscriptionJSON, quitar = false): Promise<{ ok: boolean }> {
   if (DEMO_MODE) return Promise.resolve({ ok: true })
   return llamar({ op: 'avisos', sesion, slug, suscripcion, quitar })

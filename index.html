@@ -22,7 +22,7 @@
     <script>
       ;(function () {
         var p = location.pathname, m = /^\/u\/([a-z0-9-]{1,40})\/?$/i.exec(p)
-        var ruta = m ? '/u/' + m[1].toLowerCase() : /^\/negocio\/?$/.test(p) ? '/negocio' : ''
+        var ruta = m ? '/u/' + m[1].toLowerCase() : /^\/negocio\/?$/.test(p) ? '/negocio' : /^\/central\/?$/.test(p) ? '/central' : ''
         var link = document.createElement('link')
         link.rel = 'manifest'
         if (!ruta) {
@@ -30,7 +30,7 @@
         } else {
           var nombre = m
             ? m[1].split('-').filter(Boolean).map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1) }).join(' ')
-            : 'Mi negocio'
+            : ruta === '/central' ? 'bookeaa Central' : 'Mi negocio'
           var o = location.origin
           var abs = function (x) { return o + x }
           link.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify({

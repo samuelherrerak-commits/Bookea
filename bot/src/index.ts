@@ -7,7 +7,7 @@
  *   cron            recordatorios y resumen de la mañana (cada 5 minutos)
  */
 import { serviciosAppsScript, type EnvApps } from './apps'
-import { clavesVapid, nuevaReserva, quitar, repasar, suscribir } from './avisos'
+import { avisar, avisoPrueba, clavesVapid, nuevaReserva, quitar, repasar, suscribir } from './avisos'
 import { manejarBandeja } from './bandeja'
 import { guardarConversacion, guardarMensaje, leerConversacion, nueva, sumarUso } from './db'
 import { firmaMetaValida } from './firma'
@@ -70,6 +70,7 @@ export async function manejarPush(req: Request, ruta: string, env: Env): Promise
     if (ruta === '/push/suscribir') await suscribir(env.DB, slug, String(cuerpo.email || ''), cuerpo.suscripcion || {}, Date.now())
     else if (ruta === '/push/quitar') await quitar(env.DB, String(cuerpo.suscripcion?.endpoint || ''))
     else if (ruta === '/push/evento' && cuerpo.tipo === 'reserva') await nuevaReserva(env.DB, slug, cuerpo.cita || {})
+    else if (ruta === '/push/evento' && cuerpo.tipo === 'prueba') return json({ ok: true, ...(await avisar(env.DB, slug, avisoPrueba(slug))) })
     else return json({ error: 'No encontrado' }, 404)
   } catch (err) {
     return json({ error: String((err as Error).message) }, 400)

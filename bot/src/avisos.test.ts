@@ -44,3 +44,47 @@ describe('avisos de Mi negocio', () => {
     expect((await manejarPush(post(env.BOT_TOKEN), '/push/evento', env)).status).toBe(400) // sin negocio
   })
 })
+
+describe('aviso de prueba: dice qué pasó', () => {
+  const sub = { endpoint: 'https://web.push.apple.com/QW1', p256dh: 'BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4', auth: 'BTBZMqHH6r4Tts7J_aSIgg' }
+  /** D1 falso: responde por el texto de la consulta. */
+  function db(subs: typeof sub[]) {
+    const ajustes = new Map<string, string>()
+    const borradas: string[] = []
+    return {
+      borradas,
+      prepare: (sql: string) => ({
+        bind: (...a: unknown[]) => ({
+          all: async () => ({ results: /FROM push_suscripciones/.test(sql) ? subs : [] }),
+          first: async () => (/FROM ajustes/.test(sql) && ajustes.has('vapid') ? { valor: ajustes.get('vapid') } : null),
+          run: async () => {
+            if (/INSERT OR IGNORE INTO ajustes/.test(sql)) ajustes.set('vapid', String(a[0]))
+            if (/DELETE FROM push_suscripciones/.test(sql)) borradas.push(String(a[0]))
+            return {}
+          },
+        }),
+        first: async () => (ajustes.has('vapid') ? { valor: ajustes.get('vapid') } : null),
+      }),
+    }
+  }
+
+  it('sin equipos registrados, cero; con rechazo del servicio, el código y la razón', async () => {
+    const { avisar, avisoPrueba } = await import('./avisos')
+    expect(await avisar(db([]) as any, 'b', avisoPrueba('b'))).toEqual({ equipos: 0, enviadas: 0, fallos: [] })
+
+    const original = globalThis.fetch
+    globalThis.fetch = (async () => new Response('{"reason":"BadJwtToken"}', { status: 403 })) as typeof fetch
+    try {
+      const r = await avisar(db([sub]) as any, 'b', avisoPrueba('b'))
+      expect(r).toEqual({ equipos: 1, enviadas: 0, fallos: ['web.push.apple.com: 403 {"reason":"BadJwtToken"}'] })
+      const d = db([sub])
+      globalThis.fetch = (async () => new Response('', { status: 410 })) as typeof fetch
+      await avisar(d as any, 'b', avisoPrueba('b'))
+      expect(d.borradas).toEqual([sub.endpoint]) // vencida: se borra
+      globalThis.fetch = (async () => new Response('', { status: 201 })) as typeof fetch
+      expect((await avisar(db([sub]) as any, 'b', avisoPrueba('b'))).enviadas).toBe(1)
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+})

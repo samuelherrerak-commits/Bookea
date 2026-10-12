@@ -71,7 +71,18 @@ export default function NegocioApp() {
 
 // ---------- Entrar ----------
 
-function Entrar({ alEntrar }: { alEntrar: (s: api.Sesion) => void }) {
+/** Pantalla de entrada con Google. La usan Mi negocio y la central de bookeaa. */
+export function Entrar({
+  alEntrar,
+  titulo = 'Mi negocio',
+  bajada = 'Tus citas de hoy, tus reservas y avisos en el teléfono.',
+  nota = 'Entra con el Gmail que diste al afiliarte a bookeaa.',
+}: {
+  alEntrar: (s: api.Sesion) => void
+  titulo?: string
+  bajada?: string
+  nota?: string
+}) {
   const boton = useRef<HTMLDivElement>(null)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -98,8 +109,8 @@ function Entrar({ alEntrar }: { alEntrar: (s: api.Sesion) => void }) {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-6 pb-safe text-center">
       <Logo className="size-16" />
-      <h1 className="mt-6 font-display text-[36px] leading-tight">Mi negocio</h1>
-      <p className="mt-2 max-w-[30ch] text-[15px] text-muted">Tus citas de hoy, tus reservas y avisos en el teléfono.</p>
+      <h1 className="mt-6 font-display text-[36px] leading-tight">{titulo}</h1>
+      <p className="mt-2 max-w-[30ch] text-[15px] text-muted">{bajada}</p>
       <div className="mt-10 grid min-h-11 place-items-center">
         {DEMO_MODE ? (
           <button type="button" className="rounded-full bg-ink px-6 py-3 text-[15px] font-semibold text-bg" onClick={() => void conCredencial('demo')}>
@@ -117,7 +128,7 @@ function Entrar({ alEntrar }: { alEntrar: (s: api.Sesion) => void }) {
           {error}
         </p>
       )}
-      <p className="mt-10 max-w-[34ch] text-[13px] text-muted">Entra con el Gmail que diste al afiliarte a bookeaa.</p>
+      <p className="mt-10 max-w-[34ch] text-[13px] text-muted">{nota}</p>
     </main>
   )
 }
@@ -396,16 +407,57 @@ function Ajustes({ sesion, slug, onSlug, onSalir }: { sesion: api.Sesion; slug: 
   const [estado, setEstado] = useState<EstadoAvisos | null>(null)
   const [mensaje, setMensaje] = useState('')
   const [ocupado, setOcupado] = useState(false)
+  const [clave, setClave] = useState<{ vapid: string; servidor: boolean } | null>(null)
+  const [prueba, setPrueba] = useState('')
 
+  // La clave se pide al día (la de la sesión pudo quedar vacía) y, si el teléfono ya
+  // tiene avisos, se vuelve a registrar en el servidor por si se perdió.
   useEffect(() => {
-    void estadoAvisos().then(setEstado)
-  }, [])
+    let vivo = true
+    void (async () => {
+      const e = await estadoAvisos()
+      if (!vivo) return
+      setEstado(e)
+      try {
+        const c = await api.claveAvisos(sesion.sesion, slug)
+        if (!vivo) return
+        setClave(c)
+        if (e === 'activos' && c.vapid) {
+          const sub = await activarAvisos(c.vapid)
+          for (const n of sesion.negocios) await api.avisos(sesion.sesion, n.slug, sub)
+        }
+      } catch (err) {
+        if (vivo) setMensaje((err as Error).message)
+      }
+    })()
+    return () => {
+      vivo = false
+    }
+  }, [sesion, slug])
+
+  const probar = async () => {
+    setPrueba('Enviando…')
+    try {
+      const r = await api.probarAvisos(sesion.sesion, slug)
+      setPrueba(
+        r.equipos === 0
+          ? 'El servidor no tiene ningún teléfono registrado para este negocio. Toca "Apagar" y vuelve a activarlos.'
+          : r.enviadas > 0
+            ? `Enviado a ${r.enviadas} de ${r.equipos} ${r.equipos === 1 ? 'equipo' : 'equipos'}. Debería llegarte en segundos.`
+            : `No se pudo entregar. Respuesta del servicio de avisos: ${r.fallos.join(' · ') || 'sin detalle'}`,
+      )
+    } catch (e) {
+      setPrueba((e as Error).message)
+    }
+  }
 
   const activar = async () => {
     setOcupado(true)
     setMensaje('')
     try {
-      const sub = await activarAvisos(sesion.vapid)
+      const c = clave ?? (await api.claveAvisos(sesion.sesion, slug))
+      if (!c.vapid) throw new Error(c.servidor ? 'El servidor de avisos no respondió. Intenta en un minuto.' : 'Falta configurar el servidor de avisos en el Apps Script (propiedad bot_bandeja_url).')
+      const sub = await activarAvisos(c.vapid)
       // Un mismo teléfono puede recibir los avisos de todos tus negocios.
       for (const n of sesion.negocios) await api.avisos(sesion.sesion, n.slug, sub)
       setEstado('activos')
@@ -444,9 +496,14 @@ function Ajustes({ sesion, slug, onSlug, onSalir }: { sesion: api.Sesion; slug: 
         </ul>
         <div className="mt-4">
           {estado === 'activos' ? (
-            <button type="button" disabled={ocupado} onClick={() => void apagar()} className="w-full rounded-full px-5 py-3 text-[15px] font-semibold ring-1 ring-line disabled:opacity-50">
-              ✅ Activos · Apagar
-            </button>
+            <div className="space-y-2">
+              <button type="button" onClick={() => void probar()} className="w-full rounded-full bg-ink px-5 py-3 text-[15px] font-semibold text-bg">
+                Enviarme un aviso de prueba
+              </button>
+              <button type="button" disabled={ocupado} onClick={() => void apagar()} className="w-full rounded-full px-5 py-3 text-[15px] font-semibold ring-1 ring-line disabled:opacity-50">
+                ✅ Activos · Apagar
+              </button>
+            </div>
           ) : estado === 'instalar_primero' ? (
             <InstruccionesInstalar />
           ) : estado === 'bloqueados' ? (
@@ -460,6 +517,10 @@ function Ajustes({ sesion, slug, onSlug, onSalir }: { sesion: api.Sesion; slug: 
           )}
         </div>
         {mensaje && <p className="mt-3 text-[14px]" role="status">{mensaje}</p>}
+        {prueba && <p className="mt-3 rounded-2xl bg-sand px-4 py-3 text-[14px]" role="status">{prueba}</p>}
+        {clave && !clave.servidor && (
+          <p className="mt-3 rounded-2xl bg-danger/10 px-4 py-3 text-[14px] text-danger">Falta configurar el servidor de avisos en el Apps Script (propiedad bot_bandeja_url).</p>
+        )}
       </section>
 
       {!instalada() && estado !== 'instalar_primero' && (
@@ -518,7 +579,7 @@ function Cargando() {
   )
 }
 
-function Logo({ className = '' }: { className?: string }) {
+export function Logo({ className = '' }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" className={className} aria-hidden>
       <rect x="2" y="4" width="28" height="26" rx="7" fill="#0f0f0e" />

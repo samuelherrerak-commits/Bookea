@@ -93,7 +93,13 @@ Las claves VAPID de los avisos las crea el Worker solo y las guarda en D1.
 - **"No pudimos verificar tu cuenta de Google":** revisa que `google_client_id` (Apps Script) y `VITE_GOOGLE_CLIENT_ID` (Render) sean el mismo ID.
 - **"… no tiene un negocio en bookeaa":** ese Gmail no está en la columna Email de Tenants.
 - **El botón de Google no aparece:** el dominio no está en **Orígenes de JavaScript autorizados**.
-- **Los avisos no llegan:**
+- **Los avisos no llegan:** en Avisos toca **"Enviarme un aviso de prueba"**. Dice exactamente qué pasó:
+  - "Falta configurar el servidor de avisos (bot_bandeja_url)" → agrega esa propiedad en el Apps Script;
+  - "El bot_token del Apps Script no coincide…" → el `bot_token` del Apps Script y el secreto `BOT_TOKEN` de GitHub tienen que ser iguales;
+  - "No hay ningún teléfono registrado" → apaga los avisos y vuelve a activarlos;
+  - "No se pudo entregar: web.push.apple.com 403…" → el código y la razón que dio Apple o Google.
+
+  Además:
   - revisa `bot_bandeja_url`;
   - revisa que la Action del bot haya corrido después de fusionar;
   - en Cloudflare → Workers → bookeaa-bot → Logs están los envíos.
