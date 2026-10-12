@@ -3,6 +3,7 @@ import { formatTime12 } from '../lib/format'
 import { LUGAR_TIPOS } from '../lib/lugar'
 import { ESTILO_DEF, ESTILOS, PALETAS } from '../lib/theme'
 import * as api from './api'
+import { MiPlan } from './MiPlan'
 import { MENSAJE_VISTA, VISTA_LISTA, type Borrador } from '../lib/vistaPrevia'
 import { dibujarQr, linkDelNegocio, MODOS_QR, PLANTILLAS_QR, type ModoQr, type PlantillaQr } from './qr'
 
@@ -11,9 +12,10 @@ import { dibujarQr, linkDelNegocio, MODOS_QR, PLANTILLAS_QR, type ModoQr, type P
  * Cada sección guarda en la hoja del negocio y la página lo muestra en la próxima carga.
  */
 
-type Id = 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'qr' | 'pagina' | 'lugar' | 'pagos' | 'mensaje' | 'ticket'
+export type Id = 'plan' | 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'qr' | 'pagina' | 'lugar' | 'pagos' | 'mensaje' | 'ticket'
 
 const SECCIONES: { id: Id; titulo: string; detalle: string; icono: string }[] = [
+  { id: 'plan', titulo: 'Mi plan y pagos', detalle: 'Tu fecha de corte y pagar por Pago Móvil', icono: '💳' },
   { id: 'servicios', titulo: 'Servicios', detalle: 'Nombre, precio y duración', icono: '✂️' },
   { id: 'horario', titulo: 'Horario', detalle: 'Días y horas de atención', icono: '🕘' },
   { id: 'bloqueos', titulo: 'Días libres', detalle: 'Vacaciones, feriados, permisos', icono: '🌴' },
@@ -21,7 +23,7 @@ const SECCIONES: { id: Id; titulo: string; detalle: string; icono: string }[] = 
   { id: 'qr', titulo: 'Código QR', detalle: 'Cartel, historia o tarjeta con tu QR', icono: '🔳' },
   { id: 'pagina', titulo: 'Mi página', detalle: 'Nombre, logo, textos y colores', icono: '🎨' },
   { id: 'lugar', titulo: 'Lugar', detalle: 'Sedes y servicio a domicilio', icono: '📍' },
-  { id: 'pagos', titulo: 'Pagos y WhatsApp', detalle: 'Moneda, métodos y Pago Móvil', icono: '💳' },
+  { id: 'pagos', titulo: 'Cobros a tus clientes', detalle: 'WhatsApp, moneda, métodos y tu Pago Móvil', icono: '💵' },
   { id: 'mensaje', titulo: 'Mensaje de WhatsApp', detalle: 'Lo que te llega con cada reserva', icono: '💬' },
   { id: 'ticket', titulo: 'Ticket de reserva', detalle: 'Activarlo o facturar con tu imprenta', icono: '🧾' },
 ]
@@ -35,11 +37,13 @@ interface Props {
   sesion: string
   slug: string
   alSalir: () => void
+  /** Sección que abre de entrada (un aviso de cobro abre 'plan'). */
+  inicial?: Id | null
 }
 
-export function Configurar({ sesion, slug, alSalir }: Props) {
+export function Configurar({ sesion, slug, alSalir, inicial = null }: Props) {
   const [datos, setDatos] = useState<api.Configuracion | null>(null)
-  const [abierta, setAbierta] = useState<Id | null>(null)
+  const [abierta, setAbierta] = useState<Id | null>(inicial)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -91,6 +95,7 @@ export function Configurar({ sesion, slug, alSalir }: Props) {
           Configurar
         </button>
         <h2 className="mt-1 font-display text-[30px] leading-tight">{s.titulo}</h2>
+        {abierta === 'plan' && <MiPlan sesion={sesion} slug={slug} alSalir={alSalir} />}
         {abierta === 'servicios' && <Servicios {...props} />}
         {abierta === 'horario' && <HorarioSec {...props} />}
         {abierta === 'bloqueos' && <Bloqueos {...props} />}

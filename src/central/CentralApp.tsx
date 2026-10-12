@@ -4,11 +4,13 @@ import { prepararApp } from '../lib/pwa'
 import { Entrar, Logo } from '../negocio/NegocioApp'
 import type { Sesion } from '../negocio/api'
 import * as api from './api'
+import { Cobros } from './Cobros'
 
 /**
  * Central de bookeaa (bookeaa.com/central): para el dueño de bookeaa. Ve todos los
  * negocios con su estado de cobro, registra pagos, da de alta negocios nuevos,
- * suspende o reactiva, y ve los prospectos que agendó el bot de WhatsApp.
+ * suspende o reactiva, concilia los Pago Móvil que reportan (Cobros) y ve los prospectos
+ * que agendó el bot de WhatsApp.
  */
 
 const CLAVE_SESION = 'bookeaa-central-sesion'
@@ -59,13 +61,14 @@ export default function CentralApp() {
 
 // ---------- Panel ----------
 
-type Pestana = 'negocios' | 'prospectos' | 'pagos'
+type Pestana = 'negocios' | 'cobros' | 'prospectos' | 'pagos'
 type Filtro = 'todos' | 'pendiente' | 'por_vencer' | 'prueba' | 'activo' | 'suspendido'
 
 const ETIQUETA: Record<api.EstadoCobro, { texto: string; clase: string }> = {
   activo: { texto: 'Activo', clase: 'bg-ok/15 text-ok' },
   prueba: { texto: 'En prueba', clase: 'bg-sand text-ink' },
   pendiente: { texto: 'Por cobrar', clase: 'bg-danger/12 text-danger' },
+  vencido: { texto: 'Vencido', clase: 'bg-danger text-white' },
   suspendido: { texto: 'Suspendido', clase: 'bg-ink/10 text-muted' },
   sin_fecha: { texto: 'Sin fecha', clase: 'bg-sand text-muted' },
 }
@@ -85,7 +88,7 @@ function textoVence(n: api.Negocio) {
 
 function mensajeCobro(n: api.Negocio, precio: number) {
   const nombre = n.nombre
-  if (n.estado === 'pendiente') return `Hola, ${nombre} 👋 Tu plan de bookeaa venció el ${fechaCorta(n.vence)}. Para seguir recibiendo reservas son $${precio} al mes. ¿Te paso los datos de Pago Móvil?`
+  if (n.estado === 'pendiente' || n.estado === 'vencido') return `Hola, ${nombre} 👋 Tu plan de bookeaa venció el ${fechaCorta(n.vence)}. Para seguir recibiendo reservas son $${precio} al mes. ¿Te paso los datos de Pago Móvil?`
   if (n.estado === 'prueba') return `Hola, ${nombre} 👋 Tu mes gratis de bookeaa termina el ${fechaCorta(n.vence)}. Para seguir con tu página de reservas son $${precio} al mes. ¿Te paso los datos de Pago Móvil?`
   return `Hola, ${nombre} 👋 Tu plan de bookeaa vence el ${fechaCorta(n.vence)} ($${precio} al mes). ¿Te paso los datos de Pago Móvil para renovarlo?`
 }
@@ -99,11 +102,13 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
   const [busqueda, setBusqueda] = useState('')
   const [abierto, setAbierto] = useState<api.Negocio | null>(null)
   const [nuevo, setNuevo] = useState<Partial<{ nombre: string; email: string; telefono: string }> | null>(null)
+  const [porVerificar, setPorVerificar] = useState(0)
 
   const cargar = useCallback(async () => {
     setCargando(true)
     setError('')
     try {
+      api.cobros(sesion.sesion).then((c) => setPorVerificar(c.porVerificar.length), () => {})
       const r = await api.resumen(sesion.sesion)
       setDatos(r)
       setAbierto((a) => (a ? r.negocios.find((n) => n.slug === a.slug) ?? null : a))
@@ -126,6 +131,7 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
       .filter((n) =>
         filtro === 'todos' ? true
         : filtro === 'por_vencer' ? (n.estado === 'activo' || n.estado === 'prueba') && n.dias !== null && n.dias <= 5
+        : filtro === 'pendiente' ? n.estado === 'pendiente' || n.estado === 'vencido'
         : n.estado === filtro,
       )
       .filter((n) => !q || `${n.nombre} ${n.slug} ${n.email} ${n.telefono}`.toLowerCase().includes(q))
@@ -207,6 +213,7 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
           <Prospectos lista={datos.prospectos} onCrear={(p) => setNuevo({ nombre: p.negocio, email: p.correo, telefono: p.telefono })} />
         )}
         {datos && pestana === 'pagos' && <Pagos lista={datos.pagos} hoy={datos.hoy} />}
+        {pestana === 'cobros' && <Cobros sesion={sesion.sesion} alSalir={alSalir} alCambiar={() => void cargar()} />}
 
         <p className="mt-10 text-center text-[13px] text-muted">
           {sesion.email} · <button type="button" onClick={alSalir} className="underline underline-offset-4">Cerrar sesión</button>
@@ -214,8 +221,9 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur" aria-label="Secciones">
-        <div className="mx-auto grid max-w-xl grid-cols-3">
+        <div className="mx-auto grid max-w-xl grid-cols-4">
           <Tab activa={pestana === 'negocios'} onClick={() => setPestana('negocios')} d="M4 21V8l8-5 8 5v13M9 21v-6h6v6">Negocios</Tab>
+          <Tab activa={pestana === 'cobros'} onClick={() => setPestana('cobros')} d="M12 3v18M17 7.5C17 5.6 14.8 4.5 12 4.5S7 5.6 7 7.5s2 2.7 5 3.4 5 1.6 5 3.6-2.2 3-5 3-5-1.1-5-3" contador={porVerificar}>Cobros</Tab>
           <Tab activa={pestana === 'prospectos'} onClick={() => setPestana('prospectos')} d="M16 21v-2a4 4 0 0 0-8 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M22 11h-6" contador={datos?.prospectos.length}>Prospectos</Tab>
           <Tab activa={pestana === 'pagos'} onClick={() => setPestana('pagos')} d="M3 7h18v10H3zM3 11h18M7 15h3">Pagos</Tab>
         </div>
@@ -229,7 +237,7 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
   )
 }
 
-const orden = (n: api.Negocio) => ({ pendiente: 0, prueba: 1, activo: 2, sin_fecha: 3, suspendido: 4 })[n.estado]
+const orden = (n: api.Negocio) => ({ vencido: 0, pendiente: 1, prueba: 2, activo: 3, sin_fecha: 4, suspendido: 5 })[n.estado]
 
 function Cifra({ valor, etiqueta, alerta, activo, onClick }: { valor: number; etiqueta: string; alerta?: boolean; activo: boolean; onClick: () => void }) {
   return (
@@ -345,8 +353,14 @@ function Detalle({ negocio: n, precio, sesion, onCerrar, onCambio }: { negocio: 
             <button type="button" onClick={() => { setVista('pago'); setHecho('') }} className="rounded-full bg-ink px-5 py-3.5 text-[15px] font-semibold text-bg">Registrar pago</button>
             {wa && (
               <a href={wa} target="_blank" rel="noopener noreferrer" className="rounded-full px-5 py-3.5 text-center text-[15px] font-semibold ring-1 ring-line">
-                {n.estado === 'pendiente' ? 'Cobrar por WhatsApp' : 'Escribir por WhatsApp'}
+                {n.estado === 'pendiente' || n.estado === 'vencido' ? 'Cobrar por WhatsApp' : 'Escribir por WhatsApp'}
               </a>
+            )}
+            {n.estado === 'sin_fecha' && n.creado && (
+              <button type="button" disabled={ocupado} onClick={() => void hacer(async () => { const r = await api.usarIngreso(sesion, n.slug); setEd((x) => ({ ...x, vence: r.vence })) }, `Fecha de corte: el día ${Number(n.creado.slice(8, 10))} de cada mes, como su fecha de ingreso.`)}
+                className="rounded-full px-5 py-3.5 text-[15px] font-semibold ring-1 ring-line disabled:opacity-50">
+                Usar fecha de ingreso como corte (día {Number(n.creado.slice(8, 10))})
+              </button>
             )}
             <div className="grid grid-cols-2 gap-2">
               <a href={`/u/${n.slug}`} target="_blank" rel="noopener noreferrer" className="rounded-full px-4 py-3 text-center text-[14px] font-semibold ring-1 ring-line">Ver página</a>

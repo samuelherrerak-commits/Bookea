@@ -4,6 +4,7 @@ import { capitalize, formatLongDate, formatTime12 } from '../lib/format'
 import { prepararApp } from '../lib/pwa'
 import { formatMonto } from '../lib/ticket'
 import * as api from './api'
+import { resumenPlan } from './MiPlan'
 import { Configurar } from './Configurar'
 import { botonGoogle } from './google'
 import { activarAvisos, apagarAvisos, esIOS, estadoAvisos, instalada, type EstadoAvisos } from './push'
@@ -142,7 +143,11 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
   const inicial = [pedido, (() => { try { return localStorage.getItem(CLAVE_NEGOCIO) } catch { return null } })()]
     .find((s) => s && sesion.negocios.some((n) => n.slug === s)) || sesion.negocios[0]?.slug || ''
   const [slug, setSlug] = useState(inicial)
-  const [pestana, setPestana] = useState<Pestana>('hoy')
+  const verPlan = new URLSearchParams(location.search).get('ver') === 'plan'
+  const [pestana, setPestana] = useState<Pestana>(verPlan ? 'configurar' : 'hoy')
+  // Sección de Configurar que abre de entrada; `abrirPlan` la vuelve a montar en 'plan'.
+  const [seccion, setSeccion] = useState<{ id: 'plan' | null; n: number }>({ id: verPlan ? 'plan' : null, n: 0 })
+  const [plan, setPlan] = useState<api.Plan | null>(null)
   const [agenda, setAgenda] = useState<api.Agenda | null>(null)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -166,6 +171,17 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
     setAgenda(null)
     void cargar()
   }, [slug, cargar])
+
+  // El estado del plan, para avisar en Hoy si hay un pago pendiente (si falla, no se muestra nada).
+  useEffect(() => {
+    setPlan(null)
+    if (slug) api.plan(sesion.sesion, slug).then(setPlan, () => {})
+  }, [sesion.sesion, slug, pestana])
+
+  const abrirPlan = () => {
+    setSeccion((x) => ({ id: 'plan', n: x.n + 1 }))
+    setPestana('configurar')
+  }
 
   // Al volver a la app (o tocar un aviso) se recargan las citas.
   useEffect(() => {
@@ -217,9 +233,10 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
             {error}
           </p>
         )}
+        {pestana === 'hoy' && plan && ['pendiente', 'vencido', 'suspendido'].includes(plan.estado) && <AvisoPlan plan={plan} onAbrir={abrirPlan} />}
         {pestana === 'hoy' && <Hoy agenda={agenda} onConfirmar={confirmar} />}
         {pestana === 'proximas' && <Proximas agenda={agenda} onConfirmar={confirmar} />}
-        {pestana === 'configurar' && <Configurar sesion={sesion.sesion} slug={slug} alSalir={alSalir} />}
+        {pestana === 'configurar' && <Configurar key={`${slug}-${seccion.n}`} sesion={sesion.sesion} slug={slug} alSalir={alSalir} inicial={seccion.id} />}
         {pestana === 'ajustes' && (
           <Ajustes sesion={sesion} slug={slug} onSlug={setSlug} onSalir={alSalir} />
         )}
@@ -262,6 +279,17 @@ const minutosAhora = () => {
 }
 const minutos = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))
 const activa = (c: api.Cita) => !/cancel/i.test(c.estado)
+
+function AvisoPlan({ plan, onAbrir }: { plan: api.Plan; onAbrir: () => void }) {
+  const r = resumenPlan(plan)
+  return (
+    <button type="button" onClick={onAbrir} className="mt-2 block w-full rounded-3xl bg-danger px-5 py-4 text-left text-white">
+      <p className="text-[17px] font-semibold">💳 {r.titulo}</p>
+      <p className="mt-0.5 text-[14px] opacity-90">{plan.porVerificar ? 'Tu pago está por verificar. Te avisamos apenas se confirme.' : r.detalle}</p>
+      {!plan.porVerificar && <p className="mt-2 inline-block rounded-full bg-white/20 px-3 py-1 text-[13px] font-semibold">Pagar ahora →</p>}
+    </button>
+  )
+}
 
 function Hoy({ agenda, onConfirmar }: { agenda: api.Agenda | null; onConfirmar: (id: string) => void }) {
   if (!agenda) return <Cargando />

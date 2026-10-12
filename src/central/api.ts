@@ -4,7 +4,7 @@
  */
 import { API_URL, DEMO_MODE } from '../config'
 
-export type EstadoCobro = 'activo' | 'prueba' | 'pendiente' | 'suspendido' | 'sin_fecha'
+export type EstadoCobro = 'activo' | 'prueba' | 'pendiente' | 'vencido' | 'suspendido' | 'sin_fecha'
 
 export interface Negocio {
   slug: string
@@ -54,6 +54,76 @@ export interface Resumen {
   prospectos: Prospecto[]
 }
 
+// ---------- Cobros: pagos reportados por los negocios y movimientos del banco ----------
+
+export interface Movimiento {
+  clave: string
+  fecha: string
+  referencia: string
+  descripcion: string
+  monto: number
+  /** 'correo' o 'estado de cuenta'. */
+  fuente: string
+  pagoId: string
+}
+
+export interface PagoNegocio {
+  id: string
+  registrado: string
+  slug: string
+  negocio: string
+  fecha: string
+  banco: string
+  telefono: string
+  referencia: string
+  montoBs: number
+  tasa: number
+  montoUsd: number
+  meses: number
+  estado: string
+  conciliado: string
+  motivo: string
+  /** Movimiento del banco que se le parece (mismo monto o referencia), para revisar a mano. */
+  pista?: Movimiento | null
+}
+
+export interface PagoMovilDatos {
+  banco: string
+  telefono: string
+  cedula: string
+  titular: string
+}
+
+export interface LecturaCorreos {
+  fecha: string
+  leidos: number
+  abonos: number
+  nuevos: number
+  sinDatos: number
+  aprobados: number
+}
+
+export interface Cobros {
+  porVerificar: PagoNegocio[]
+  revisados: PagoNegocio[]
+  movimientos: Movimiento[]
+  tasa: number
+  ajustes: {
+    pagoMovil: PagoMovilDatos
+    correoQuery: string
+    ultimaLectura: LecturaCorreos | null
+    automaticos: { correos: boolean; cortes: boolean }
+  }
+}
+
+/** Una fila leída del estado de cuenta (la arma estadoCuenta.ts). */
+export interface FilaBanco {
+  fecha: string
+  referencia: string
+  descripcion: string
+  monto: number
+}
+
 export class ErrorCentral extends Error {
   constructor(public codigo: string, mensaje: string) {
     super(mensaje)
@@ -91,6 +161,30 @@ export const cambiarActivo = (sesion: string, slug: string, activo: boolean) =>
 
 export const editar = (sesion: string, slug: string, campos: Partial<Pick<Negocio, 'email' | 'telefono' | 'notas' | 'vence'>>) =>
   DEMO_MODE ? demo.editar(slug, campos) : llamar<{ ok: boolean }>({ op: 'editar', sesion, slug, ...campos })
+
+export const cobros = (sesion: string) => (DEMO_MODE ? demo.cobros() : llamar<Cobros>({ op: 'cobros', sesion }))
+
+export const aprobar = (sesion: string, id: string) =>
+  DEMO_MODE ? demo.revisar(id, true) : llamar<{ ok: boolean; vence?: string }>({ op: 'aprobar', sesion, id })
+
+export const rechazar = (sesion: string, id: string, motivo: string) =>
+  DEMO_MODE ? demo.revisar(id, false, motivo) : llamar<{ ok: boolean }>({ op: 'rechazar', sesion, id, motivo })
+
+/** Sube los movimientos del estado de cuenta; el servidor guarda los nuevos y concilia. */
+export const subirMovimientos = (sesion: string, filas: FilaBanco[]) =>
+  DEMO_MODE ? demo.movimientos(filas) : llamar<{ ok: boolean; nuevos: number; aprobados: number }>({ op: 'movimientos', sesion, filas })
+
+export const leerCorreos = (sesion: string) => (DEMO_MODE ? demo.leer() : llamar<LecturaCorreos>({ op: 'leer_correos', sesion }))
+
+export const instalarCobros = (sesion: string) =>
+  DEMO_MODE ? demo.instalar() : llamar<{ ok: boolean }>({ op: 'instalar_cobros', sesion })
+
+export const ajustesCobro = (sesion: string, d: { pagoMovil?: Partial<PagoMovilDatos>; correoQuery?: string }) =>
+  DEMO_MODE ? demo.ajustes(d) : llamar<{ ok: boolean }>({ op: 'ajustes_cobro', sesion, ...d })
+
+/** Pone la fecha de corte según el día del mes en que entró el negocio. */
+export const usarIngreso = (sesion: string, slug: string) =>
+  DEMO_MODE ? demo.ingreso(slug) : llamar<{ ok: boolean; vence: string }>({ op: 'usar_ingreso', sesion, slug })
 
 /** "Barbería El Corte" → "barberia-el-corte" (como lo valida crearTenant). */
 export function slugDe(nombre: string): string {
@@ -134,20 +228,107 @@ const demo = (() => {
     const h = hoy()
     for (const n of negocios) {
       n.dias = n.vence ? Math.round((Date.parse(n.vence) - Date.parse(h)) / 86400_000) : null
-      n.estado = !n.activo ? 'suspendido' : !n.vence ? 'sin_fecha' : n.vence < h ? 'pendiente' : n.ultimoPago ? 'activo' : 'prueba'
+      n.estado = !n.activo ? 'suspendido' : !n.vence ? 'sin_fecha' : n.vence < h ? (Math.round((Date.parse(h) - Date.parse(n.vence)) / 86400_000) <= 3 ? 'pendiente' : 'vencido') : n.ultimoPago ? 'activo' : 'prueba'
     }
     const c = (e: EstadoCobro) => negocios.filter((n) => n.estado === e).length
     return {
       hoy: h,
       precio: 10,
-      totales: { activos: c('activo'), prueba: c('prueba'), pendientes: c('pendiente'), suspendidos: c('suspendido'), sinFecha: c('sin_fecha'), porVencer: negocios.filter((n) => (n.estado === 'activo' || n.estado === 'prueba') && (n.dias ?? 99) <= 5).length },
+      totales: { activos: c('activo'), prueba: c('prueba'), pendientes: c('pendiente') + c('vencido'), suspendidos: c('suspendido'), sinFecha: c('sin_fecha'), porVencer: negocios.filter((n) => (n.estado === 'activo' || n.estado === 'prueba') && (n.dias ?? 99) <= 5).length },
       negocios: structuredClone(negocios),
       pagos: structuredClone(pagos),
       prospectos: structuredClone(prospectos),
     }
   }
   const espera = <T,>(v: T) => new Promise<T>((ok) => setTimeout(() => ok(v), 350))
+  const tasa = 39.5
+  const reportes: PagoNegocio[] = [
+    { id: 'p3', registrado: `${hoy()}T09:12`, slug: 'barberia-norte', negocio: 'Barbería Norte', fecha: hoy(), banco: 'Banesco (0134)', telefono: '04121112233', referencia: '003418274651', montoBs: 395, tasa, montoUsd: 10, meses: 1, estado: 'Por verificar', conciliado: '', motivo: '' },
+    { id: 'p2', registrado: `${dias(-1)}T18:40`, slug: 'estudio-luz', negocio: 'Estudio Luz', fecha: dias(-1), banco: 'Mercantil (0105)', telefono: '04245550000', referencia: '88120034', montoBs: 790, tasa, montoUsd: 20, meses: 2, estado: 'Por verificar', conciliado: '', motivo: '' },
+    { id: 'p1', registrado: `${dias(-6)}T10:20`, slug: 'consultorio-diaz', negocio: 'Consultorio Díaz', fecha: dias(-6), banco: 'Banco de Venezuela (0102)', telefono: '04165556677', referencia: '004512', montoBs: 392, tasa: 39.2, montoUsd: 10, meses: 1, estado: 'Aprobado', conciliado: 'correo', motivo: '' },
+  ]
+  const movs: Movimiento[] = [
+    { clave: 'm1', fecha: hoy(), referencia: '3418274651', descripcion: 'PAGO MOVIL RECIBIDO 04121112233', monto: 395, fuente: 'correo', pagoId: '' },
+    { clave: 'm2', fecha: dias(-2), referencia: '55120987', descripcion: 'PAGO MOVIL RECIBIDO', monto: 120, fuente: 'estado de cuenta', pagoId: '' },
+  ]
+  const ajustes: Cobros['ajustes'] = {
+    pagoMovil: { banco: 'Banco de Venezuela (0102)', telefono: '04120000000', cedula: 'V-12345678', titular: 'bookeaa' },
+    correoQuery: 'from:(bdvenlinea OR banvenez OR bancodevenezuela) newer_than:7d',
+    ultimaLectura: { fecha: new Date(Date.now() - 7 * 60_000).toISOString(), leidos: 4, abonos: 2, nuevos: 1, sinDatos: 2, aprobados: 0 },
+    automaticos: { correos: false, cortes: false },
+  }
+  const cobrosDemo = (): Cobros => {
+    const libres = movs.filter((m) => !m.pagoId)
+    const ultimos4 = (r: string) => r.slice(-4)
+    return {
+      porVerificar: reportes.filter((p) => p.estado === 'Por verificar').map((p) => ({ ...p, pista: libres.find((m) => Math.abs(m.monto - p.montoBs) <= 0.5 || ultimos4(m.referencia) === ultimos4(p.referencia)) ?? null })),
+      revisados: structuredClone(reportes.filter((p) => p.estado !== 'Por verificar')),
+      movimientos: structuredClone(libres),
+      tasa,
+      ajustes: structuredClone(ajustes),
+    }
+  }
   return {
+    cobros: () => espera(cobrosDemo()),
+    revisar: (id: string, ok: boolean, motivo = '') => {
+      const p = reportes.find((x) => x.id === id)!
+      let vence: string | undefined
+      p.estado = ok ? 'Aprobado' : 'Rechazado'
+      p.motivo = motivo
+      if (ok) {
+        const m = movs.find((x) => !x.pagoId && Math.abs(x.monto - p.montoBs) <= 0.5)
+        if (m) m.pagoId = id
+        const n = negocios.find((x) => x.slug === p.slug)
+        if (n) {
+          const f = new Date((n.vence && n.vence >= hoy() ? n.vence : hoy()) + 'T12:00:00Z')
+          f.setUTCMonth(f.getUTCMonth() + p.meses)
+          n.vence = f.toISOString().slice(0, 10)
+          n.ultimoPago = hoy()
+          n.activo = true
+          vence = n.vence
+        }
+      }
+      return espera({ ok: true, vence })
+    },
+    movimientos: (filas: FilaBanco[]) => {
+      let nuevos = 0
+      for (const f of filas) {
+        const clave = `${f.fecha}|${f.referencia}|${f.monto}`
+        if (movs.some((m) => m.clave === clave)) continue
+        movs.unshift({ clave, ...f, fuente: 'estado de cuenta', pagoId: '' })
+        nuevos++
+      }
+      return espera({ ok: true, nuevos, aprobados: 0 })
+    },
+    leer: () => {
+      ajustes.ultimaLectura = { fecha: new Date().toISOString(), leidos: 3, abonos: 1, nuevos: 0, sinDatos: 2, aprobados: 0 }
+      return espera(ajustes.ultimaLectura)
+    },
+    instalar: () => {
+      ajustes.automaticos = { correos: true, cortes: true }
+      return espera({ ok: true })
+    },
+    ajustes: (d: { pagoMovil?: Partial<PagoMovilDatos>; correoQuery?: string }) => {
+      Object.assign(ajustes.pagoMovil, d.pagoMovil)
+      if (d.correoQuery !== undefined) ajustes.correoQuery = d.correoQuery
+      return espera({ ok: true })
+    },
+    ingreso: (slug: string) => {
+      const n = negocios.find((x) => x.slug === slug)!
+      const [y, m, d] = n.creado.split('-').map(Number)
+      const h = hoy()
+      let k = 1
+      let v = ''
+      do {
+        const f = new Date(Date.UTC(y, m - 1 + k, 1))
+        const ultimo = new Date(Date.UTC(f.getUTCFullYear(), f.getUTCMonth() + 1, 0)).getUTCDate()
+        f.setUTCDate(Math.min(d, ultimo))
+        v = f.toISOString().slice(0, 10)
+        k++
+      } while (v < h)
+      n.vence = v
+      return espera({ ok: true, vence: v })
+    },
     resumen: () => espera(recalcular()),
     pago: (d: { slug: string; meses: number; monto: number; metodo: string; referencia: string }) => {
       const n = negocios.find((x) => x.slug === d.slug)!

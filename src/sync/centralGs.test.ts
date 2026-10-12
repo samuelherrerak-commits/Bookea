@@ -36,9 +36,9 @@ function maestro() {
   const ss = { getSheetByName: (n: string) => hojas[n] ?? null, insertSheet: (n: string) => (hojas[n] = hoja([])) }
   const f = funcionesGs<Record<string, Fn>>(gs, [
     'estadoCobro_', 'diasEntre_', 'sumarMeses_', 'sumarDias_', 'hojaTenants_', 'filasTenants_', 'escribirTenant_', 'negocioCentral_',
-    'hojaPagos_', 'pagosRecientes_', 'registrarPagoCentral_', 'tenantActivo_', 'ymd_', 'normKey_', 'round2_', 'toNumber_', 'limpiarTexto_', 'paraCelda_',
+    'hojaPagos_', 'pagosRecientes_', 'registrarPagoCentral_', 'extenderVence_', 'tenantActivo_', 'ymd_', 'normKey_', 'round2_', 'toNumber_', 'limpiarTexto_', 'paraCelda_',
   ], {
-    TENANT_HEADERS, PAGOS_HEADERS: constanteGs(gs, 'PAGOS_HEADERS'), ZONA: 'America/Caracas',
+    TENANT_HEADERS, PAGOS_HEADERS: constanteGs(gs, 'PAGOS_HEADERS'), ZONA: 'America/Caracas', DIAS_GRACIA: 3,
     SpreadsheetApp: { getActiveSpreadsheet: () => ss },
     Utilities: { formatDate: (d: Date, _z: string, formato: string) => (formato === 'yyyy-MM-dd' ? ymd(d) : d.toISOString()) },
     limpiarCacheTenants_: () => undefined,
@@ -52,7 +52,9 @@ describe('Code.gs · central de bookeaa', () => {
     const hoy = '2026-10-12'
     expect(f.estadoCobro_({ activo: 'si', vence: '2026-10-30', ultimoPago: '' }, hoy)).toBe('prueba')
     expect(f.estadoCobro_({ activo: 'si', vence: '2026-10-30', ultimoPago: '2026-09-30' }, hoy)).toBe('activo')
-    expect(f.estadoCobro_({ activo: 'si', vence: '2026-10-11', ultimoPago: '2026-09-11' }, hoy)).toBe('pendiente')
+    expect(f.estadoCobro_({ activo: 'si', vence: '2026-10-11', ultimoPago: '2026-09-11' }, hoy)).toBe('pendiente') // 1 día de gracia
+    expect(f.estadoCobro_({ activo: 'si', vence: '2026-10-09', ultimoPago: '2026-09-09' }, hoy)).toBe('pendiente') // 3: último día
+    expect(f.estadoCobro_({ activo: 'si', vence: '2026-10-08', ultimoPago: '2026-09-08' }, hoy)).toBe('vencido')
     expect(f.estadoCobro_({ activo: 'si', vence: '2026-10-12', ultimoPago: '' }, hoy)).toBe('prueba') // vence hoy: todavía vale
     expect(f.estadoCobro_({ activo: 'no', vence: '2026-12-01', ultimoPago: '' }, hoy)).toBe('suspendido')
     expect(f.estadoCobro_({ activo: 'si', vence: '', ultimoPago: '' }, hoy)).toBe('sin_fecha')
@@ -63,6 +65,14 @@ describe('Code.gs · central de bookeaa', () => {
     expect(f.sumarMeses_('2026-01-31', 1)).toBe('2026-02-28')
     expect(f.sumarMeses_('2026-10-12', 1)).toBe('2026-11-12')
     expect(f.sumarMeses_('2026-12-15', 3)).toBe('2027-03-15')
+  })
+
+  it('el corte queda anclado al mismo día aunque pague tarde; si venció hace meses salta al próximo', () => {
+    const { f } = maestro()
+    expect(f.extenderVence_('2026-10-05', 1, '2026-10-12')).toBe('2026-11-05') // pagó 7 días tarde: sigue el 5
+    expect(f.extenderVence_('2026-06-05', 1, '2026-10-12')).toBe('2026-11-05') // meses atrás: próximo corte futuro
+    expect(f.extenderVence_('', 1, '2026-10-12')).toBe('2026-11-12')
+    expect(f.extenderVence_('2026-01-31', 1, '2026-01-20')).toBe('2026-02-28')
   })
 
   it('pago: agrega las columnas que falten, extiende desde el vencimiento o desde hoy, y reactiva', () => {

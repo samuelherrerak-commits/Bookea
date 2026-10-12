@@ -153,7 +153,7 @@ const PLANTILLAS_MENSAJE = [
 ];
 
 // Telefono, Vence, Ultimo_Pago y Notas los usa la central (/central): el cobro mensual de bookeaa.
-const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado', 'Telefono', 'Vence', 'Ultimo_Pago', 'Notas'];
+const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado', 'Telefono', 'Vence', 'Ultimo_Pago', 'Notas', 'Suspendido_Auto'];
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -404,6 +404,7 @@ function onOpen() {
     .addItem('Bot de WhatsApp: generar token', 'promptGenerarTokenBot')
     .addItem('Bot de WhatsApp: avisos y calendario', 'promptAjustesBot')
     .addItem('Bot de WhatsApp: probar agenda', 'probarAgendaBot')
+    .addItem('Cobros: activar automáticos (correos del banco y cortes)', 'instalarCobros')
     .addToUi();
 }
 
@@ -2887,6 +2888,16 @@ function atenderDueno_(data, ahoraMs) {
   }
   if (op === 'config') return duenoLeerConfig_(openTenant_(tenant), tenant, ahoraMs);
   if (op === 'guardar') return duenoGuardar_(openTenant_(tenant), tenant, String(data.seccion || ''), data.datos, ahoraMs);
+  if (op === 'plan') return planNegocio_(tenant, ahoraMs);
+  if (op === 'reportar_pago') {
+    const lockPago = LockService.getScriptLock();
+    if (!lockPago.tryLock(20000)) return { error: 'servidor', mensaje: 'Intenta de nuevo en un momento.' };
+    try {
+      return reportarPago_(tenant, email, data, ahoraMs);
+    } finally {
+      lockPago.releaseLock();
+    }
+  }
   if (op === 'vapid') {
     // La app la pide cada vez que abre Avisos: la de la sesión pudo quedar vacía si se
     // entró antes de configurar bot_bandeja_url.
@@ -3248,12 +3259,37 @@ const DIAS_AVISO_VENCE = 5;
 const PAGOS_HEADERS = ['Fecha', 'Slug', 'Negocio', 'Monto', 'Meses', 'Metodo', 'Referencia', 'Vence_Antes', 'Vence_Nuevo', 'Registrado_Por'];
 
 /** Estado de cobro de un negocio: suspendido, pendiente (venció), prueba, activo o sin_fecha. */
+/**
+ * Estado de cobro: suspendido, sin_fecha, prueba o activo (al día), pendiente (pasó el
+ * corte y está en los DIAS_GRACIA para pagar) o vencido (pasó la gracia; revisarCortes
+ * lo suspende).
+ */
 function estadoCobro_(t, hoy) {
   if (!tenantActivo_(t)) return 'suspendido';
   const vence = ymd_(t.vence);
   if (!vence) return 'sin_fecha';
-  if (vence < hoy) return 'pendiente';
+  if (vence < hoy) return diasEntre_(vence, hoy) <= DIAS_GRACIA ? 'pendiente' : 'vencido';
   return ymd_(t.ultimoPago) ? 'activo' : 'prueba';
+}
+
+/**
+ * Nuevo vencimiento al pagar `meses`. El corte es siempre el mismo día del mes (el de
+ * ingreso): se suma desde el vencimiento anterior, no desde el día en que pagó. Si
+ * venció hace meses, se salta hasta el primer corte que quede en el futuro.
+ */
+function extenderVence_(antes, meses, hoy) {
+  if (!antes) return sumarMeses_(hoy, meses);
+  let n = meses;
+  while (sumarMeses_(antes, n) < hoy && n < 240) n++;
+  return sumarMeses_(antes, n);
+}
+
+/** Próxima fecha de corte (mismo día del mes que el ingreso) que sea hoy o después. */
+function proximoCorte_(creado, hoy) {
+  if (!creado) return '';
+  let n = 1;
+  while (sumarMeses_(creado, n) < hoy && n < 600) n++;
+  return sumarMeses_(creado, n);
 }
 
 function diasEntre_(a, b) {
@@ -3408,12 +3444,11 @@ function registrarPagoCentral_(data, email, ahoraMs) {
   const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(data.slug || ''); })[0];
   if (!fila) return { error: 'no_existe', mensaje: 'Ese negocio no existe.' };
   const antes = ymd_(fila.Vence) || '';
-  const base = antes && antes >= hoy ? antes : hoy;
-  const nuevo = sumarMeses_(base, meses);
+  const nuevo = extenderVence_(antes, meses, hoy);
   hojaPagos_().appendRow([new Date(ahoraMs), String(fila.Slug), String(fila.Nombre), monto, meses,
     limpiarTexto_(data.metodo || 'Pago Móvil', 40), paraCelda_(limpiarTexto_(data.referencia || '', 60)), antes, nuevo, email]);
   // Pagar reactiva un negocio suspendido.
-  escribirTenant_(fila.Slug, { Vence: nuevo, Ultimo_Pago: hoy, Activo: 'si' });
+  escribirTenant_(fila.Slug, { Vence: nuevo, Ultimo_Pago: hoy, Activo: 'si', Suspendido_Auto: '' });
   return { ok: true, vence: nuevo };
 }
 
@@ -3446,14 +3481,41 @@ function atenderCentral_(data, ahoraMs) {
   if (!esAdminDueno_(email)) return { error: 'no_autorizado', mensaje: email + ' no es administrador de bookeaa (propiedad dueno_admins).' };
   const op = String(data.op || '');
   if (op === 'resumen') return resumenCentral_(ahoraMs);
+  if (op === 'cobros') return cobrosCentral_(ahoraMs);
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return { error: 'servidor', mensaje: 'Hay otra operación en curso. Intenta de nuevo.' };
   try {
     if (op === 'pago') return registrarPagoCentral_(data, email, ahoraMs);
     if (op === 'crear') return crearNegocioCentral_(data, ahoraMs);
+    if (op === 'aprobar' || op === 'rechazar') {
+      const hojaPN = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+      const pago = objetos_(hojaPN, PAGOS_NEGOCIO_HEADERS).filter(function (o) { return String(o.ID) === String(data.id || ''); })[0];
+      if (!pago || String(pago.Estado) !== 'Por verificar') return { error: 'no_existe', mensaje: 'Ese pago ya no está por verificar.' };
+      if (op === 'aprobar') return { ok: true, vence: aprobarPago_(pago.fila, 'Aprobado a mano', email, ahoraMs) };
+      const motivo = limpiarTexto_(data.motivo || 'No encontramos el pago en el banco', 160);
+      escribirFila_(hojaPN, PAGOS_NEGOCIO_HEADERS, pago.fila, { Estado: 'Rechazado', Motivo: paraCelda_(motivo), Revisado_Por: email, Fecha_Revision: new Date(ahoraMs) });
+      avisarNegocio_(String(pago.Slug), '❌ Pago no confirmado', motivo + '. Revisa los datos y repórtalo otra vez en Mi plan y pagos.');
+      return { ok: true };
+    }
+    if (op === 'movimientos') {
+      const nuevos = guardarMovimientos_(data.filas, 'estado de cuenta', ahoraMs);
+      const r = conciliar_(ahoraMs);
+      return { ok: true, nuevos: nuevos, aprobados: r.aprobados.length };
+    }
+    if (op === 'leer_correos') return leerCorreosBanco();
+    if (op === 'instalar_cobros') return instalarCobros();
+    if (op === 'ajustes_cobro') return guardarAjustesCobro_(data);
+    if (op === 'usar_ingreso') {
+      const t = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(data.slug || ''); })[0];
+      const creado = t ? ymd_(t.Creado) : '';
+      if (!creado) return { error: 'datos_invalidos', mensaje: 'Ese negocio no tiene fecha de ingreso.' };
+      const corte = proximoCorte_(creado, Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd'));
+      escribirTenant_(String(t.Slug), { Vence: corte });
+      return { ok: true, vence: corte };
+    }
     if (op === 'activo') {
-      escribirTenant_(String(data.slug || ''), { Activo: data.activo ? 'si' : 'no' });
+      escribirTenant_(String(data.slug || ''), { Activo: data.activo ? 'si' : 'no', Suspendido_Auto: '' });
       return { ok: true };
     }
     if (op === 'editar') {
@@ -3474,4 +3536,371 @@ function atenderCentral_(data, ahoraMs) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// ============================================================================
+// Cobros de bookeaa: corte mensual, Pago Móvil reportado y conciliación
+// ============================================================================
+// - El corte es el día de ingreso de cada mes (el primer mes es gratis). Después del
+//   corte hay DIAS_GRACIA para pagar; al día siguiente revisarCortes suspende la página
+//   (Suspendido_Auto = si) y al aprobarse un pago se reactiva sola.
+// - El negocio reporta su Pago Móvil desde Mi negocio (pestaña PagosNegocio).
+// - Los movimientos del banco llegan del estado de cuenta (lo sube la central) o de
+//   los correos de aviso del banco en el Gmail de bookeaa (leerCorreosBanco, cada
+//   10 min). conciliar_ cruza referencia, monto y fecha y aprueba lo que coincide.
+// Propiedades: pm_banco, pm_telefono, pm_cedula, pm_titular (el Pago Móvil de bookeaa)
+// y correo_banco_query (la búsqueda de Gmail de los avisos del banco).
+
+const DIAS_GRACIA = 3;
+const PAGOS_NEGOCIO_HEADERS = [
+  'ID', 'Fecha_Registro', 'Slug', 'Negocio', 'Fecha_Pago', 'Banco_Origen', 'Telefono_Origen', 'Referencia',
+  'Monto_Bs', 'Tasa', 'Monto_USD', 'Meses', 'Estado', 'Conciliado_Con', 'Motivo', 'Revisado_Por', 'Fecha_Revision',
+];
+const MOVIMIENTOS_HEADERS = ['Clave', 'Fecha', 'Referencia', 'Descripcion', 'Monto', 'Fuente', 'Cargado', 'Pago_ID'];
+const CORREO_BANCO_QUERY = 'from:(bdvenlinea OR banvenez OR bancodevenezuela) newer_than:7d';
+
+function hojaCon_(nombre, headers) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(nombre);
+  if (!sheet) {
+    sheet = ss.insertSheet(nombre);
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/** Filas de una pestaña como objetos (con su número de fila). */
+function objetos_(sheet, headers) {
+  const n = sheet.getLastRow() - 1;
+  if (n < 1) return [];
+  return sheet.getRange(2, 1, n, headers.length).getValues().map(function (r, i) {
+    const o = { fila: i + 2 };
+    headers.forEach(function (h, j) { o[h] = r[j]; });
+    return o;
+  });
+}
+
+function escribirFila_(sheet, headers, fila, campos) {
+  Object.keys(campos).forEach(function (h) {
+    const c = headers.indexOf(h);
+    if (c !== -1) sheet.getRange(fila, c + 1).setValue(campos[h]);
+  });
+}
+
+const soloDigitos_ = function (v) { return String(v == null ? '' : v).replace(/\D/g, ''); };
+
+/** Misma referencia: coinciden los últimos dígitos (al menos 4; los bancos recortan distinto). */
+function refCoincide_(a, b) {
+  const da = soloDigitos_(a).replace(/^0+/, ''), db = soloDigitos_(b).replace(/^0+/, '');
+  const n = Math.min(6, da.length, db.length);
+  return n >= 4 && da.slice(-n) === db.slice(-n);
+}
+
+/** Mismo monto, con medio bolívar o 0,5 % de holgura (redondeos de la tasa). */
+function montoCoincide_(a, b) {
+  const x = Number(a), y = Number(b);
+  return x > 0 && y > 0 && Math.abs(x - y) <= Math.max(0.5, y * 0.005);
+}
+
+/** "1.234,56" / "1234.56" / 1234.56 → 1234.56 */
+function montoVe_(v) {
+  if (typeof v === 'number') return v;
+  let t = String(v || '').replace(/[^\d.,-]/g, '');
+  if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+  else if ((t.match(/\./g) || []).length > 1) t = t.replace(/\./g, '');
+  const n = Number(t);
+  return isFinite(n) ? n : 0;
+}
+
+function datosPagoMovil_() {
+  const p = PropertiesService.getScriptProperties();
+  return {
+    banco: p.getProperty('pm_banco') || 'Banco de Venezuela (0102)',
+    telefono: p.getProperty('pm_telefono') || '',
+    cedula: p.getProperty('pm_cedula') || '',
+    titular: p.getProperty('pm_titular') || '',
+  };
+}
+
+function tasaUsd_() {
+  try {
+    const t = getTasa('USD', null);
+    return t && t.valor > 0 ? t.valor : 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+function pagoNegocioJson_(o) {
+  return {
+    id: String(o.ID), registrado: o.Fecha_Registro instanceof Date ? Utilities.formatDate(o.Fecha_Registro, ZONA, "yyyy-MM-dd'T'HH:mm") : String(o.Fecha_Registro),
+    slug: String(o.Slug), negocio: String(o.Negocio), fecha: ymd_(o.Fecha_Pago) || '', banco: String(o.Banco_Origen),
+    telefono: String(o.Telefono_Origen), referencia: String(o.Referencia), montoBs: toNumber_(o.Monto_Bs), tasa: toNumber_(o.Tasa),
+    montoUsd: toNumber_(o.Monto_USD), meses: toNumber_(o.Meses) || 1, estado: String(o.Estado), conciliado: String(o.Conciliado_Con || ''),
+    motivo: String(o.Motivo || ''),
+  };
+}
+
+function movimientoJson_(o) {
+  return {
+    clave: String(o.Clave), fecha: ymd_(o.Fecha) || '', referencia: String(o.Referencia), descripcion: String(o.Descripcion),
+    monto: toNumber_(o.Monto), fuente: String(o.Fuente), pagoId: String(o.Pago_ID || ''),
+  };
+}
+
+/** Avisa al negocio en su teléfono (Mi negocio). Nunca lanza. */
+function avisarNegocio_(slug, titulo, cuerpo) {
+  llamarWorker_('/push/evento', { tipo: 'aviso', slug: slug, titulo: titulo, cuerpo: cuerpo });
+}
+
+// ---------- Lo que ve el negocio ----------
+
+function planNegocio_(tenant, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })[0] || {};
+  const n = negocioCentral_(fila, hoy);
+  const tasa = tasaUsd_();
+  const pagos = objetos_(hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS), PAGOS_NEGOCIO_HEADERS)
+    .filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })
+    .map(pagoNegocioJson_).reverse().slice(0, 12);
+  return {
+    estado: n.estado, vence: n.vence, dias: n.dias, gracia: DIAS_GRACIA,
+    corteDia: n.creado ? Number(n.creado.slice(8, 10)) : (n.vence ? Number(n.vence.slice(8, 10)) : null),
+    limite: n.vence ? sumarDias_(n.vence, DIAS_GRACIA) : '',
+    precio: PRECIO_MENSUAL, tasa: tasa, montoBs: tasa ? round2_(PRECIO_MENSUAL * tasa) : 0,
+    pagoMovil: datosPagoMovil_(), pagos: pagos,
+    porVerificar: pagos.some(function (p) { return p.estado === 'Por verificar'; }),
+  };
+}
+
+function reportarPago_(tenant, email, data, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const fecha = String(data.fecha || '');
+  const referencia = soloDigitos_(data.referencia);
+  const telefono = soloDigitos_(data.telefono);
+  const montoBs = round2_(montoVe_(data.montoBs));
+  const meses = Math.max(1, Math.min(12, Math.floor(Number(data.meses) || 1)));
+  const errores = [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha > hoy || diasEntre_(fecha, hoy) > 15) errores.push('Revisa la fecha del pago (de los últimos 15 días).');
+  if (referencia.length < 4 || referencia.length > 20) errores.push('Escribe el número de referencia completo (solo números).');
+  if (telefono.length < 10) errores.push('Escribe el teléfono desde el que pagaste.');
+  if (!(montoBs > 0)) errores.push('Escribe el monto que pagaste en bolívares.');
+  if (!String(data.banco || '').trim()) errores.push('Elige el banco desde el que pagaste.');
+  if (errores.length) return { error: 'datos_invalidos', mensaje: errores.join(' ') };
+
+  const hoja = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+  const repetido = objetos_(hoja, PAGOS_NEGOCIO_HEADERS).some(function (o) {
+    return String(o.Estado) !== 'Rechazado' && refCoincide_(o.Referencia, referencia) && montoCoincide_(o.Monto_Bs, montoBs);
+  });
+  if (repetido) return { error: 'datos_invalidos', mensaje: 'Ese pago ya está reportado.' };
+
+  const tasa = tasaUsd_();
+  const id = 'P' + Utilities.getUuid().replace(/-/g, '').slice(0, 10).toUpperCase();
+  hoja.appendRow([id, new Date(ahoraMs), tenant.slug, tenant.nombre, fecha, limpiarTexto_(data.banco, 60), "'" + telefono, "'" + referencia,
+    montoBs, tasa || '', tasa ? round2_(montoBs / tasa) : '', meses, 'Por verificar', '', '', email, '']);
+  const r = conciliar_(ahoraMs);
+  const aprobado = r.aprobados.indexOf(id) !== -1;
+  if (!aprobado) {
+    botAvisar_('Pago Móvil por verificar: ' + tenant.nombre, [
+      tenant.nombre + ' reportó un pago de Bs. ' + montoBs + ' (' + meses + (meses === 1 ? ' mes' : ' meses') + ').',
+      'Referencia: ' + referencia + ' · ' + String(data.banco) + ' · ' + fecha,
+      'Apruébalo o recházalo en bookeaa.com/central → Cobros.',
+    ]);
+  }
+  return { ok: true, id: id, estado: aprobado ? 'Aprobado' : 'Por verificar' };
+}
+
+// ---------- Aprobar, rechazar, conciliar ----------
+
+function aprobarPago_(fila, fuente, revisor, ahoraMs) {
+  const hoja = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+  const pago = objetos_(hoja, PAGOS_NEGOCIO_HEADERS).filter(function (o) { return o.fila === fila; })[0];
+  if (!pago || String(pago.Estado) !== 'Por verificar') return null;
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const t = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(pago.Slug); })[0];
+  if (!t) return null;
+  const meses = Math.max(1, toNumber_(pago.Meses) || 1);
+  const antes = ymd_(t.Vence) || '';
+  const nuevo = extenderVence_(antes, meses, hoy);
+  escribirFila_(hoja, PAGOS_NEGOCIO_HEADERS, fila, { Estado: 'Aprobado', Conciliado_Con: fuente, Revisado_Por: revisor, Fecha_Revision: new Date(ahoraMs) });
+  hojaPagos_().appendRow([new Date(ahoraMs), String(t.Slug), String(t.Nombre), toNumber_(pago.Monto_USD) || PRECIO_MENSUAL * meses, meses,
+    'Pago Móvil', "'" + soloDigitos_(pago.Referencia), antes, nuevo, revisor]);
+  const campos = { Vence: nuevo, Ultimo_Pago: hoy, Suspendido_Auto: '' };
+  // Solo se reactiva sola si la suspendió el cobro (no si la suspendiste tú a mano).
+  if (String(t.Suspendido_Auto || '') === 'si') campos.Activo = 'si';
+  escribirTenant_(t.Slug, campos);
+  avisarNegocio_(String(t.Slug), '✅ Pago aprobado', 'Tu plan de bookeaa queda al día hasta el ' + nuevo.split('-').reverse().join('/') + '. ¡Gracias!');
+  return nuevo;
+}
+
+/** Cruza los pagos por verificar con los movimientos del banco. Devuelve los aprobados. */
+function conciliar_(ahoraMs) {
+  const hojaP = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+  const hojaM = hojaCon_('MovimientosBanco', MOVIMIENTOS_HEADERS);
+  const libres = objetos_(hojaM, MOVIMIENTOS_HEADERS).filter(function (m) { return !String(m.Pago_ID || ''); });
+  const aprobados = [];
+  objetos_(hojaP, PAGOS_NEGOCIO_HEADERS).forEach(function (p) {
+    if (String(p.Estado) !== 'Por verificar') return;
+    const fechaPago = ymd_(p.Fecha_Pago);
+    const m = libres.filter(function (x) {
+      if (String(x.Pago_ID || '')) return false;
+      const f = ymd_(x.Fecha);
+      return refCoincide_(x.Referencia, p.Referencia) && montoCoincide_(x.Monto, p.Monto_Bs) && (!f || !fechaPago || Math.abs(diasEntre_(f, fechaPago)) <= 3);
+    })[0];
+    if (!m) return;
+    if (aprobarPago_(p.fila, String(m.Fuente) === 'correo' ? 'Correo del banco' : 'Estado de cuenta', 'conciliación automática', ahoraMs)) {
+      escribirFila_(hojaM, MOVIMIENTOS_HEADERS, m.fila, { Pago_ID: String(p.ID) });
+      m.Pago_ID = String(p.ID);
+      aprobados.push(String(p.ID));
+    }
+  });
+  return { aprobados: aprobados };
+}
+
+/** Guarda movimientos (créditos) sin repetir. `filas`: [{fecha, referencia, descripcion, monto, clave?}] */
+function guardarMovimientos_(filas, fuente, ahoraMs) {
+  const hoja = hojaCon_('MovimientosBanco', MOVIMIENTOS_HEADERS);
+  const existentes = {};
+  objetos_(hoja, MOVIMIENTOS_HEADERS).forEach(function (m) { existentes[String(m.Clave)] = true; });
+  const nuevas = [];
+  (filas || []).slice(0, 3000).forEach(function (f) {
+    const monto = round2_(montoVe_(f.monto));
+    const ref = soloDigitos_(f.referencia);
+    const fecha = ymd_(f.fecha) || '';
+    if (!(monto > 0) || ref.length < 4) return;
+    const clave = String(f.clave || (fecha + '|' + ref + '|' + monto));
+    if (existentes[clave]) return;
+    existentes[clave] = true;
+    nuevas.push([clave, fecha, "'" + ref, paraCelda_(limpiarTexto_(f.descripcion || '', 120)), monto, fuente, new Date(ahoraMs), '']);
+  });
+  if (nuevas.length) hoja.getRange(hoja.getLastRow() + 1, 1, nuevas.length, MOVIMIENTOS_HEADERS.length).setValues(nuevas);
+  return nuevas.length;
+}
+
+// ---------- Correos del banco ----------
+
+/** Saca monto, referencia y fecha de un aviso de Pago Móvil recibido. null si no es un abono. */
+function parsearCorreoBanco_(texto) {
+  const t = String(texto || '').replace(/\s+/g, ' ');
+  if (!/(recib|abon|acredit|ingres|te (?:han )?(?:enviado|pagado)|le (?:han )?(?:enviado|transferido))/i.test(t)) return null;
+  if (/(has enviado|enviaste|realizaste un pago|d[eé]bito a tu cuenta|cargo a su cuenta)/i.test(t)) return null;
+  const monto = /(?:Bs\.?\s*S?\.?|VES|monto(?: de)?:?)\s*([\d.]+,\d{2}|\d+(?:\.\d{2})?)/i.exec(t);
+  const ref = /(?:referencia|ref\.?|n[uú]mero de (?:operaci[oó]n|referencia)|operaci[oó]n|comprobante)\s*(?:n[°º.o]*)?\s*:?\s*#?\s*(\d{4,20})/i.exec(t);
+  if (!monto || !ref) return null;
+  const f = /(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/.exec(t);
+  let fecha = '';
+  if (f) {
+    const anio = f[3].length === 2 ? '20' + f[3] : f[3];
+    fecha = anio + '-' + ('0' + f[2]).slice(-2) + '-' + ('0' + f[1]).slice(-2);
+  }
+  return { monto: montoVe_(monto[1]), referencia: ref[1], fecha: fecha };
+}
+
+/** Lee los avisos del banco en el Gmail de bookeaa y concilia. La llama un disparador cada 10 min. */
+function leerCorreosBanco() {
+  const ahoraMs = Date.now();
+  const props = PropertiesService.getScriptProperties();
+  const query = props.getProperty('correo_banco_query') || CORREO_BANCO_QUERY;
+  const filas = [];
+  let leidos = 0, sinDatos = 0;
+  GmailApp.search(query, 0, 30).forEach(function (hilo) {
+    hilo.getMessages().forEach(function (msg) {
+      leidos++;
+      const datos = parsearCorreoBanco_(msg.getSubject() + ' ' + msg.getPlainBody());
+      if (!datos) { sinDatos++; return; }
+      filas.push({
+        clave: 'correo:' + msg.getId(), fecha: datos.fecha || Utilities.formatDate(msg.getDate(), ZONA, 'yyyy-MM-dd'),
+        referencia: datos.referencia, monto: datos.monto, descripcion: msg.getSubject(),
+      });
+    });
+  });
+  const nuevos = guardarMovimientos_(filas, 'correo', ahoraMs);
+  const r = conciliar_(ahoraMs);
+  const resumen = { fecha: new Date(ahoraMs).toISOString(), leidos: leidos, abonos: filas.length, nuevos: nuevos, sinDatos: sinDatos, aprobados: r.aprobados.length };
+  props.setProperty('correo_banco_ultima', JSON.stringify(resumen));
+  return resumen;
+}
+
+// ---------- Cortes diarios ----------
+
+/** Recordatorios de pago y suspensión al pasar la gracia. La llama un disparador diario (7:00). */
+function revisarCortes() {
+  const ahoraMs = Date.now();
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const suspendidos = [];
+  filasTenants_().forEach(function (o) {
+    const vence = ymd_(o.Vence);
+    const t = { activo: String(o.Activo || 'si') };
+    if (!vence || !tenantActivo_(t)) return;
+    const slug = String(o.Slug), dias = diasEntre_(hoy, vence);
+    const fechaTxt = vence.split('-').reverse().join('/');
+    const monto = '$' + PRECIO_MENSUAL;
+    if (dias === 3 || dias === 1) avisarNegocio_(slug, '🗓️ Tu pago de bookeaa vence el ' + fechaTxt, 'Son ' + monto + ' por Pago Móvil. Repórtalo en Configurar → Mi plan y pagos.');
+    else if (dias === 0) avisarNegocio_(slug, '🗓️ Hoy es tu fecha de corte', 'Tienes ' + DIAS_GRACIA + ' días para pagar ' + monto + ' y seguir recibiendo reservas.');
+    else if (dias < 0 && -dias <= DIAS_GRACIA) {
+      const quedan = DIAS_GRACIA + dias;
+      avisarNegocio_(slug, '⚠️ Tu pago de bookeaa está pendiente', quedan ? 'Te quedan ' + quedan + (quedan === 1 ? ' día' : ' días') + ' para pagar antes de que tu página se pause.' : 'Hoy es el último día para pagar antes de que tu página se pause.');
+    } else if (dias < 0) {
+      escribirTenant_(slug, { Activo: 'no', Suspendido_Auto: 'si' });
+      avisarNegocio_(slug, '⏸️ Tu página de reservas está en pausa', 'Pasaron ' + DIAS_GRACIA + ' días del corte sin pago. Reporta tu Pago Móvil y se reactiva al aprobarse.');
+      suspendidos.push(String(o.Nombre || slug));
+    }
+  });
+  if (suspendidos.length) botAvisar_('Negocios suspendidos por falta de pago', suspendidos);
+  return { suspendidos: suspendidos };
+}
+
+/** Crea los disparadores de cobros (correos cada 10 min y cortes a las 7:00). Sin duplicar. */
+function instalarCobros() {
+  const existentes = ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); });
+  if (existentes.indexOf('leerCorreosBanco') === -1) ScriptApp.newTrigger('leerCorreosBanco').timeBased().everyMinutes(10).create();
+  if (existentes.indexOf('revisarCortes') === -1) ScriptApp.newTrigger('revisarCortes').timeBased().atHour(7).everyDays(1).inTimezone(ZONA).create();
+  return { ok: true };
+}
+
+function cobrosActivos_() {
+  const h = ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); });
+  return { correos: h.indexOf('leerCorreosBanco') !== -1, cortes: h.indexOf('revisarCortes') !== -1 };
+}
+
+// ---------- Lo que ve la central ----------
+
+function cobrosCentral_(ahoraMs) {
+  const props = PropertiesService.getScriptProperties();
+  const pagos = objetos_(hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS), PAGOS_NEGOCIO_HEADERS);
+  const movs = objetos_(hojaCon_('MovimientosBanco', MOVIMIENTOS_HEADERS), MOVIMIENTOS_HEADERS);
+  const libres = movs.filter(function (m) { return !String(m.Pago_ID || ''); });
+  const porVerificar = pagos.filter(function (p) { return String(p.Estado) === 'Por verificar'; }).map(function (p) {
+    const j = pagoNegocioJson_(p);
+    // Pista para revisar a mano: un movimiento con el mismo monto o la misma referencia.
+    const pista = libres.filter(function (m) { return montoCoincide_(m.Monto, p.Monto_Bs) || refCoincide_(m.Referencia, p.Referencia); })[0];
+    j.pista = pista ? movimientoJson_(pista) : null;
+    return j;
+  }).reverse();
+  let ultima = null;
+  try { ultima = JSON.parse(props.getProperty('correo_banco_ultima') || 'null'); } catch (_) { /* nada */ }
+  let activos = { correos: false, cortes: false };
+  try { activos = cobrosActivos_(); } catch (_) { /* sin permiso de ScriptApp */ }
+  return {
+    porVerificar: porVerificar,
+    revisados: pagos.filter(function (p) { return String(p.Estado) !== 'Por verificar'; }).map(pagoNegocioJson_).reverse().slice(0, 40),
+    movimientos: libres.map(movimientoJson_).reverse().slice(0, 60),
+    tasa: tasaUsd_(),
+    ajustes: {
+      pagoMovil: datosPagoMovil_(), correoQuery: props.getProperty('correo_banco_query') || CORREO_BANCO_QUERY,
+      ultimaLectura: ultima, automaticos: activos,
+    },
+  };
+}
+
+function guardarAjustesCobro_(data) {
+  const p = PropertiesService.getScriptProperties();
+  const pm = data.pagoMovil || {};
+  ['banco', 'telefono', 'cedula', 'titular'].forEach(function (k) {
+    if (k in pm) p.setProperty('pm_' + k, limpiarTexto_(pm[k], 80));
+  });
+  if ('correoQuery' in data) p.setProperty('correo_banco_query', limpiarTexto_(data.correoQuery, 300) || CORREO_BANCO_QUERY);
+  return { ok: true };
 }

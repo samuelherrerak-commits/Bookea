@@ -188,6 +188,64 @@ export function guardar(sesion: string, slug: string, seccion: Seccion, datos: D
   return llamar<Guardado>({ op: 'guardar', sesion, slug, seccion, datos })
 }
 
+// ---------- Mi plan y pagos ----------
+
+export type EstadoPlan = 'activo' | 'prueba' | 'pendiente' | 'vencido' | 'suspendido' | 'sin_fecha'
+
+export interface PagoReportado {
+  id: string
+  registrado: string
+  fecha: string
+  banco: string
+  telefono: string
+  referencia: string
+  montoBs: number
+  meses: number
+  estado: 'Por verificar' | 'Aprobado' | 'Rechazado' | string
+  conciliado: string
+  motivo: string
+}
+
+export interface Plan {
+  estado: EstadoPlan
+  /** Fecha de corte (yyyy-MM-dd) o ''. */
+  vence: string
+  dias: number | null
+  gracia: number
+  corteDia: number | null
+  /** Último día para pagar antes de la pausa. */
+  limite: string
+  precio: number
+  tasa: number
+  montoBs: number
+  pagoMovil: { banco: string; telefono: string; cedula: string; titular: string }
+  pagos: PagoReportado[]
+  porVerificar: boolean
+}
+
+export function plan(sesion: string, slug: string): Promise<Plan> {
+  if (DEMO_MODE) return Promise.resolve(structuredClone(DEMO.plan))
+  return llamar<Plan>({ op: 'plan', sesion, slug })
+}
+
+export interface Reporte {
+  fecha: string
+  banco: string
+  telefono: string
+  referencia: string
+  montoBs: string
+  meses: number
+}
+
+export function reportarPago(sesion: string, slug: string, r: Reporte): Promise<{ ok: boolean; id: string; estado: string }> {
+  if (DEMO_MODE) {
+    DEMO.plan.pagos.unshift({ id: 'PDEMO', registrado: '', fecha: r.fecha, banco: r.banco, telefono: r.telefono, referencia: r.referencia, montoBs: Number(r.montoBs.replace(/\./g, '').replace(',', '.')) || 0, meses: r.meses, estado: 'Por verificar', conciliado: '', motivo: '' })
+    DEMO.plan.porVerificar = true
+    return new Promise((ok) => setTimeout(() => ok({ ok: true, id: 'PDEMO', estado: 'Por verificar' }), 500))
+  }
+  return llamar({ op: 'reportar_pago', sesion, slug, ...r })
+}
+
 // ---------- Datos de ejemplo (sin VITE_API_URL) ----------
 
 function sumarDias(ymd: string, n: number) {
@@ -202,6 +260,13 @@ export function hoyCaracas(ahora = Date.now()): string {
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 const DEMO = {
+  plan: {
+    estado: 'pendiente', vence: sumarDias(hoyCaracas(), -1), dias: -1, gracia: 3, corteDia: Number(sumarDias(hoyCaracas(), -1).slice(8, 10)),
+    limite: sumarDias(hoyCaracas(), 2), precio: 10, tasa: 40.25, montoBs: 402.5,
+    pagoMovil: { banco: 'Banco de Venezuela (0102)', telefono: '04220298203', cedula: 'V-12345678', titular: 'bookeaa' },
+    pagos: [{ id: 'P1', registrado: '', fecha: sumarDias(hoyCaracas(), -31), banco: 'Banesco', telefono: '04121234567', referencia: '001234567', montoBs: 380, meses: 1, estado: 'Aprobado', conciliado: 'Correo del banco', motivo: '' }],
+    porVerificar: false,
+  } as Plan,
   configuracion: {
     config: {
       nombre_negocio: 'Barbería Norte', marca: 'Barbería Norte', logo_url: '', hero_titulo: 'Tu corte, cuando quieras', hero_subtitulo: 'Reserva en 1 minuto.',

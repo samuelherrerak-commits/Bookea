@@ -44,6 +44,19 @@ Worker del bot (bookeaa-bot) ◄── reserva nueva (Apps Script, al reservar)
 
 El dueño entra con el **Gmail de la columna `Email` de la pestaña Tenants**. Puede haber varios correos en la celda, separados por coma.
 
+## Mi plan y pagos
+Es la primera sección de **Configurar**. Muestra:
+- el estado del plan: mes gratis, al día, pago pendiente o página en pausa;
+- la fecha de corte, que es el mismo día del mes en que el negocio entró a bookeaa, y los 3 días para pagar;
+- el monto en bolívares a la tasa BCV del día. Se puede pagar más de un mes;
+- los datos de Pago Móvil de bookeaa, con botones para copiar.
+
+Después de pagar, el dueño **reporta el pago** con la fecha, su banco, su teléfono, la referencia y el monto. Si el banco ya lo muestra, se aprueba al instante. Si no, queda *por verificar* y le avisamos al confirmarlo o al rechazarlo.
+
+Cuando el pago está pendiente o la página está en pausa, **Hoy** muestra un aviso rojo con **"Pagar ahora"**. Los avisos de cobro abren directo esta sección (`/negocio?ver=plan`).
+
+Cómo se concilia y cuándo se pausa una página: [CENTRAL.md](CENTRAL.md#ciclo-de-cobro).
+
 ## Puesta en marcha (una sola vez)
 
 ### 1. ID de cliente de Google

@@ -71,6 +71,12 @@ export async function manejarPush(req: Request, ruta: string, env: Env): Promise
     else if (ruta === '/push/quitar') await quitar(env.DB, String(cuerpo.suscripcion?.endpoint || ''))
     else if (ruta === '/push/evento' && cuerpo.tipo === 'reserva') await nuevaReserva(env.DB, slug, cuerpo.cita || {})
     else if (ruta === '/push/evento' && cuerpo.tipo === 'prueba') return json({ ok: true, ...(await avisar(env.DB, slug, avisoPrueba(slug))) })
+    else if (ruta === '/push/evento' && cuerpo.tipo === 'aviso') {
+      // Avisos del cobro de bookeaa (pago aprobado o rechazado, corte, pausa): texto libre del Apps Script.
+      const titulo = String(cuerpo.titulo || '').slice(0, 80)
+      if (!titulo) return json({ error: 'Falta el título' }, 400)
+      return json({ ok: true, ...(await avisar(env.DB, slug, { titulo, cuerpo: String(cuerpo.cuerpo || '').slice(0, 240), tag: 'plan', url: `/negocio?n=${encodeURIComponent(slug)}&ver=plan` })) })
+    }
     else return json({ error: 'No encontrado' }, 404)
   } catch (err) {
     return json({ error: String((err as Error).message) }, 400)
