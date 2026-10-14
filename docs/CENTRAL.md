@@ -25,6 +25,48 @@ Solo los correos de la propiedad **`dueno_admins`** del Apps Script maestro, sep
 - **Cobros:** los Pago Móvil que reportan los negocios desde "Mi plan y pagos" (ver abajo).
 - **Pagos:** lo cobrado en el mes y el historial.
 
+## En computadora: panel y negocios a fondo
+En una pantalla de 1024 px o más, la central cambia de forma:
+- tiene una barra lateral;
+- abre en el **Panel**;
+- las hojas de acciones salen como ventana en el centro.
+
+En el teléfono el Panel también está, en la barra de abajo.
+
+**Panel:**
+- **Cifras principales:**
+  - ingreso mensual recurrente, es decir, los que pagan × $10, y lo que sumarían los que están en prueba;
+  - lo cobrado este mes contra el mes pasado;
+  - las reservas de toda la plataforma en 30 días, contra los 30 anteriores;
+  - los negocios activos y las altas del mes.
+- **Gráficos de 12 meses:** lo cobrado por bookeaa, las reservas de todos los negocios y las altas. El mes en curso va más claro. Al pasar el mouse se ve el valor exacto.
+- **Negocios por estado** y **próximos cortes**: los de los 7 días siguientes, con lo que hay por cobrar.
+- **Necesitan atención**, cuando un negocio:
+  - venció o está por cobrar;
+  - no tiene reservas en 30 días;
+  - bajó a la mitad;
+  - está por terminar su prueba;
+  - tiene la hoja sin poder leerse.
+- **Actividad por negocio:** una tabla que se ordena por reservas, cambio, última reserva, corte o nombre. Muestra:
+  - las minibarras de los últimos 6 meses;
+  - las próximas citas;
+  - los clientes.
+
+**Negocios** en computadora es una tabla con el plan, las reservas de 30 días, la actividad y el contacto. Cada fila tiene **Gestionar** (pagos, editar, suspender) y **Ver a fondo**.
+
+**Ver a fondo** muestra un negocio completo. En el teléfono se abre desde su detalle: "📊 Ver el negocio a fondo".
+- **Cifras:** reservas y facturación de 30 días con su cambio, ticket promedio, clientes y qué porcentaje volvió, y cancelaciones.
+- **Gráficos por mes:** reservas, facturación (en la moneda del negocio) y clientes nuevos.
+- **Cuándo le reservan:** un mapa de calor de día × hora.
+- **Rankings:**
+  - servicios más pedidos, con lo que facturan;
+  - cómo le pagan;
+  - estado de las reservas;
+  - dónde atiende.
+- **Las últimas reservas** y **su plan en bookeaa:** pagos, reportes, configuración y notas.
+
+**De dónde salen los números:** el Apps Script lee la pestaña Reservaciones de la hoja de cada negocio (operaciones `metricas` y `negocio`). Las canceladas se cuentan aparte. La facturación es la suma del total de cada reserva, no lo que el negocio cobró de verdad. El panel se guarda 10 minutos en caché; **Recalcular ahora** lo vuelve a leer.
+
 ## Dónde se guarda (archivo maestro)
 - **Tenants:** columnas nuevas `Telefono`, `Vence`, `Ultimo_Pago` y `Notas`. Se agregan solas la primera vez.
 - **Pagos** (pestaña nueva): `Fecha, Slug, Negocio, Monto, Meses, Metodo, Referencia, Vence_Antes, Vence_Nuevo, Registrado_Por`.

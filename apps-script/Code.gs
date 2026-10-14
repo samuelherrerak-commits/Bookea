@@ -3482,6 +3482,8 @@ function atenderCentral_(data, ahoraMs) {
   const op = String(data.op || '');
   if (op === 'resumen') return resumenCentral_(ahoraMs);
   if (op === 'cobros') return cobrosCentral_(ahoraMs);
+  if (op === 'metricas') return metricasCentral_(ahoraMs, !!data.fresco);
+  if (op === 'negocio') return negocioDetalleCentral_(String(data.slug || ''), ahoraMs);
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return { error: 'servidor', mensaje: 'Hay otra operación en curso. Intenta de nuevo.' };
@@ -3903,4 +3905,217 @@ function guardarAjustesCobro_(data) {
   });
   if ('correoQuery' in data) p.setProperty('correo_banco_query', limpiarTexto_(data.correoQuery, 300) || CORREO_BANCO_QUERY);
   return { ok: true };
+}
+
+// ---------- Central: métricas (vista de computadora) ----------
+
+const METRICAS_MESES = 12;
+const DIAS_SEMANA_CORTO = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+/** Los últimos `n` meses hasta el de `hoy`, como 'yyyy-MM' (el más viejo primero). */
+function ultimosMeses_(hoy, n) {
+  const p = hoy.split('-').map(Number);
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(p[0], p[1] - 1 - i, 1, 12));
+    out.push(d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2));
+  }
+  return out;
+}
+
+/** Día de la semana de 'yyyy-MM-dd' (0 = domingo). */
+function diaSemana_(ymd) {
+  const p = ymd.split('-').map(Number);
+  return new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)).getUTCDay();
+}
+
+function sumarConteo_(obj, clave, n) {
+  const k = String(clave || '').trim() || '—';
+  obj[k] = (obj[k] || 0) + (n == null ? 1 : n);
+}
+
+/** { clave: n } → [{ nombre, n }] de mayor a menor, máximo `max`. */
+function rankingConteo_(obj, max) {
+  return Object.keys(obj).map(function (k) { return { nombre: k, n: round2_(obj[k]) }; })
+    .sort(function (a, b) { return b.n - a.n || a.nombre.localeCompare(b.nombre); })
+    .slice(0, max);
+}
+
+/**
+ * Estadísticas de las reservas de un negocio (filas de Reservaciones). Las canceladas
+ * se cuentan aparte y no suman en lo demás. `completo` agrega servicios, horas,
+ * métodos, modalidades y estados (para el detalle de un negocio).
+ */
+function estadisticasReservas_(filas, hoy, completo) {
+  const meses = ultimosMeses_(hoy, METRICAS_MESES);
+  const idx = {};
+  meses.forEach(function (m, i) { idx[m] = i; });
+  const cero = function () { return meses.map(function () { return 0; }); };
+  const porMes = cero(), ingresosMes = cero(), canceladasMes = cero(), clientesNuevosMes = cero();
+  const hace30 = sumarDias_(hoy, -30), hace60 = sumarDias_(hoy, -60), en30 = sumarDias_(hoy, 30);
+  const r = { total: 0, canceladas: 0, ultimos30: 0, previos30: 0, ingresos30: 0, ingresosPrevios30: 0, proximas: 0, ultimaSolicitud: '', conCupon: 0 };
+  const clientes = {}, primeraVez = {};
+  const servicios = {}, ingresosServicio = {}, metodos = {}, modalidades = {}, estados = {};
+  const mapa = [0, 1, 2, 3, 4, 5, 6].map(function () { return []; });
+
+  filas.forEach(function (f) {
+    const fecha = ymd_(f.Fecha_Cita);
+    if (!fecha) return;
+    const solicitud = ymd_(f.Fecha_Solicitud) || fecha;
+    if (solicitud > r.ultimaSolicitud) r.ultimaSolicitud = solicitud;
+    const estado = String(f.Estado || '');
+    if (completo) sumarConteo_(estados, estado || 'Sin estado');
+    const mes = fecha.slice(0, 7);
+    if (/cancel/i.test(estado)) {
+      r.canceladas++;
+      if (mes in idx) canceladasMes[idx[mes]]++;
+      return;
+    }
+    r.total++;
+    const monto = toNumber_(f.Total) || 0;
+    if (mes in idx) { porMes[idx[mes]]++; ingresosMes[idx[mes]] += monto; }
+    if (fecha > hace30 && fecha <= hoy) { r.ultimos30++; r.ingresos30 += monto; }
+    else if (fecha > hace60 && fecha <= hace30) { r.previos30++; r.ingresosPrevios30 += monto; }
+    if (fecha > hoy && fecha <= en30) r.proximas++;
+    const cliente = String(f.Telefono || '').replace(/\D/g, '').slice(-10) || String(f.Cliente || '').trim().toLowerCase();
+    if (cliente) {
+      clientes[cliente] = (clientes[cliente] || 0) + 1;
+      if (!primeraVez[cliente] || fecha < primeraVez[cliente]) primeraVez[cliente] = fecha;
+    }
+    if (!completo) return;
+    const cupon = String(f.Cupon || '').trim();
+    if (cupon && cupon !== 'N/A') r.conCupon++;
+    const lineas = String(f.Servicios || '').split(/\s*,\s*/).filter(String);
+    lineas.forEach(function (s) {
+      sumarConteo_(servicios, s);
+      sumarConteo_(ingresosServicio, s, lineas.length ? monto / lineas.length : 0);
+    });
+    sumarConteo_(metodos, f.Metodo_Pago);
+    sumarConteo_(modalidades, f.Modalidad);
+    const hora = horaTexto_(f.Hora_Cita);
+    if (hora) {
+      const h = Number(hora.slice(0, 2));
+      const d = diaSemana_(fecha);
+      mapa[d][h] = (mapa[d][h] || 0) + 1;
+    }
+  });
+
+  const ids = Object.keys(clientes);
+  ids.forEach(function (c) { const m = primeraVez[c].slice(0, 7); if (m in idx) clientesNuevosMes[idx[m]]++; });
+  const out = {
+    meses: meses, porMes: porMes, ingresosMes: ingresosMes.map(round2_), canceladasMes: canceladasMes,
+    total: r.total, canceladas: r.canceladas, ultimos30: r.ultimos30, previos30: r.previos30,
+    ingresos30: round2_(r.ingresos30), ingresosPrevios30: round2_(r.ingresosPrevios30),
+    proximas: r.proximas, ultimaSolicitud: r.ultimaSolicitud,
+    clientes: ids.length, recurrentes: ids.filter(function (c) { return clientes[c] > 1; }).length,
+  };
+  if (!completo) return out;
+  // Horas con alguna cita (para no dibujar la madrugada vacía).
+  let hMin = 24, hMax = -1;
+  mapa.forEach(function (fila) { fila.forEach(function (n, h) { if (n) { hMin = Math.min(hMin, h); hMax = Math.max(hMax, h); } }); });
+  if (hMax < 0) { hMin = 8; hMax = 18; }
+  out.clientesNuevosMes = clientesNuevosMes;
+  out.conCupon = r.conCupon;
+  out.ticket = r.total ? round2_(ingresosMes.reduce(function (a, b) { return a + b; }, 0) / Math.max(1, porMes.reduce(function (a, b) { return a + b; }, 0))) : 0;
+  out.servicios = rankingConteo_(servicios, 10).map(function (s) { return { nombre: s.nombre, n: s.n, ingresos: round2_(ingresosServicio[s.nombre] || 0) }; });
+  out.metodos = rankingConteo_(metodos, 8);
+  out.modalidades = rankingConteo_(modalidades, 6);
+  out.estados = rankingConteo_(estados, 8);
+  out.horas = { desde: hMin, hasta: hMax, dias: DIAS_SEMANA_CORTO, mapa: mapa.map(function (fila) { const v = []; for (let h = hMin; h <= hMax; h++) v.push(fila[h] || 0); return v; }) };
+  return out;
+}
+
+/** Lo cobrado por bookeaa por mes (pestaña Pagos, en USD). */
+function ingresosBookeaa_(meses) {
+  const idx = {};
+  meses.forEach(function (m, i) { idx[m] = i; });
+  const total = meses.map(function () { return 0; });
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Pagos');
+  if (!sheet || sheet.getLastRow() < 2) return total;
+  sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues().forEach(function (f) {
+    const m = (ymd_(f[0]) || '').slice(0, 7);
+    if (m in idx) total[idx[m]] = round2_(total[idx[m]] + toNumber_(f[3]));
+  });
+  return total;
+}
+
+/**
+ * Panel de la central en computadora: ingresos de bookeaa, altas, reservas de toda la
+ * plataforma y la actividad de cada negocio. Abre la hoja de cada negocio, así que se
+ * guarda 10 minutos en caché (`fresco` la recalcula).
+ */
+function metricasCentral_(ahoraMs, fresco) {
+  const cache = CacheService.getScriptCache();
+  if (!fresco) {
+    const hit = cache.get('central_metricas');
+    if (hit) { try { return JSON.parse(hit); } catch (_) { /* recalcula */ } }
+  }
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const meses = ultimosMeses_(hoy, METRICAS_MESES);
+  const idx = {};
+  meses.forEach(function (m, i) { idx[m] = i; });
+  const filas = filasTenants_();
+  const tenants = {};
+  getTenants_().forEach(function (t) { tenants[t.slug] = t; });
+  const altas = meses.map(function () { return 0; });
+  const reservas = meses.map(function () { return 0; });
+  const negocios = filas.map(function (o) {
+    const n = negocioCentral_(o, hoy);
+    const m = (n.creado || '').slice(0, 7);
+    if (m in idx) altas[idx[m]]++;
+    const t = tenants[n.slug];
+    let e = null, error = '';
+    try {
+      if (t) e = estadisticasReservas_(getSheetData_(openTenant_(t), 'Reservaciones'), hoy, false);
+    } catch (err) {
+      error = String(err && err.message || err).slice(0, 120);
+    }
+    if (e) e.porMes.forEach(function (v, i) { reservas[i] += v; });
+    return {
+      slug: n.slug, nombre: n.nombre, estado: n.estado, creado: n.creado, vence: n.vence, dias: n.dias,
+      reservas30: e ? e.ultimos30 : null, previas30: e ? e.previos30 : null, proximas: e ? e.proximas : null,
+      clientes: e ? e.clientes : null, ultimaReserva: e ? e.ultimaSolicitud : '', porMes: e ? e.porMes.slice(-6) : [],
+      error: error,
+    };
+  });
+  const out = {
+    hoy: hoy, generado: new Date(ahoraMs).toISOString(), precio: PRECIO_MENSUAL, meses: meses,
+    ingresos: ingresosBookeaa_(meses), altas: altas, reservas: reservas, negocios: negocios,
+  };
+  try { cache.put('central_metricas', JSON.stringify(out), 600); } catch (_) { /* muy grande para la caché */ }
+  return out;
+}
+
+/** Un negocio a fondo: su cobro, su configuración, sus reservas y sus pagos a bookeaa. */
+function negocioDetalleCentral_(slug, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(slug || ''); })[0];
+  const t = getTenants_().filter(function (x) { return normKey_(x.slug) === normKey_(slug || ''); })[0];
+  if (!fila || !t) return { error: 'no_existe', mensaje: 'Ese negocio no existe.' };
+  const negocio = negocioCentral_(fila, hoy);
+  const libro = openTenant_(t);
+  const config = getConfig_(libro);
+  const filasReservas = getSheetData_(libro, 'Reservaciones');
+  const est = estadisticasReservas_(filasReservas, hoy, true);
+  const recientes = filasReservas.slice(-12).reverse().map(function (f) {
+    return {
+      cliente: String(f.Cliente || ''), servicios: String(f.Servicios || ''), total: toNumber_(f.Total) || 0,
+      fecha: ymd_(f.Fecha_Cita) || '', hora: horaTexto_(f.Hora_Cita), estado: String(f.Estado || ''), metodo: String(f.Metodo_Pago || ''),
+    };
+  });
+  const pagos = pagosRecientes_(500).filter(function (p) { return normKey_(p.slug) === normKey_(negocio.slug); });
+  const reportes = objetos_(hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS), PAGOS_NEGOCIO_HEADERS)
+    .filter(function (o) { return normKey_(o.Slug) === normKey_(negocio.slug); }).map(pagoNegocioJson_).reverse().slice(0, 20);
+  return {
+    negocio: negocio,
+    config: {
+      marca: config.marca || config.nombre_negocio || negocio.nombre, moneda: normalizarMoneda_(config.moneda),
+      whatsapp: String(config.whatsapp || ''), lugar: String(config.lugar_tipo || ''), metodos: String(config.metodos_pago || ''),
+      servicios: getSheetData_(libro, 'Servicios').length, ticket: String(config.ticket_reserva || '') === 'si',
+    },
+    estadisticas: est,
+    recientes: recientes,
+    pagos: pagos,
+    reportes: reportes,
+  };
 }

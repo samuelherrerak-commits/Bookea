@@ -124,6 +124,79 @@ export interface FilaBanco {
   monto: number
 }
 
+// ---------- Métricas (panel de computadora) ----------
+
+export interface NegocioMetricas {
+  slug: string
+  nombre: string
+  estado: EstadoCobro
+  creado: string
+  vence: string
+  dias: number | null
+  /** null si no se pudo leer su hoja. */
+  reservas30: number | null
+  previas30: number | null
+  proximas: number | null
+  clientes: number | null
+  ultimaReserva: string
+  /** Reservas de los últimos 6 meses (el último es el mes en curso). */
+  porMes: number[]
+  error: string
+}
+
+export interface Metricas {
+  hoy: string
+  generado: string
+  precio: number
+  /** 'yyyy-MM', los últimos 12 meses. */
+  meses: string[]
+  /** Lo cobrado por bookeaa (USD) en cada mes. */
+  ingresos: number[]
+  altas: number[]
+  /** Reservas de todos los negocios en cada mes. */
+  reservas: number[]
+  negocios: NegocioMetricas[]
+}
+
+export interface Ranking {
+  nombre: string
+  n: number
+}
+
+export interface EstadisticasNegocio {
+  meses: string[]
+  porMes: number[]
+  ingresosMes: number[]
+  canceladasMes: number[]
+  clientesNuevosMes: number[]
+  total: number
+  canceladas: number
+  ultimos30: number
+  previos30: number
+  ingresos30: number
+  ingresosPrevios30: number
+  proximas: number
+  ultimaSolicitud: string
+  clientes: number
+  recurrentes: number
+  conCupon: number
+  ticket: number
+  servicios: (Ranking & { ingresos: number })[]
+  metodos: Ranking[]
+  modalidades: Ranking[]
+  estados: Ranking[]
+  horas: { desde: number; hasta: number; dias: string[]; mapa: number[][] }
+}
+
+export interface DetalleNegocio {
+  negocio: Negocio
+  config: { marca: string; moneda: 'USD' | 'EUR' | 'BS'; whatsapp: string; lugar: string; metodos: string; servicios: number; ticket: boolean }
+  estadisticas: EstadisticasNegocio
+  recientes: { cliente: string; servicios: string; total: number; fecha: string; hora: string; estado: string; metodo: string }[]
+  pagos: Pago[]
+  reportes: PagoNegocio[]
+}
+
 export class ErrorCentral extends Error {
   constructor(public codigo: string, mensaje: string) {
     super(mensaje)
@@ -161,6 +234,12 @@ export const cambiarActivo = (sesion: string, slug: string, activo: boolean) =>
 
 export const editar = (sesion: string, slug: string, campos: Partial<Pick<Negocio, 'email' | 'telefono' | 'notas' | 'vence'>>) =>
   DEMO_MODE ? demo.editar(slug, campos) : llamar<{ ok: boolean }>({ op: 'editar', sesion, slug, ...campos })
+
+export const metricas = (sesion: string, fresco = false) =>
+  DEMO_MODE ? demo.metricas() : llamar<Metricas>({ op: 'metricas', sesion, fresco })
+
+export const detalleNegocio = (sesion: string, slug: string) =>
+  DEMO_MODE ? demo.detalle(slug) : llamar<DetalleNegocio>({ op: 'negocio', sesion, slug })
 
 export const cobros = (sesion: string) => (DEMO_MODE ? demo.cobros() : llamar<Cobros>({ op: 'cobros', sesion }))
 
@@ -268,7 +347,83 @@ const demo = (() => {
       ajustes: structuredClone(ajustes),
     }
   }
+  // Números de ejemplo estables (no cambian al recargar).
+  const azar = (semilla: number) => () => ((semilla = (semilla * 16807) % 2147483647) - 1) / 2147483646
+  const mesesDemo = () => {
+    const [y, m] = hoy().split('-').map(Number)
+    return Array.from({ length: 12 }, (_, i) => new Date(Date.UTC(y, m - 12 + i, 1)).toISOString().slice(0, 7))
+  }
+  const serie = (semilla: number, base: number, crece: number, desde = 0) => {
+    const r = azar(semilla)
+    return mesesDemo().map((_, i) => (i < desde ? 0 : Math.max(0, Math.round(base + crece * (i - desde) + (r() - 0.5) * base * 0.6))))
+  }
+  const ritmo: Record<string, [number, number, number]> = {
+    'barberia-norte': [40, 2, 2], 'spa-sol': [22, 1.5, 6], 'unas-mariana': [12, 0, 11], 'consultorio-diaz': [30, -1.2, 0], 'estudio-luz': [8, -1, 0],
+  }
+  const metricasDemo = (): Metricas => {
+    const r = recalcular()
+    const meses = mesesDemo()
+    const negociosM = r.negocios.map((n, k): NegocioMetricas => {
+      const [b, c, d] = ritmo[n.slug] ?? [10, 0.5, 6]
+      const porMes = serie(k + 3, b, c, d)
+      if (n.slug === 'estudio-luz') porMes.splice(-3, 3, 2, 0, 0)
+      if (n.slug === 'unas-mariana') porMes[11] = 9
+      return {
+        slug: n.slug, nombre: n.nombre, estado: n.estado, creado: n.creado, vence: n.vence, dias: n.dias,
+        reservas30: porMes[11] + Math.round(porMes[10] * 0.4), previas30: porMes[10], proximas: Math.round(porMes[11] * 0.6),
+        clientes: Math.round(porMes.reduce((a, v) => a + v, 0) * 0.45), ultimaReserva: n.slug === 'estudio-luz' ? dias(-52) : dias(-1), porMes: porMes.slice(-6), error: '',
+      }
+    })
+    const reservas = meses.map((_, i) => negociosM.reduce((a, n) => a + (serie(negociosM.indexOf(n) + 3, ...(ritmo[n.slug] ?? [10, 0.5, 6]))[i] ?? 0), 0))
+    return {
+      hoy: r.hoy, generado: new Date().toISOString(), precio: 10, meses,
+      ingresos: serie(11, 20, 3.2, 2).map((v) => v - (v % 10)),
+      altas: [0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1],
+      reservas, negocios: negociosM,
+    }
+  }
+  const detalleDemo = (slug: string): DetalleNegocio => {
+    const n = recalcular().negocios.find((x) => x.slug === slug) ?? recalcular().negocios[0]
+    const m = metricasDemo().negocios.find((x) => x.slug === n.slug)!
+    const [b, c, d] = ritmo[n.slug] ?? [10, 0.5, 6]
+    const porMes = serie(recalcular().negocios.indexOf(n) + 3, b, c, d)
+    const rnd = azar(n.slug.length * 7)
+    const horas = [1, 2, 3, 4, 5, 6, 0].reduce((mapa, dia) => {
+      mapa[dia] = Array.from({ length: 11 }, (_, h) => (dia === 0 ? 0 : Math.round(rnd() * (h > 1 && h < 4 ? 6 : h > 7 ? 7 : 3) * (dia === 5 || dia === 6 ? 1.6 : 1))))
+      return mapa
+    }, [] as number[][])
+    const total = porMes.reduce((a, v) => a + v, 0)
+    return {
+      negocio: n,
+      config: { marca: n.nombre, moneda: 'USD', whatsapp: n.telefono, lugar: 'barberia', metodos: 'pago_movil,efectivo,zelle', servicios: 7, ticket: true },
+      estadisticas: {
+        meses: mesesDemo(), porMes, ingresosMes: porMes.map((v) => v * 14), canceladasMes: porMes.map((v) => Math.round(v * 0.06)),
+        clientesNuevosMes: porMes.map((v) => Math.round(v * 0.35)), total, canceladas: Math.round(total * 0.06),
+        ultimos30: m.reservas30 ?? 0, previos30: m.previas30 ?? 0, ingresos30: (m.reservas30 ?? 0) * 14, ingresosPrevios30: (m.previas30 ?? 0) * 13,
+        proximas: m.proximas ?? 0, ultimaSolicitud: m.ultimaReserva, clientes: m.clientes ?? 0, recurrentes: Math.round((m.clientes ?? 0) * 0.42), conCupon: Math.round(total * 0.08), ticket: 14,
+        servicios: [
+          { nombre: 'Corte clásico', n: Math.round(total * 0.42), ingresos: Math.round(total * 0.42) * 10 },
+          { nombre: 'Corte y barba', n: Math.round(total * 0.27), ingresos: Math.round(total * 0.27) * 16 },
+          { nombre: 'Barba', n: Math.round(total * 0.14), ingresos: Math.round(total * 0.14) * 7 },
+          { nombre: 'Corte niño', n: Math.round(total * 0.1), ingresos: Math.round(total * 0.1) * 8 },
+          { nombre: 'Cejas', n: Math.round(total * 0.07), ingresos: Math.round(total * 0.07) * 5 },
+        ],
+        metodos: [{ nombre: 'Pago Móvil', n: Math.round(total * 0.58) }, { nombre: 'Efectivo', n: Math.round(total * 0.3) }, { nombre: 'Zelle', n: Math.round(total * 0.12) }],
+        modalidades: [{ nombre: 'En la barbería', n: Math.round(total * 0.9) }, { nombre: 'A domicilio', n: Math.round(total * 0.1) }],
+        estados: [{ nombre: 'Confirmada', n: Math.round(total * 0.88) }, { nombre: 'Cancelada', n: Math.round(total * 0.06) }, { nombre: 'Pago por verificar', n: Math.round(total * 0.06) }],
+        horas: { desde: 9, hasta: 19, dias: ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'], mapa: horas },
+      },
+      recientes: ['Ana Pérez', 'Carlos Méndez', 'Luis Rojas', 'María Gómez', 'José Díaz', 'Eva Torres'].map((cliente, i) => ({
+        cliente, servicios: ['Corte clásico', 'Corte y barba', 'Barba', 'Corte clásico', 'Cejas', 'Corte niño'][i], total: [10, 16, 7, 10, 5, 8][i],
+        fecha: dias(1 - i), hora: ['10:00', '11:30', '15:00', '09:30', '17:00', '12:00'][i], estado: i === 1 ? 'Pago por verificar' : i === 4 ? 'Cancelada' : 'Confirmada', metodo: i % 2 ? 'Efectivo' : 'Pago Móvil',
+      })),
+      pagos: pagos.filter((p) => p.slug === n.slug),
+      reportes: reportes.filter((p) => p.slug === n.slug),
+    }
+  }
   return {
+    metricas: () => espera(metricasDemo()),
+    detalle: (slug: string) => espera(detalleDemo(slug)),
     cobros: () => espera(cobrosDemo()),
     revisar: (id: string, ok: boolean, motivo = '') => {
       const p = reportes.find((x) => x.id === id)!
