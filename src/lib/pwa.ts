@@ -62,5 +62,7 @@ export function prepararApp(datos: DatosApp): void {
 /** Registra el service worker (Android lo pide para instalar). Sin él la página sigue igual. */
 export function registrarServiceWorker(): void {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator) || !import.meta.env.PROD) return
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}), { once: true })
+  const registrar = () => navigator.serviceWorker.register('/sw.js').catch(() => {})
+  if (document.readyState === 'complete') registrar()
+  else window.addEventListener('load', registrar, { once: true })
 }

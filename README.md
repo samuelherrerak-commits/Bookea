@@ -20,6 +20,10 @@ Quien abre la raíz del dominio, sin `/u/<slug>`, ve la landing comercial de **b
 
 Cada dueño entra con Google y ve sus citas de hoy y las próximas. Confirma los Pago Móvil y recibe avisos en el teléfono: reserva nueva, 30 min antes de cada cita y el resumen de las 7:00. Se agrega a inicio como app. Cómo ponerlo en marcha: [docs/MI-NEGOCIO.md](docs/MI-NEGOCIO.md).
 
+## Central de bookeaa (`/central`)
+
+La app del dueño de bookeaa: todos los negocios con su estado de cobro, registrar pagos, dar de alta negocios, suspender o reactivar, y los prospectos del bot. Ver [docs/CENTRAL.md](docs/CENTRAL.md).
+
 ## Estilos y colores de cada negocio
 
 Se eligen en la hoja **Configuracion** del negocio. Todos los estilos usan la misma distribución; cambian las fuentes, las esquinas y los detalles.

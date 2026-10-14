@@ -44,6 +44,19 @@ Worker del bot (bookeaa-bot) ◄── reserva nueva (Apps Script, al reservar)
 
 El dueño entra con el **Gmail de la columna `Email` de la pestaña Tenants**. Puede haber varios correos en la celda, separados por coma.
 
+## Mi plan y pagos
+Es la primera sección de **Configurar**. Muestra:
+- el estado del plan: mes gratis, al día, pago pendiente o página en pausa;
+- la fecha de corte, que es el mismo día del mes en que el negocio entró a bookeaa, y los 3 días para pagar;
+- el monto en bolívares a la tasa BCV del día. Se puede pagar más de un mes;
+- los datos de Pago Móvil de bookeaa, con botones para copiar.
+
+Después de pagar, el dueño **reporta el pago** con la fecha, su banco, su teléfono, la referencia y el monto. Si el banco ya lo muestra, se aprueba al instante. Si no, queda *por verificar* y le avisamos al confirmarlo o al rechazarlo.
+
+Cuando el pago está pendiente o la página está en pausa, **Hoy** muestra un aviso rojo con **"Pagar ahora"**. Los avisos de cobro abren directo esta sección (`/negocio?ver=plan`).
+
+Cómo se concilia y cuándo se pausa una página: [CENTRAL.md](CENTRAL.md#ciclo-de-cobro).
+
 ## Puesta en marcha (una sola vez)
 
 ### 1. ID de cliente de Google
@@ -93,7 +106,13 @@ Las claves VAPID de los avisos las crea el Worker solo y las guarda en D1.
 - **"No pudimos verificar tu cuenta de Google":** revisa que `google_client_id` (Apps Script) y `VITE_GOOGLE_CLIENT_ID` (Render) sean el mismo ID.
 - **"… no tiene un negocio en bookeaa":** ese Gmail no está en la columna Email de Tenants.
 - **El botón de Google no aparece:** el dominio no está en **Orígenes de JavaScript autorizados**.
-- **Los avisos no llegan:**
+- **Los avisos no llegan:** en Avisos toca **"Enviarme un aviso de prueba"**. Dice exactamente qué pasó:
+  - "Falta configurar el servidor de avisos (bot_bandeja_url)" → agrega esa propiedad en el Apps Script;
+  - "El bot_token del Apps Script no coincide…" → el `bot_token` del Apps Script y el secreto `BOT_TOKEN` de GitHub tienen que ser iguales;
+  - "No hay ningún teléfono registrado" → apaga los avisos y vuelve a activarlos;
+  - "No se pudo entregar: web.push.apple.com 403…" → el código y la razón que dio Apple o Google.
+
+  Además:
   - revisa `bot_bandeja_url`;
   - revisa que la Action del bot haya corrido después de fusionar;
   - en Cloudflare → Workers → bookeaa-bot → Logs están los envíos.

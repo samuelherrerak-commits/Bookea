@@ -152,7 +152,8 @@ const PLANTILLAS_MENSAJE = [
   },
 ];
 
-const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado'];
+// Telefono, Vence, Ultimo_Pago y Notas los usa la central (/central): el cobro mensual de bookeaa.
+const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado', 'Telefono', 'Vence', 'Ultimo_Pago', 'Notas', 'Suspendido_Auto'];
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -403,6 +404,7 @@ function onOpen() {
     .addItem('Bot de WhatsApp: generar token', 'promptGenerarTokenBot')
     .addItem('Bot de WhatsApp: avisos y calendario', 'promptAjustesBot')
     .addItem('Bot de WhatsApp: probar agenda', 'probarAgendaBot')
+    .addItem('Cobros: activar automáticos (correos del banco y cortes)', 'instalarCobros')
     .addToUi();
 }
 
@@ -967,6 +969,14 @@ function doPost(e) {
     return json_({ error: 'datos_invalidos', mensaje: 'Solicitud inválida.' });
   }
   // El bot de WhatsApp tiene su propio token (no el público de la web) y no es de un negocio.
+  if (data && data.accion === 'central') {
+    try {
+      return json_(atenderCentral_(data, Date.now()));
+    } catch (err) {
+      console.error('central: ' + err);
+      return json_({ error: 'servidor', mensaje: 'Error del servidor. Intenta de nuevo.' });
+    }
+  }
   if (data && data.accion === 'dueno') {
     try {
       return json_(atenderDueno_(data, Date.now()));
@@ -2776,6 +2786,28 @@ function urlWorker_() {
   return String(PropertiesService.getScriptProperties().getProperty('bot_bandeja_url') || '').trim().replace(/\/bandeja\/?$/, '');
 }
 
+/** Como llamarWorker_, pero devuelve el código HTTP para explicar qué falló (aviso de prueba). */
+function llamarWorkerDetalle_(ruta, datos) {
+  const base = urlWorker_();
+  const token = String(PropertiesService.getScriptProperties().getProperty('bot_token') || '');
+  if (!/^https:/.test(base)) return { codigo: 0, error: 'Falta la propiedad bot_bandeja_url del Apps Script (la dirección de la bandeja del bot).' };
+  if (!token) return { codigo: 0, error: 'Falta la propiedad bot_token del Apps Script.' };
+  try {
+    const r = UrlFetchApp.fetch(base + ruta, {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(datos),
+      headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true,
+    });
+    const codigo = r.getResponseCode();
+    let json = null;
+    try { json = JSON.parse(r.getContentText()); } catch (_) { /* no es JSON */ }
+    if (codigo === 401) return { codigo: codigo, error: 'El bot_token del Apps Script no coincide con BOT_TOKEN del servidor de avisos (GitHub).' };
+    if (codigo !== 200) return { codigo: codigo, error: 'El servidor de avisos respondió ' + codigo + (json && json.error ? ': ' + json.error : '') + '.' };
+    return { codigo: codigo, json: json };
+  } catch (err) {
+    return { codigo: 0, error: 'No se pudo hablar con el servidor de avisos: ' + err };
+  }
+}
+
 /** POST al Worker con el token del bot. Nunca lanza: los avisos no pueden tumbar nada. */
 function llamarWorker_(ruta, datos) {
   const base = urlWorker_();
@@ -2856,11 +2888,31 @@ function atenderDueno_(data, ahoraMs) {
   }
   if (op === 'config') return duenoLeerConfig_(openTenant_(tenant), tenant, ahoraMs);
   if (op === 'guardar') return duenoGuardar_(openTenant_(tenant), tenant, String(data.seccion || ''), data.datos, ahoraMs);
+  if (op === 'plan') return planNegocio_(tenant, ahoraMs);
+  if (op === 'reportar_pago') {
+    const lockPago = LockService.getScriptLock();
+    if (!lockPago.tryLock(20000)) return { error: 'servidor', mensaje: 'Intenta de nuevo en un momento.' };
+    try {
+      return reportarPago_(tenant, email, data, ahoraMs);
+    } finally {
+      lockPago.releaseLock();
+    }
+  }
+  if (op === 'vapid') {
+    // La app la pide cada vez que abre Avisos: la de la sesión pudo quedar vacía si se
+    // entró antes de configurar bot_bandeja_url.
+    return { vapid: claveVapid_(), servidor: /^https:/.test(urlWorker_()) };
+  }
+  if (op === 'probar_avisos') {
+    const r = llamarWorkerDetalle_('/push/evento', { tipo: 'prueba', slug: tenant.slug });
+    if (r.error) return { error: 'servidor', mensaje: r.error };
+    return { ok: true, equipos: r.json.equipos || 0, enviadas: r.json.enviadas || 0, fallos: r.json.fallos || [] };
+  }
   if (op === 'avisos') {
     const s = data.suscripcion || {};
-    if (!/^https:\/\//.test(String(s.endpoint || ''))) return { error: 'datos_invalidos', mensaje: 'Suscripción inválida.' };
-    const r = llamarWorker_(data.quitar ? '/push/quitar' : '/push/suscribir', { slug: tenant.slug, email: email, suscripcion: s });
-    return r && r.ok ? { ok: true } : { error: 'servidor', mensaje: 'No se pudieron activar los avisos. Intenta de nuevo.' };
+    if (!/^https:/.test(String(s.endpoint || ''))) return { error: 'datos_invalidos', mensaje: 'Suscripción inválida.' };
+    const r = llamarWorkerDetalle_(data.quitar ? '/push/quitar' : '/push/suscribir', { slug: tenant.slug, email: email, suscripcion: s });
+    return r.json && r.json.ok ? { ok: true } : { error: 'servidor', mensaje: 'No se pudieron activar los avisos. ' + (r.error || 'Intenta de nuevo.') };
   }
   return { error: 'op_desconocida' };
 }
@@ -3191,4 +3243,879 @@ function duenoGuardar_(ss, tenant, seccion, datos, ahoraMs) {
   }
   limpiarCacheCatalogo_(tenant.slug); // la página muestra el cambio en la próxima carga
   return { ok: true, errores: [], datos: duenoLeerConfig_(ss, tenant, ahoraMs) };
+}
+
+// ============================================================================
+// Central de bookeaa (bookeaa.com/central): administración de los negocios
+// ============================================================================
+// Solo para los correos de la propiedad dueno_admins. Entran con Google igual que en
+// "Mi negocio" (op 'entrar' de la rama dueno) y usan la misma sesión.
+// El cobro mensual vive en la pestaña Tenants (Vence, Ultimo_Pago) y cada pago queda
+// en la pestaña Pagos del archivo maestro.
+
+const PRECIO_MENSUAL = 10;
+const DIAS_PRUEBA = 30;
+const DIAS_AVISO_VENCE = 5;
+const PAGOS_HEADERS = ['Fecha', 'Slug', 'Negocio', 'Monto', 'Meses', 'Metodo', 'Referencia', 'Vence_Antes', 'Vence_Nuevo', 'Registrado_Por'];
+
+/** Estado de cobro de un negocio: suspendido, pendiente (venció), prueba, activo o sin_fecha. */
+/**
+ * Estado de cobro: suspendido, sin_fecha, prueba o activo (al día), pendiente (pasó el
+ * corte y está en los DIAS_GRACIA para pagar) o vencido (pasó la gracia; revisarCortes
+ * lo suspende).
+ */
+function estadoCobro_(t, hoy) {
+  if (!tenantActivo_(t)) return 'suspendido';
+  const vence = ymd_(t.vence);
+  if (!vence) return 'sin_fecha';
+  if (vence < hoy) return diasEntre_(vence, hoy) <= DIAS_GRACIA ? 'pendiente' : 'vencido';
+  return ymd_(t.ultimoPago) ? 'activo' : 'prueba';
+}
+
+/**
+ * Nuevo vencimiento al pagar `meses`. El corte es siempre el mismo día del mes (el de
+ * ingreso): se suma desde el vencimiento anterior, no desde el día en que pagó. Si
+ * venció hace meses, se salta hasta el primer corte que quede en el futuro.
+ */
+function extenderVence_(antes, meses, hoy) {
+  if (!antes) return sumarMeses_(hoy, meses);
+  let n = meses;
+  while (sumarMeses_(antes, n) < hoy && n < 240) n++;
+  return sumarMeses_(antes, n);
+}
+
+/** Próxima fecha de corte (mismo día del mes que el ingreso) que sea hoy o después. */
+function proximoCorte_(creado, hoy) {
+  if (!creado) return '';
+  let n = 1;
+  while (sumarMeses_(creado, n) < hoy && n < 600) n++;
+  return sumarMeses_(creado, n);
+}
+
+function diasEntre_(a, b) {
+  const pa = a.split('-').map(Number), pb = b.split('-').map(Number);
+  return Math.round((Date.UTC(pb[0], pb[1] - 1, pb[2]) - Date.UTC(pa[0], pa[1] - 1, pa[2])) / 86400000);
+}
+
+/** Suma meses a una fecha yyyy-MM-dd (el 31 de enero + 1 mes = 28/29 de febrero). */
+function sumarMeses_(ymd, meses) {
+  const p = ymd.split('-').map(Number);
+  const destino = new Date(Date.UTC(p[0], p[1] - 1 + meses, 1));
+  const ultimo = new Date(Date.UTC(destino.getUTCFullYear(), destino.getUTCMonth() + 1, 0)).getUTCDate();
+  destino.setUTCDate(Math.min(p[2], ultimo));
+  return destino.toISOString().slice(0, 10);
+}
+
+/** La pestaña Tenants con los encabezados de la central (los agrega si faltan). */
+function hojaTenants_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Tenants');
+  if (!sheet) throw new Error('Falta la pestaña Tenants (ejecuta setupMaster).');
+  const actuales = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map(String);
+  TENANT_HEADERS.forEach(function (h) {
+    if (actuales.indexOf(h) === -1) {
+      actuales.push(h);
+      sheet.getRange(1, actuales.length).setValue(h);
+    }
+  });
+  return { sheet: sheet, headers: actuales };
+}
+
+/** Todas las filas de Tenants como objetos con su número de fila. */
+function filasTenants_() {
+  const t = hojaTenants_();
+  const n = t.sheet.getLastRow() - 1;
+  if (n < 1) return [];
+  const valores = t.sheet.getRange(2, 1, n, t.headers.length).getValues();
+  return valores.map(function (r, i) {
+    const o = { fila: i + 2 };
+    t.headers.forEach(function (h, j) { o[h] = r[j]; });
+    return o;
+  }).filter(function (o) { return String(o.Slug || '').trim(); });
+}
+
+/** Escribe columnas (por encabezado) de la fila de un negocio. */
+function escribirTenant_(slug, campos) {
+  const t = hojaTenants_();
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(slug); })[0];
+  if (!fila) throw new Error('No existe el negocio ' + slug + '.');
+  Object.keys(campos).forEach(function (h) {
+    const c = t.headers.indexOf(h);
+    if (c !== -1) t.sheet.getRange(fila.fila, c + 1).setValue(campos[h]);
+  });
+  limpiarCacheTenants_();
+}
+
+function negocioCentral_(o, hoy) {
+  const t = {
+    slug: String(o.Slug).trim(), nombre: String(o.Nombre || '').trim(), activo: String(o.Activo || 'si'),
+    vence: o.Vence, ultimoPago: o.Ultimo_Pago,
+  };
+  const vence = ymd_(o.Vence) || '';
+  return {
+    slug: t.slug,
+    nombre: t.nombre,
+    email: String(o.Email || '').trim(),
+    telefono: String(o.Telefono || '').replace(/[^\d+]/g, ''),
+    creado: ymd_(o.Creado) || '',
+    vence: vence,
+    ultimoPago: ymd_(o.Ultimo_Pago) || '',
+    notas: String(o.Notas || ''),
+    activo: tenantActivo_(t),
+    estado: estadoCobro_(t, hoy),
+    dias: vence ? diasEntre_(hoy, vence) : null,
+    hoja: o.Spreadsheet_Id ? 'https://docs.google.com/spreadsheets/d/' + o.Spreadsheet_Id + '/edit' : '',
+  };
+}
+
+function hojaPagos_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Pagos');
+  if (!sheet) {
+    sheet = ss.insertSheet('Pagos');
+    sheet.appendRow(PAGOS_HEADERS);
+    sheet.getRange(1, 1, 1, PAGOS_HEADERS.length).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function pagosRecientes_(limite) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Pagos');
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const n = sheet.getLastRow() - 1;
+  const desde = Math.max(2, sheet.getLastRow() - limite + 1);
+  return sheet.getRange(desde, 1, sheet.getLastRow() - desde + 1, PAGOS_HEADERS.length).getValues().map(function (r) {
+    return {
+      fecha: r[0] instanceof Date ? Utilities.formatDate(r[0], ZONA, "yyyy-MM-dd'T'HH:mm") : String(r[0]),
+      slug: String(r[1]), negocio: String(r[2]), monto: toNumber_(r[3]), meses: toNumber_(r[4]),
+      metodo: String(r[5]), referencia: String(r[6]), venceNuevo: ymd_(r[8]) || '',
+    };
+  }).reverse();
+}
+
+/** Lo que el bot agendó para afiliar (pestaña Prospectos), sin los ya convertidos en negocio. */
+function prospectosCentral_(negocios) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Prospectos');
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  const col = function (h) { return headers.indexOf(h); };
+  const correos = negocios.map(function (n) { return n.email.toLowerCase(); });
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues().map(function (r) {
+    const cita = r[col('Cita')];
+    return {
+      fecha: ymd_(r[col('Fecha')]) || '',
+      telefono: String(r[col('Teléfono')] || '').replace(/[^\d+]/g, ''),
+      nombre: String(r[col('Nombre en WhatsApp')] || ''),
+      negocio: String(r[col('Negocio')] || ''),
+      correo: String(r[col('Correo')] || '').trim(),
+      modalidad: String(r[col('Modalidad')] || ''),
+      cita: cita instanceof Date ? Utilities.formatDate(cita, ZONA, "yyyy-MM-dd'T'HH:mm") : String(cita || ''),
+      estado: String(r[col('Estado')] || ''),
+    };
+  }).filter(function (p) {
+    return p.negocio && !/cancel/i.test(p.estado) && (!p.correo || correos.indexOf(p.correo.toLowerCase()) === -1);
+  }).reverse().slice(0, 100);
+}
+
+function resumenCentral_(ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const negocios = filasTenants_().map(function (o) { return negocioCentral_(o, hoy); });
+  const cuenta = function (e) { return negocios.filter(function (n) { return n.estado === e; }).length; };
+  return {
+    hoy: hoy,
+    precio: PRECIO_MENSUAL,
+    totales: {
+      activos: cuenta('activo'), prueba: cuenta('prueba'), pendientes: cuenta('pendiente'),
+      suspendidos: cuenta('suspendido'), sinFecha: cuenta('sin_fecha'),
+      porVencer: negocios.filter(function (n) { return (n.estado === 'activo' || n.estado === 'prueba') && n.dias !== null && n.dias <= DIAS_AVISO_VENCE; }).length,
+    },
+    negocios: negocios,
+    pagos: pagosRecientes_(60),
+    prospectos: prospectosCentral_(negocios),
+  };
+}
+
+/** Registra un pago: extiende Vence desde la fecha de vencimiento (o desde hoy si ya venció). */
+function registrarPagoCentral_(data, email, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const meses = Math.max(1, Math.min(12, Math.floor(Number(data.meses) || 1)));
+  const monto = round2_(Number(String(data.monto == null ? '' : data.monto).replace(',', '.')));
+  if (!(monto >= 0)) return { error: 'datos_invalidos', mensaje: 'Revisa el monto.' };
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(data.slug || ''); })[0];
+  if (!fila) return { error: 'no_existe', mensaje: 'Ese negocio no existe.' };
+  const antes = ymd_(fila.Vence) || '';
+  const nuevo = extenderVence_(antes, meses, hoy);
+  hojaPagos_().appendRow([new Date(ahoraMs), String(fila.Slug), String(fila.Nombre), monto, meses,
+    limpiarTexto_(data.metodo || 'Pago Móvil', 40), paraCelda_(limpiarTexto_(data.referencia || '', 60)), antes, nuevo, email]);
+  // Pagar reactiva un negocio suspendido.
+  escribirTenant_(fila.Slug, { Vence: nuevo, Ultimo_Pago: hoy, Activo: 'si', Suspendido_Auto: '' });
+  return { ok: true, vence: nuevo };
+}
+
+function crearNegocioCentral_(data, ahoraMs) {
+  const nombre = limpiarTexto_(data.nombre, 80);
+  const slug = String(data.slug || '').trim().toLowerCase();
+  const email = String(data.email || '').trim().toLowerCase();
+  if (!nombre) return { error: 'datos_invalidos', mensaje: 'Escribe el nombre del negocio.' };
+  if (email && !/^[^\s@,]+@[^\s@,]+\.[a-z]{2,}$/i.test(email)) return { error: 'datos_invalidos', mensaje: 'Revisa el correo (Gmail del dueño).' };
+  const dias = Math.max(0, Math.min(365, Math.floor(Number(data.diasPrueba == null ? DIAS_PRUEBA : data.diasPrueba))));
+  let creado;
+  try {
+    creado = crearTenant(slug, nombre, email);
+  } catch (err) {
+    return { error: 'datos_invalidos', mensaje: String(err.message || err) };
+  }
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  escribirTenant_(creado.slug, {
+    Telefono: paraCelda_(String(data.telefono || '').replace(/[^\d]/g, '').slice(0, 20)),
+    Vence: sumarDias_(hoy, dias), // primer mes gratis (o los días de prueba que se elijan)
+    Notas: paraCelda_(limpiarTexto_(data.notas || '', 300)),
+  });
+  return { ok: true, slug: creado.slug, hoja: creado.url };
+}
+
+/** Punto de entrada desde doPost (accion: 'central'). */
+function atenderCentral_(data, ahoraMs) {
+  const email = leerSesion_(data.sesion, ahoraMs);
+  if (!email) return { error: 'sesion', mensaje: 'Tu sesión venció. Entra otra vez.' };
+  if (!esAdminDueno_(email)) return { error: 'no_autorizado', mensaje: email + ' no es administrador de bookeaa (propiedad dueno_admins).' };
+  const op = String(data.op || '');
+  if (op === 'resumen') return resumenCentral_(ahoraMs);
+  if (op === 'cobros') return cobrosCentral_(ahoraMs);
+  if (op === 'metricas') return metricasCentral_(ahoraMs, !!data.fresco);
+  if (op === 'negocio') return negocioDetalleCentral_(String(data.slug || ''), ahoraMs);
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { error: 'servidor', mensaje: 'Hay otra operación en curso. Intenta de nuevo.' };
+  try {
+    if (op === 'pago') return registrarPagoCentral_(data, email, ahoraMs);
+    if (op === 'crear') return crearNegocioCentral_(data, ahoraMs);
+    if (op === 'aprobar' || op === 'rechazar') {
+      const hojaPN = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+      const pago = objetos_(hojaPN, PAGOS_NEGOCIO_HEADERS).filter(function (o) { return String(o.ID) === String(data.id || ''); })[0];
+      if (!pago || String(pago.Estado) !== 'Por verificar') return { error: 'no_existe', mensaje: 'Ese pago ya no está por verificar.' };
+      if (op === 'aprobar') return { ok: true, vence: aprobarPago_(pago.fila, 'Aprobado a mano', email, ahoraMs) };
+      const motivo = limpiarTexto_(data.motivo || 'No encontramos el pago en el banco', 160);
+      escribirFila_(hojaPN, PAGOS_NEGOCIO_HEADERS, pago.fila, { Estado: 'Rechazado', Motivo: paraCelda_(motivo), Revisado_Por: email, Fecha_Revision: new Date(ahoraMs) });
+      avisarNegocio_(String(pago.Slug), '❌ Pago no confirmado', motivo + '. Revisa los datos y repórtalo otra vez en Mi plan y pagos.');
+      return { ok: true };
+    }
+    if (op === 'movimientos') {
+      const nuevos = guardarMovimientos_(data.filas, 'estado de cuenta', ahoraMs);
+      const r = conciliar_(ahoraMs);
+      return { ok: true, nuevos: nuevos, aprobados: r.aprobados.length };
+    }
+    if (op === 'leer_correos') return leerCorreosBanco();
+    if (op === 'instalar_cobros') return instalarCobros();
+    if (op === 'ajustes_cobro') return guardarAjustesCobro_(data);
+    if (op === 'usar_ingreso') {
+      const t = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(data.slug || ''); })[0];
+      const creado = t ? ymd_(t.Creado) : '';
+      if (!creado) return { error: 'datos_invalidos', mensaje: 'Ese negocio no tiene fecha de ingreso.' };
+      const corte = proximoCorte_(creado, Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd'));
+      escribirTenant_(String(t.Slug), { Vence: corte });
+      return { ok: true, vence: corte };
+    }
+    if (op === 'activo') {
+      escribirTenant_(String(data.slug || ''), { Activo: data.activo ? 'si' : 'no', Suspendido_Auto: '' });
+      return { ok: true };
+    }
+    if (op === 'editar') {
+      const campos = {};
+      if ('email' in data) campos.Email = String(data.email || '').trim().toLowerCase();
+      if ('telefono' in data) campos.Telefono = paraCelda_(String(data.telefono || '').replace(/[^\d]/g, '').slice(0, 20));
+      if ('notas' in data) campos.Notas = paraCelda_(limpiarTexto_(data.notas || '', 300));
+      if ('vence' in data) {
+        if (data.vence && !/^\d{4}-\d{2}-\d{2}$/.test(String(data.vence))) return { error: 'datos_invalidos', mensaje: 'Revisa la fecha de vencimiento.' };
+        campos.Vence = String(data.vence || '');
+      }
+      escribirTenant_(String(data.slug || ''), campos);
+      return { ok: true };
+    }
+    return { error: 'op_desconocida' };
+  } catch (err) {
+    return { error: 'servidor', mensaje: String(err.message || err) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ============================================================================
+// Cobros de bookeaa: corte mensual, Pago Móvil reportado y conciliación
+// ============================================================================
+// - El corte es el día de ingreso de cada mes (el primer mes es gratis). Después del
+//   corte hay DIAS_GRACIA para pagar; al día siguiente revisarCortes suspende la página
+//   (Suspendido_Auto = si) y al aprobarse un pago se reactiva sola.
+// - El negocio reporta su Pago Móvil desde Mi negocio (pestaña PagosNegocio).
+// - Los movimientos del banco llegan del estado de cuenta (lo sube la central) o de
+//   los correos de aviso del banco en el Gmail de bookeaa (leerCorreosBanco, cada
+//   10 min). conciliar_ cruza referencia, monto y fecha y aprueba lo que coincide.
+// Propiedades: pm_banco, pm_telefono, pm_cedula, pm_titular (el Pago Móvil de bookeaa)
+// y correo_banco_query (la búsqueda de Gmail de los avisos del banco).
+
+const DIAS_GRACIA = 3;
+const PAGOS_NEGOCIO_HEADERS = [
+  'ID', 'Fecha_Registro', 'Slug', 'Negocio', 'Fecha_Pago', 'Banco_Origen', 'Telefono_Origen', 'Referencia',
+  'Monto_Bs', 'Tasa', 'Monto_USD', 'Meses', 'Estado', 'Conciliado_Con', 'Motivo', 'Revisado_Por', 'Fecha_Revision',
+];
+const MOVIMIENTOS_HEADERS = ['Clave', 'Fecha', 'Referencia', 'Descripcion', 'Monto', 'Fuente', 'Cargado', 'Pago_ID'];
+const CORREO_BANCO_QUERY = 'from:(bdvenlinea OR banvenez OR bancodevenezuela) newer_than:7d';
+
+function hojaCon_(nombre, headers) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(nombre);
+  if (!sheet) {
+    sheet = ss.insertSheet(nombre);
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/** Filas de una pestaña como objetos (con su número de fila). */
+function objetos_(sheet, headers) {
+  const n = sheet.getLastRow() - 1;
+  if (n < 1) return [];
+  return sheet.getRange(2, 1, n, headers.length).getValues().map(function (r, i) {
+    const o = { fila: i + 2 };
+    headers.forEach(function (h, j) { o[h] = r[j]; });
+    return o;
+  });
+}
+
+function escribirFila_(sheet, headers, fila, campos) {
+  Object.keys(campos).forEach(function (h) {
+    const c = headers.indexOf(h);
+    if (c !== -1) sheet.getRange(fila, c + 1).setValue(campos[h]);
+  });
+}
+
+const soloDigitos_ = function (v) { return String(v == null ? '' : v).replace(/\D/g, ''); };
+
+/** Misma referencia: coinciden los últimos dígitos (al menos 4; los bancos recortan distinto). */
+function refCoincide_(a, b) {
+  const da = soloDigitos_(a).replace(/^0+/, ''), db = soloDigitos_(b).replace(/^0+/, '');
+  const n = Math.min(6, da.length, db.length);
+  return n >= 4 && da.slice(-n) === db.slice(-n);
+}
+
+/** Mismo monto, con medio bolívar o 0,5 % de holgura (redondeos de la tasa). */
+function montoCoincide_(a, b) {
+  const x = Number(a), y = Number(b);
+  return x > 0 && y > 0 && Math.abs(x - y) <= Math.max(0.5, y * 0.005);
+}
+
+/** "1.234,56" / "1234.56" / 1234.56 → 1234.56 */
+function montoVe_(v) {
+  if (typeof v === 'number') return v;
+  let t = String(v || '').replace(/[^\d.,-]/g, '');
+  if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+  else if ((t.match(/\./g) || []).length > 1) t = t.replace(/\./g, '');
+  const n = Number(t);
+  return isFinite(n) ? n : 0;
+}
+
+function datosPagoMovil_() {
+  const p = PropertiesService.getScriptProperties();
+  return {
+    banco: p.getProperty('pm_banco') || 'Banco de Venezuela (0102)',
+    telefono: p.getProperty('pm_telefono') || '',
+    cedula: p.getProperty('pm_cedula') || '',
+    titular: p.getProperty('pm_titular') || '',
+  };
+}
+
+function tasaUsd_() {
+  try {
+    const t = getTasa('USD', null);
+    return t && t.valor > 0 ? t.valor : 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+function pagoNegocioJson_(o) {
+  return {
+    id: String(o.ID), registrado: o.Fecha_Registro instanceof Date ? Utilities.formatDate(o.Fecha_Registro, ZONA, "yyyy-MM-dd'T'HH:mm") : String(o.Fecha_Registro),
+    slug: String(o.Slug), negocio: String(o.Negocio), fecha: ymd_(o.Fecha_Pago) || '', banco: String(o.Banco_Origen),
+    telefono: String(o.Telefono_Origen), referencia: String(o.Referencia), montoBs: toNumber_(o.Monto_Bs), tasa: toNumber_(o.Tasa),
+    montoUsd: toNumber_(o.Monto_USD), meses: toNumber_(o.Meses) || 1, estado: String(o.Estado), conciliado: String(o.Conciliado_Con || ''),
+    motivo: String(o.Motivo || ''),
+  };
+}
+
+function movimientoJson_(o) {
+  return {
+    clave: String(o.Clave), fecha: ymd_(o.Fecha) || '', referencia: String(o.Referencia), descripcion: String(o.Descripcion),
+    monto: toNumber_(o.Monto), fuente: String(o.Fuente), pagoId: String(o.Pago_ID || ''),
+  };
+}
+
+/** Avisa al negocio en su teléfono (Mi negocio). Nunca lanza. */
+function avisarNegocio_(slug, titulo, cuerpo) {
+  llamarWorker_('/push/evento', { tipo: 'aviso', slug: slug, titulo: titulo, cuerpo: cuerpo });
+}
+
+// ---------- Lo que ve el negocio ----------
+
+function planNegocio_(tenant, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })[0] || {};
+  const n = negocioCentral_(fila, hoy);
+  const tasa = tasaUsd_();
+  const pagos = objetos_(hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS), PAGOS_NEGOCIO_HEADERS)
+    .filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })
+    .map(pagoNegocioJson_).reverse().slice(0, 12);
+  return {
+    estado: n.estado, vence: n.vence, dias: n.dias, gracia: DIAS_GRACIA,
+    corteDia: n.creado ? Number(n.creado.slice(8, 10)) : (n.vence ? Number(n.vence.slice(8, 10)) : null),
+    limite: n.vence ? sumarDias_(n.vence, DIAS_GRACIA) : '',
+    precio: PRECIO_MENSUAL, tasa: tasa, montoBs: tasa ? round2_(PRECIO_MENSUAL * tasa) : 0,
+    pagoMovil: datosPagoMovil_(), pagos: pagos,
+    porVerificar: pagos.some(function (p) { return p.estado === 'Por verificar'; }),
+  };
+}
+
+function reportarPago_(tenant, email, data, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const fecha = String(data.fecha || '');
+  const referencia = soloDigitos_(data.referencia);
+  const telefono = soloDigitos_(data.telefono);
+  const montoBs = round2_(montoVe_(data.montoBs));
+  const meses = Math.max(1, Math.min(12, Math.floor(Number(data.meses) || 1)));
+  const errores = [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha > hoy || diasEntre_(fecha, hoy) > 15) errores.push('Revisa la fecha del pago (de los últimos 15 días).');
+  if (referencia.length < 4 || referencia.length > 20) errores.push('Escribe el número de referencia completo (solo números).');
+  if (telefono.length < 10) errores.push('Escribe el teléfono desde el que pagaste.');
+  if (!(montoBs > 0)) errores.push('Escribe el monto que pagaste en bolívares.');
+  if (!String(data.banco || '').trim()) errores.push('Elige el banco desde el que pagaste.');
+  if (errores.length) return { error: 'datos_invalidos', mensaje: errores.join(' ') };
+
+  const hoja = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+  const repetido = objetos_(hoja, PAGOS_NEGOCIO_HEADERS).some(function (o) {
+    return String(o.Estado) !== 'Rechazado' && refCoincide_(o.Referencia, referencia) && montoCoincide_(o.Monto_Bs, montoBs);
+  });
+  if (repetido) return { error: 'datos_invalidos', mensaje: 'Ese pago ya está reportado.' };
+
+  const tasa = tasaUsd_();
+  const id = 'P' + Utilities.getUuid().replace(/-/g, '').slice(0, 10).toUpperCase();
+  hoja.appendRow([id, new Date(ahoraMs), tenant.slug, tenant.nombre, fecha, limpiarTexto_(data.banco, 60), "'" + telefono, "'" + referencia,
+    montoBs, tasa || '', tasa ? round2_(montoBs / tasa) : '', meses, 'Por verificar', '', '', email, '']);
+  const r = conciliar_(ahoraMs);
+  const aprobado = r.aprobados.indexOf(id) !== -1;
+  if (!aprobado) {
+    botAvisar_('Pago Móvil por verificar: ' + tenant.nombre, [
+      tenant.nombre + ' reportó un pago de Bs. ' + montoBs + ' (' + meses + (meses === 1 ? ' mes' : ' meses') + ').',
+      'Referencia: ' + referencia + ' · ' + String(data.banco) + ' · ' + fecha,
+      'Apruébalo o recházalo en bookeaa.com/central → Cobros.',
+    ]);
+  }
+  return { ok: true, id: id, estado: aprobado ? 'Aprobado' : 'Por verificar' };
+}
+
+// ---------- Aprobar, rechazar, conciliar ----------
+
+function aprobarPago_(fila, fuente, revisor, ahoraMs) {
+  const hoja = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+  const pago = objetos_(hoja, PAGOS_NEGOCIO_HEADERS).filter(function (o) { return o.fila === fila; })[0];
+  if (!pago || String(pago.Estado) !== 'Por verificar') return null;
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const t = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(pago.Slug); })[0];
+  if (!t) return null;
+  const meses = Math.max(1, toNumber_(pago.Meses) || 1);
+  const antes = ymd_(t.Vence) || '';
+  const nuevo = extenderVence_(antes, meses, hoy);
+  escribirFila_(hoja, PAGOS_NEGOCIO_HEADERS, fila, { Estado: 'Aprobado', Conciliado_Con: fuente, Revisado_Por: revisor, Fecha_Revision: new Date(ahoraMs) });
+  hojaPagos_().appendRow([new Date(ahoraMs), String(t.Slug), String(t.Nombre), toNumber_(pago.Monto_USD) || PRECIO_MENSUAL * meses, meses,
+    'Pago Móvil', "'" + soloDigitos_(pago.Referencia), antes, nuevo, revisor]);
+  const campos = { Vence: nuevo, Ultimo_Pago: hoy, Suspendido_Auto: '' };
+  // Solo se reactiva sola si la suspendió el cobro (no si la suspendiste tú a mano).
+  if (String(t.Suspendido_Auto || '') === 'si') campos.Activo = 'si';
+  escribirTenant_(t.Slug, campos);
+  avisarNegocio_(String(t.Slug), '✅ Pago aprobado', 'Tu plan de bookeaa queda al día hasta el ' + nuevo.split('-').reverse().join('/') + '. ¡Gracias!');
+  return nuevo;
+}
+
+/** Cruza los pagos por verificar con los movimientos del banco. Devuelve los aprobados. */
+function conciliar_(ahoraMs) {
+  const hojaP = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+  const hojaM = hojaCon_('MovimientosBanco', MOVIMIENTOS_HEADERS);
+  const libres = objetos_(hojaM, MOVIMIENTOS_HEADERS).filter(function (m) { return !String(m.Pago_ID || ''); });
+  const aprobados = [];
+  objetos_(hojaP, PAGOS_NEGOCIO_HEADERS).forEach(function (p) {
+    if (String(p.Estado) !== 'Por verificar') return;
+    const fechaPago = ymd_(p.Fecha_Pago);
+    const m = libres.filter(function (x) {
+      if (String(x.Pago_ID || '')) return false;
+      const f = ymd_(x.Fecha);
+      return refCoincide_(x.Referencia, p.Referencia) && montoCoincide_(x.Monto, p.Monto_Bs) && (!f || !fechaPago || Math.abs(diasEntre_(f, fechaPago)) <= 3);
+    })[0];
+    if (!m) return;
+    if (aprobarPago_(p.fila, String(m.Fuente) === 'correo' ? 'Correo del banco' : 'Estado de cuenta', 'conciliación automática', ahoraMs)) {
+      escribirFila_(hojaM, MOVIMIENTOS_HEADERS, m.fila, { Pago_ID: String(p.ID) });
+      m.Pago_ID = String(p.ID);
+      aprobados.push(String(p.ID));
+    }
+  });
+  return { aprobados: aprobados };
+}
+
+/** Guarda movimientos (créditos) sin repetir. `filas`: [{fecha, referencia, descripcion, monto, clave?}] */
+function guardarMovimientos_(filas, fuente, ahoraMs) {
+  const hoja = hojaCon_('MovimientosBanco', MOVIMIENTOS_HEADERS);
+  const existentes = {};
+  objetos_(hoja, MOVIMIENTOS_HEADERS).forEach(function (m) { existentes[String(m.Clave)] = true; });
+  const nuevas = [];
+  (filas || []).slice(0, 3000).forEach(function (f) {
+    const monto = round2_(montoVe_(f.monto));
+    const ref = soloDigitos_(f.referencia);
+    const fecha = ymd_(f.fecha) || '';
+    if (!(monto > 0) || ref.length < 4) return;
+    const clave = String(f.clave || (fecha + '|' + ref + '|' + monto));
+    if (existentes[clave]) return;
+    existentes[clave] = true;
+    nuevas.push([clave, fecha, "'" + ref, paraCelda_(limpiarTexto_(f.descripcion || '', 120)), monto, fuente, new Date(ahoraMs), '']);
+  });
+  if (nuevas.length) hoja.getRange(hoja.getLastRow() + 1, 1, nuevas.length, MOVIMIENTOS_HEADERS.length).setValues(nuevas);
+  return nuevas.length;
+}
+
+// ---------- Correos del banco ----------
+
+/** Saca monto, referencia y fecha de un aviso de Pago Móvil recibido. null si no es un abono. */
+function parsearCorreoBanco_(texto) {
+  const t = String(texto || '').replace(/\s+/g, ' ');
+  if (!/(recib|abon|acredit|ingres|te (?:han )?(?:enviado|pagado)|le (?:han )?(?:enviado|transferido))/i.test(t)) return null;
+  if (/(has enviado|enviaste|realizaste un pago|d[eé]bito a tu cuenta|cargo a su cuenta)/i.test(t)) return null;
+  const monto = /(?:Bs\.?\s*S?\.?|VES|monto(?: de)?:?)\s*([\d.]+,\d{2}|\d+(?:\.\d{2})?)/i.exec(t);
+  const ref = /(?:referencia|ref\.?|n[uú]mero de (?:operaci[oó]n|referencia)|operaci[oó]n|comprobante)\s*(?:n[°º.o]*)?\s*:?\s*#?\s*(\d{4,20})/i.exec(t);
+  if (!monto || !ref) return null;
+  const f = /(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/.exec(t);
+  let fecha = '';
+  if (f) {
+    const anio = f[3].length === 2 ? '20' + f[3] : f[3];
+    fecha = anio + '-' + ('0' + f[2]).slice(-2) + '-' + ('0' + f[1]).slice(-2);
+  }
+  return { monto: montoVe_(monto[1]), referencia: ref[1], fecha: fecha };
+}
+
+/** Lee los avisos del banco en el Gmail de bookeaa y concilia. La llama un disparador cada 10 min. */
+function leerCorreosBanco() {
+  const ahoraMs = Date.now();
+  const props = PropertiesService.getScriptProperties();
+  const query = props.getProperty('correo_banco_query') || CORREO_BANCO_QUERY;
+  const filas = [];
+  let leidos = 0, sinDatos = 0;
+  GmailApp.search(query, 0, 30).forEach(function (hilo) {
+    hilo.getMessages().forEach(function (msg) {
+      leidos++;
+      const datos = parsearCorreoBanco_(msg.getSubject() + ' ' + msg.getPlainBody());
+      if (!datos) { sinDatos++; return; }
+      filas.push({
+        clave: 'correo:' + msg.getId(), fecha: datos.fecha || Utilities.formatDate(msg.getDate(), ZONA, 'yyyy-MM-dd'),
+        referencia: datos.referencia, monto: datos.monto, descripcion: msg.getSubject(),
+      });
+    });
+  });
+  const nuevos = guardarMovimientos_(filas, 'correo', ahoraMs);
+  const r = conciliar_(ahoraMs);
+  const resumen = { fecha: new Date(ahoraMs).toISOString(), leidos: leidos, abonos: filas.length, nuevos: nuevos, sinDatos: sinDatos, aprobados: r.aprobados.length };
+  props.setProperty('correo_banco_ultima', JSON.stringify(resumen));
+  return resumen;
+}
+
+// ---------- Cortes diarios ----------
+
+/** Recordatorios de pago y suspensión al pasar la gracia. La llama un disparador diario (7:00). */
+function revisarCortes() {
+  const ahoraMs = Date.now();
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const suspendidos = [];
+  filasTenants_().forEach(function (o) {
+    const vence = ymd_(o.Vence);
+    const t = { activo: String(o.Activo || 'si') };
+    if (!vence || !tenantActivo_(t)) return;
+    const slug = String(o.Slug), dias = diasEntre_(hoy, vence);
+    const fechaTxt = vence.split('-').reverse().join('/');
+    const monto = '$' + PRECIO_MENSUAL;
+    if (dias === 3 || dias === 1) avisarNegocio_(slug, '🗓️ Tu pago de bookeaa vence el ' + fechaTxt, 'Son ' + monto + ' por Pago Móvil. Repórtalo en Configurar → Mi plan y pagos.');
+    else if (dias === 0) avisarNegocio_(slug, '🗓️ Hoy es tu fecha de corte', 'Tienes ' + DIAS_GRACIA + ' días para pagar ' + monto + ' y seguir recibiendo reservas.');
+    else if (dias < 0 && -dias <= DIAS_GRACIA) {
+      const quedan = DIAS_GRACIA + dias;
+      avisarNegocio_(slug, '⚠️ Tu pago de bookeaa está pendiente', quedan ? 'Te quedan ' + quedan + (quedan === 1 ? ' día' : ' días') + ' para pagar antes de que tu página se pause.' : 'Hoy es el último día para pagar antes de que tu página se pause.');
+    } else if (dias < 0) {
+      escribirTenant_(slug, { Activo: 'no', Suspendido_Auto: 'si' });
+      avisarNegocio_(slug, '⏸️ Tu página de reservas está en pausa', 'Pasaron ' + DIAS_GRACIA + ' días del corte sin pago. Reporta tu Pago Móvil y se reactiva al aprobarse.');
+      suspendidos.push(String(o.Nombre || slug));
+    }
+  });
+  if (suspendidos.length) botAvisar_('Negocios suspendidos por falta de pago', suspendidos);
+  return { suspendidos: suspendidos };
+}
+
+/** Crea los disparadores de cobros (correos cada 10 min y cortes a las 7:00). Sin duplicar. */
+function instalarCobros() {
+  const existentes = ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); });
+  if (existentes.indexOf('leerCorreosBanco') === -1) ScriptApp.newTrigger('leerCorreosBanco').timeBased().everyMinutes(10).create();
+  if (existentes.indexOf('revisarCortes') === -1) ScriptApp.newTrigger('revisarCortes').timeBased().atHour(7).everyDays(1).inTimezone(ZONA).create();
+  return { ok: true };
+}
+
+function cobrosActivos_() {
+  const h = ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); });
+  return { correos: h.indexOf('leerCorreosBanco') !== -1, cortes: h.indexOf('revisarCortes') !== -1 };
+}
+
+// ---------- Lo que ve la central ----------
+
+function cobrosCentral_(ahoraMs) {
+  const props = PropertiesService.getScriptProperties();
+  const pagos = objetos_(hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS), PAGOS_NEGOCIO_HEADERS);
+  const movs = objetos_(hojaCon_('MovimientosBanco', MOVIMIENTOS_HEADERS), MOVIMIENTOS_HEADERS);
+  const libres = movs.filter(function (m) { return !String(m.Pago_ID || ''); });
+  const porVerificar = pagos.filter(function (p) { return String(p.Estado) === 'Por verificar'; }).map(function (p) {
+    const j = pagoNegocioJson_(p);
+    // Pista para revisar a mano: un movimiento con el mismo monto o la misma referencia.
+    const pista = libres.filter(function (m) { return montoCoincide_(m.Monto, p.Monto_Bs) || refCoincide_(m.Referencia, p.Referencia); })[0];
+    j.pista = pista ? movimientoJson_(pista) : null;
+    return j;
+  }).reverse();
+  let ultima = null;
+  try { ultima = JSON.parse(props.getProperty('correo_banco_ultima') || 'null'); } catch (_) { /* nada */ }
+  let activos = { correos: false, cortes: false };
+  try { activos = cobrosActivos_(); } catch (_) { /* sin permiso de ScriptApp */ }
+  return {
+    porVerificar: porVerificar,
+    revisados: pagos.filter(function (p) { return String(p.Estado) !== 'Por verificar'; }).map(pagoNegocioJson_).reverse().slice(0, 40),
+    movimientos: libres.map(movimientoJson_).reverse().slice(0, 60),
+    tasa: tasaUsd_(),
+    ajustes: {
+      pagoMovil: datosPagoMovil_(), correoQuery: props.getProperty('correo_banco_query') || CORREO_BANCO_QUERY,
+      ultimaLectura: ultima, automaticos: activos,
+    },
+  };
+}
+
+function guardarAjustesCobro_(data) {
+  const p = PropertiesService.getScriptProperties();
+  const pm = data.pagoMovil || {};
+  ['banco', 'telefono', 'cedula', 'titular'].forEach(function (k) {
+    if (k in pm) p.setProperty('pm_' + k, limpiarTexto_(pm[k], 80));
+  });
+  if ('correoQuery' in data) p.setProperty('correo_banco_query', limpiarTexto_(data.correoQuery, 300) || CORREO_BANCO_QUERY);
+  return { ok: true };
+}
+
+// ---------- Central: métricas (vista de computadora) ----------
+
+const METRICAS_MESES = 12;
+const DIAS_SEMANA_CORTO = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+/** Los últimos `n` meses hasta el de `hoy`, como 'yyyy-MM' (el más viejo primero). */
+function ultimosMeses_(hoy, n) {
+  const p = hoy.split('-').map(Number);
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(p[0], p[1] - 1 - i, 1, 12));
+    out.push(d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2));
+  }
+  return out;
+}
+
+/** Día de la semana de 'yyyy-MM-dd' (0 = domingo). */
+function diaSemana_(ymd) {
+  const p = ymd.split('-').map(Number);
+  return new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)).getUTCDay();
+}
+
+function sumarConteo_(obj, clave, n) {
+  const k = String(clave || '').trim() || '—';
+  obj[k] = (obj[k] || 0) + (n == null ? 1 : n);
+}
+
+/** { clave: n } → [{ nombre, n }] de mayor a menor, máximo `max`. */
+function rankingConteo_(obj, max) {
+  return Object.keys(obj).map(function (k) { return { nombre: k, n: round2_(obj[k]) }; })
+    .sort(function (a, b) { return b.n - a.n || a.nombre.localeCompare(b.nombre); })
+    .slice(0, max);
+}
+
+/**
+ * Estadísticas de las reservas de un negocio (filas de Reservaciones). Las canceladas
+ * se cuentan aparte y no suman en lo demás. `completo` agrega servicios, horas,
+ * métodos, modalidades y estados (para el detalle de un negocio).
+ */
+function estadisticasReservas_(filas, hoy, completo) {
+  const meses = ultimosMeses_(hoy, METRICAS_MESES);
+  const idx = {};
+  meses.forEach(function (m, i) { idx[m] = i; });
+  const cero = function () { return meses.map(function () { return 0; }); };
+  const porMes = cero(), ingresosMes = cero(), canceladasMes = cero(), clientesNuevosMes = cero();
+  const hace30 = sumarDias_(hoy, -30), hace60 = sumarDias_(hoy, -60), en30 = sumarDias_(hoy, 30);
+  const r = { total: 0, canceladas: 0, ultimos30: 0, previos30: 0, ingresos30: 0, ingresosPrevios30: 0, proximas: 0, ultimaSolicitud: '', conCupon: 0 };
+  const clientes = {}, primeraVez = {};
+  const servicios = {}, ingresosServicio = {}, metodos = {}, modalidades = {}, estados = {};
+  const mapa = [0, 1, 2, 3, 4, 5, 6].map(function () { return []; });
+
+  filas.forEach(function (f) {
+    const fecha = ymd_(f.Fecha_Cita);
+    if (!fecha) return;
+    const solicitud = ymd_(f.Fecha_Solicitud) || fecha;
+    if (solicitud > r.ultimaSolicitud) r.ultimaSolicitud = solicitud;
+    const estado = String(f.Estado || '');
+    if (completo) sumarConteo_(estados, estado || 'Sin estado');
+    const mes = fecha.slice(0, 7);
+    if (/cancel/i.test(estado)) {
+      r.canceladas++;
+      if (mes in idx) canceladasMes[idx[mes]]++;
+      return;
+    }
+    r.total++;
+    const monto = toNumber_(f.Total) || 0;
+    if (mes in idx) { porMes[idx[mes]]++; ingresosMes[idx[mes]] += monto; }
+    if (fecha > hace30 && fecha <= hoy) { r.ultimos30++; r.ingresos30 += monto; }
+    else if (fecha > hace60 && fecha <= hace30) { r.previos30++; r.ingresosPrevios30 += monto; }
+    if (fecha > hoy && fecha <= en30) r.proximas++;
+    const cliente = String(f.Telefono || '').replace(/\D/g, '').slice(-10) || String(f.Cliente || '').trim().toLowerCase();
+    if (cliente) {
+      clientes[cliente] = (clientes[cliente] || 0) + 1;
+      if (!primeraVez[cliente] || fecha < primeraVez[cliente]) primeraVez[cliente] = fecha;
+    }
+    if (!completo) return;
+    const cupon = String(f.Cupon || '').trim();
+    if (cupon && cupon !== 'N/A') r.conCupon++;
+    const lineas = String(f.Servicios || '').split(/\s*,\s*/).filter(String);
+    lineas.forEach(function (s) {
+      sumarConteo_(servicios, s);
+      sumarConteo_(ingresosServicio, s, lineas.length ? monto / lineas.length : 0);
+    });
+    sumarConteo_(metodos, f.Metodo_Pago);
+    sumarConteo_(modalidades, f.Modalidad);
+    const hora = horaTexto_(f.Hora_Cita);
+    if (hora) {
+      const h = Number(hora.slice(0, 2));
+      const d = diaSemana_(fecha);
+      mapa[d][h] = (mapa[d][h] || 0) + 1;
+    }
+  });
+
+  const ids = Object.keys(clientes);
+  ids.forEach(function (c) { const m = primeraVez[c].slice(0, 7); if (m in idx) clientesNuevosMes[idx[m]]++; });
+  const out = {
+    meses: meses, porMes: porMes, ingresosMes: ingresosMes.map(round2_), canceladasMes: canceladasMes,
+    total: r.total, canceladas: r.canceladas, ultimos30: r.ultimos30, previos30: r.previos30,
+    ingresos30: round2_(r.ingresos30), ingresosPrevios30: round2_(r.ingresosPrevios30),
+    proximas: r.proximas, ultimaSolicitud: r.ultimaSolicitud,
+    clientes: ids.length, recurrentes: ids.filter(function (c) { return clientes[c] > 1; }).length,
+  };
+  if (!completo) return out;
+  // Horas con alguna cita (para no dibujar la madrugada vacía).
+  let hMin = 24, hMax = -1;
+  mapa.forEach(function (fila) { fila.forEach(function (n, h) { if (n) { hMin = Math.min(hMin, h); hMax = Math.max(hMax, h); } }); });
+  if (hMax < 0) { hMin = 8; hMax = 18; }
+  out.clientesNuevosMes = clientesNuevosMes;
+  out.conCupon = r.conCupon;
+  out.ticket = r.total ? round2_(ingresosMes.reduce(function (a, b) { return a + b; }, 0) / Math.max(1, porMes.reduce(function (a, b) { return a + b; }, 0))) : 0;
+  out.servicios = rankingConteo_(servicios, 10).map(function (s) { return { nombre: s.nombre, n: s.n, ingresos: round2_(ingresosServicio[s.nombre] || 0) }; });
+  out.metodos = rankingConteo_(metodos, 8);
+  out.modalidades = rankingConteo_(modalidades, 6);
+  out.estados = rankingConteo_(estados, 8);
+  out.horas = { desde: hMin, hasta: hMax, dias: DIAS_SEMANA_CORTO, mapa: mapa.map(function (fila) { const v = []; for (let h = hMin; h <= hMax; h++) v.push(fila[h] || 0); return v; }) };
+  return out;
+}
+
+/** Lo cobrado por bookeaa por mes (pestaña Pagos, en USD). */
+function ingresosBookeaa_(meses) {
+  const idx = {};
+  meses.forEach(function (m, i) { idx[m] = i; });
+  const total = meses.map(function () { return 0; });
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Pagos');
+  if (!sheet || sheet.getLastRow() < 2) return total;
+  sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues().forEach(function (f) {
+    const m = (ymd_(f[0]) || '').slice(0, 7);
+    if (m in idx) total[idx[m]] = round2_(total[idx[m]] + toNumber_(f[3]));
+  });
+  return total;
+}
+
+/**
+ * Panel de la central en computadora: ingresos de bookeaa, altas, reservas de toda la
+ * plataforma y la actividad de cada negocio. Abre la hoja de cada negocio, así que se
+ * guarda 10 minutos en caché (`fresco` la recalcula).
+ */
+function metricasCentral_(ahoraMs, fresco) {
+  const cache = CacheService.getScriptCache();
+  if (!fresco) {
+    const hit = cache.get('central_metricas');
+    if (hit) { try { return JSON.parse(hit); } catch (_) { /* recalcula */ } }
+  }
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const meses = ultimosMeses_(hoy, METRICAS_MESES);
+  const idx = {};
+  meses.forEach(function (m, i) { idx[m] = i; });
+  const filas = filasTenants_();
+  const tenants = {};
+  getTenants_().forEach(function (t) { tenants[t.slug] = t; });
+  const altas = meses.map(function () { return 0; });
+  const reservas = meses.map(function () { return 0; });
+  const negocios = filas.map(function (o) {
+    const n = negocioCentral_(o, hoy);
+    const m = (n.creado || '').slice(0, 7);
+    if (m in idx) altas[idx[m]]++;
+    const t = tenants[n.slug];
+    let e = null, error = '';
+    try {
+      if (t) e = estadisticasReservas_(getSheetData_(openTenant_(t), 'Reservaciones'), hoy, false);
+    } catch (err) {
+      error = String(err && err.message || err).slice(0, 120);
+    }
+    if (e) e.porMes.forEach(function (v, i) { reservas[i] += v; });
+    return {
+      slug: n.slug, nombre: n.nombre, estado: n.estado, creado: n.creado, vence: n.vence, dias: n.dias,
+      reservas30: e ? e.ultimos30 : null, previas30: e ? e.previos30 : null, proximas: e ? e.proximas : null,
+      clientes: e ? e.clientes : null, ultimaReserva: e ? e.ultimaSolicitud : '', porMes: e ? e.porMes.slice(-6) : [],
+      error: error,
+    };
+  });
+  const out = {
+    hoy: hoy, generado: new Date(ahoraMs).toISOString(), precio: PRECIO_MENSUAL, meses: meses,
+    ingresos: ingresosBookeaa_(meses), altas: altas, reservas: reservas, negocios: negocios,
+  };
+  try { cache.put('central_metricas', JSON.stringify(out), 600); } catch (_) { /* muy grande para la caché */ }
+  return out;
+}
+
+/** Un negocio a fondo: su cobro, su configuración, sus reservas y sus pagos a bookeaa. */
+function negocioDetalleCentral_(slug, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(slug || ''); })[0];
+  const t = getTenants_().filter(function (x) { return normKey_(x.slug) === normKey_(slug || ''); })[0];
+  if (!fila || !t) return { error: 'no_existe', mensaje: 'Ese negocio no existe.' };
+  const negocio = negocioCentral_(fila, hoy);
+  const libro = openTenant_(t);
+  const config = getConfig_(libro);
+  const filasReservas = getSheetData_(libro, 'Reservaciones');
+  const est = estadisticasReservas_(filasReservas, hoy, true);
+  const recientes = filasReservas.slice(-12).reverse().map(function (f) {
+    return {
+      cliente: String(f.Cliente || ''), servicios: String(f.Servicios || ''), total: toNumber_(f.Total) || 0,
+      fecha: ymd_(f.Fecha_Cita) || '', hora: horaTexto_(f.Hora_Cita), estado: String(f.Estado || ''), metodo: String(f.Metodo_Pago || ''),
+    };
+  });
+  const pagos = pagosRecientes_(500).filter(function (p) { return normKey_(p.slug) === normKey_(negocio.slug); });
+  const reportes = objetos_(hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS), PAGOS_NEGOCIO_HEADERS)
+    .filter(function (o) { return normKey_(o.Slug) === normKey_(negocio.slug); }).map(pagoNegocioJson_).reverse().slice(0, 20);
+  return {
+    negocio: negocio,
+    config: {
+      marca: config.marca || config.nombre_negocio || negocio.nombre, moneda: normalizarMoneda_(config.moneda),
+      whatsapp: String(config.whatsapp || ''), lugar: String(config.lugar_tipo || ''), metodos: String(config.metodos_pago || ''),
+      servicios: getSheetData_(libro, 'Servicios').length, ticket: String(config.ticket_reserva || '') === 'si',
+    },
+    estadisticas: est,
+    recientes: recientes,
+    pagos: pagos,
+    reportes: reportes,
+  };
 }

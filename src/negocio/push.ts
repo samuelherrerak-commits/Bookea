@@ -28,9 +28,20 @@ export async function activarAvisos(vapid: string): Promise<PushSubscriptionJSON
   if (permiso !== 'granted') throw new Error('Sin permiso no podemos avisarte. Actívalo en los ajustes del teléfono.')
   const reg = (await navigator.serviceWorker.getRegistration()) ?? (await navigator.serviceWorker.register('/sw.js'))
   await navigator.serviceWorker.ready
-  const previa = await reg.pushManager.getSubscription()
-  const sub = previa ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveBytes(vapid) as BufferSource }))
+  const clave = claveBytes(vapid)
+  let previa = await reg.pushManager.getSubscription()
+  // Una suscripción hecha con otra clave no recibe nada: se rehace.
+  const suya = previa?.options.applicationServerKey
+  if (previa && suya && !mismaClave(new Uint8Array(suya), clave)) {
+    await previa.unsubscribe()
+    previa = null
+  }
+  const sub = previa ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: clave as BufferSource }))
   return sub.toJSON()
+}
+
+function mismaClave(a: Uint8Array, b: Uint8Array) {
+  return a.length === b.length && a.every((x, i) => x === b[i])
 }
 
 export async function apagarAvisos(): Promise<PushSubscriptionJSON | null> {

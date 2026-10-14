@@ -22,8 +22,17 @@ if (estatica) window.location.replace(`/${estatica[1]}/index.html`)
 const slug = slugFromLocation()
 const root = createRoot(document.getElementById('root')!)
 
-// /negocio: la app de cada dueño ("Mi negocio"). Su propio chunk.
-if (/^\/negocio\/?$/.test(window.location.pathname)) {
+// /central: la central de bookeaa (administración de los negocios). Su propio chunk.
+if (/^\/central\/?$/.test(window.location.pathname)) {
+  void import('./central/CentralApp').then(({ default: CentralApp }) => {
+    root.render(
+      <StrictMode>
+        <CentralApp />
+      </StrictMode>,
+    )
+  })
+} else if (/^\/negocio\/?$/.test(window.location.pathname)) {
+  // /negocio: la app de cada dueño ("Mi negocio"). Su propio chunk.
   void import('./negocio/NegocioApp').then(({ default: NegocioApp }) => {
     root.render(
       <StrictMode>

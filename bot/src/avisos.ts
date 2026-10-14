@@ -104,22 +104,41 @@ async function guardarCita(db: D1Database, slug: string, c: CitaAviso) {
 }
 
 /** Manda una notificación a todos los equipos de un negocio y borra los que ya no existen. */
-export async function avisar(db: D1Database, slug: string, n: Notificacion): Promise<number> {
+export interface Envio {
+  equipos: number
+  enviadas: number
+  /** Qué respondió el servicio de avisos cuando falló (para el aviso de prueba). */
+  fallos: string[]
+}
+
+export async function avisar(db: D1Database, slug: string, n: Notificacion): Promise<Envio> {
   const { results } = await db.prepare('SELECT endpoint, p256dh, auth FROM push_suscripciones WHERE slug = ?').bind(slug).all<Suscripcion>()
-  if (!results.length) return 0
+  const envio: Envio = { equipos: results.length, enviadas: 0, fallos: [] }
+  if (!results.length) return envio
   const claves = await clavesVapid(db)
-  let enviadas = 0
   for (const s of results) {
+    const servicio = new URL(s.endpoint).hostname
     try {
       const r = await enviarPush(s, n, claves, CONTACTO)
-      if (r === 'ok') enviadas++
-      else if (r === 'vencida') await quitar(db, s.endpoint)
+      if (r.estado === 'ok') envio.enviadas++
+      else {
+        envio.fallos.push(`${servicio}: ${r.codigo}${r.detalle ? ` ${r.detalle}` : ''}`)
+        if (r.estado === 'vencida') await quitar(db, s.endpoint)
+      }
     } catch (err) {
+      envio.fallos.push(`${servicio}: ${(err as Error).message}`)
       console.warn('Push a', slug, err)
     }
   }
-  return enviadas
+  return envio
 }
+
+export const avisoPrueba = (slug: string): Notificacion => ({
+  titulo: '🔔 Aviso de prueba',
+  cuerpo: 'Si ves esto, los avisos de bookeaa funcionan en este teléfono.',
+  tag: 'prueba',
+  url: urlNegocio(slug),
+})
 
 /** Una reserva nueva que avisa el Apps Script. */
 export async function nuevaReserva(db: D1Database, slug: string, c: CitaAviso) {
