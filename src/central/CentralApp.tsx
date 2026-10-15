@@ -107,7 +107,7 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
   const escritorio = useEscritorio()
-  const [pestana, setPestana] = useState<Pestana>(() => (esEscritorio() ? 'panel' : 'negocios'))
+  const [pestana, setPestana] = useState<Pestana>(() => (new URLSearchParams(location.search).get('state') ? 'marketing' : esEscritorio() ? 'panel' : 'negocios'))
   const [aFondo, setAFondo] = useState<string | null>(null)
   const [metricas, setMetricas] = useState<api.Metricas | null>(null)
   const [cargandoM, setCargandoM] = useState(false)
@@ -116,6 +116,13 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
   const [abierto, setAbierto] = useState<api.Negocio | null>(null)
   const [nuevo, setNuevo] = useState<Partial<{ nombre: string; email: string; telefono: string }> | null>(null)
   const [porVerificar, setPorVerificar] = useState(0)
+  // TikTok devuelve al usuario a /central?code=…&state=… (o ?error=…): se pasa a Marketing y se limpia la URL.
+  const [retornoTikTok, setRetornoTikTok] = useState<{ code: string; state: string } | { error: string } | null>(() => {
+    const q = new URLSearchParams(location.search)
+    if (q.get('code') && q.get('state')) return { code: q.get('code')!, state: q.get('state')! }
+    if (q.get('error') && q.get('state')) return { error: q.get('error_description') || q.get('error')! }
+    return null
+  })
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -296,7 +303,7 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
           <Prospectos lista={datos.prospectos} onCrear={(p) => setNuevo({ nombre: p.negocio, email: p.correo, telefono: p.telefono })} />
         )}
         {datos && pestana === 'pagos' && <Pagos lista={datos.pagos} hoy={datos.hoy} />}
-        {pestana === 'marketing' && <Marketing sesion={sesion.sesion} hoy={datos?.hoy ?? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas' }).format(new Date())} alSalir={alSalir} />}
+        {pestana === 'marketing' && <Marketing retornoTikTok={retornoTikTok} alTerminarRetorno={() => { setRetornoTikTok(null); history.replaceState(null, '', location.pathname) }} sesion={sesion.sesion} hoy={datos?.hoy ?? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas' }).format(new Date())} alSalir={alSalir} />}
         {pestana === 'cobros' && <Cobros sesion={sesion.sesion} alSalir={alSalir} alCambiar={() => void cargar()} />}
         </>}
 

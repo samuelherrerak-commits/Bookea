@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { capitalize, formatLongDate, formatWeekdayShort } from '../lib/format'
 import * as api from './api'
+import { crearIcs, paraAlarmas } from './ics'
 import semilla from './marketing-semilla.json'
 import { ESTADO_PUB, atrasada, contar, mesAnterior, mesSiguiente, ordenar, porDia, semanasDelMes, textoParaPublicar, tipoPub } from './marketing'
 import { fechaCorta } from './estados'
@@ -23,7 +24,15 @@ type Filtro = (typeof FILTROS)[number][0]
 
 const horaCaracas = () => new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' }).format(new Date())
 
-export function Marketing({ sesion, hoy, alSalir }: { sesion: string; hoy: string; alSalir: () => void }) {
+type Retorno = { code: string; state: string } | { error: string } | null
+
+export function Marketing({ sesion, hoy, alSalir, retornoTikTok, alTerminarRetorno }: {
+  sesion: string
+  hoy: string
+  alSalir: () => void
+  retornoTikTok?: Retorno
+  alTerminarRetorno?: () => void
+}) {
   const [lista, setLista] = useState<api.Publicacion[] | null>(null)
   const [error, setError] = useState('')
   const [vista, setVista] = useState<'cola' | 'calendario'>('cola')
@@ -32,6 +41,9 @@ export function Marketing({ sesion, hoy, alSalir }: { sesion: string; hoy: strin
   const [dia, setDia] = useState<string | null>(null)
   const [abierta, setAbierta] = useState<api.Publicacion | null>(null)
   const [importando, setImportando] = useState(false)
+  const [tt, setTt] = useState<api.EstadoTikTok | null>(null)
+  const [avisoTt, setAvisoTt] = useState('')
+  const [ocupadoTt, setOcupadoTt] = useState(false)
 
   const falla = useCallback(
     (e: unknown) => {
@@ -52,6 +64,64 @@ export function Marketing({ sesion, hoy, alSalir }: { sesion: string; hoy: strin
     void cargar()
   }, [cargar])
 
+  const cargarTt = useCallback(async () => {
+    try {
+      setTt(await api.tiktokEstado(sesion))
+    } catch (e) {
+      falla(e)
+    }
+  }, [sesion, falla])
+  useEffect(() => {
+    void cargarTt()
+  }, [cargarTt])
+
+  // Vuelta de TikTok tras autorizar: se canjea el código (una sola vez) y se limpia la URL.
+  const procesado = useRef(false)
+  useEffect(() => {
+    if (!retornoTikTok || procesado.current) return
+    procesado.current = true
+    void (async () => {
+      try {
+        if ('error' in retornoTikTok) setAvisoTt('TikTok no completó la conexión: ' + retornoTikTok.error)
+        else {
+          const r = await api.tiktokConectar(sesion, retornoTikTok.code, retornoTikTok.state)
+          setAvisoTt(`TikTok conectado como ${r.usuario}.`)
+        }
+      } catch (e) {
+        if (e instanceof api.ErrorCentral && e.codigo === 'sesion') return alSalir()
+        setAvisoTt((e as Error).message)
+      } finally {
+        alTerminarRetorno?.()
+        await cargarTt()
+      }
+    })()
+  }, [retornoTikTok, sesion, alSalir, alTerminarRetorno, cargarTt])
+
+  const conectarTt = async () => {
+    setOcupadoTt(true)
+    try {
+      const { url } = await api.tiktokUrl(sesion)
+      if (url.startsWith('http')) location.href = url
+      else setAvisoTt('Modo demo: no hay conexión real con TikTok.')
+    } catch (e) {
+      falla(e)
+    } finally {
+      setOcupadoTt(false)
+    }
+  }
+  const desconectarTt = async () => {
+    setOcupadoTt(true)
+    try {
+      await api.tiktokDesconectar(sesion)
+      setAvisoTt('TikTok desconectado.')
+      await cargarTt()
+    } catch (e) {
+      falla(e)
+    } finally {
+      setOcupadoTt(false)
+    }
+  }
+
   const importar = async () => {
     setImportando(true)
     try {
@@ -65,6 +135,15 @@ export function Marketing({ sesion, hoy, alSalir }: { sesion: string; hoy: strin
   }
 
   const ahora = horaCaracas()
+  const alarmas = paraAlarmas(lista ?? [], 'TikTok', hoy)
+  const bajarAlarmas = () => {
+    const url = URL.createObjectURL(new Blob([crearIcs(alarmas)], { type: 'text/calendar;charset=utf-8' }))
+    const a = Object.assign(document.createElement('a'), { href: url, download: 'bookeaa-alarmas-tiktok.ics' })
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 2000)
+  }
   const visibles = useMemo(
     () => (lista ?? []).filter((p) => (filtro === 'todas' ? true : filtro === 'pendientes' ? p.estado === 'borrador' || p.estado === 'aprobado' : p.estado === filtro)),
     [lista, filtro],
@@ -77,6 +156,29 @@ export function Marketing({ sesion, hoy, alSalir }: { sesion: string; hoy: strin
   return (
     <div>
       {error && <div role="alert" className="mb-4 rounded-2xl bg-danger/10 px-4 py-3 text-[14px] text-danger">{error}</div>}
+      {avisoTt && (
+        <div role="status" className="mb-4 flex items-start justify-between gap-3 rounded-2xl bg-sand px-4 py-3 text-[14px]">
+          <span>{avisoTt}</span>
+          <button type="button" onClick={() => setAvisoTt('')} aria-label="Cerrar aviso" className="shrink-0 text-muted">×</button>
+        </div>
+      )}
+      {tt && (
+        <section className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-surface p-4 shadow-card ring-1 ring-line" aria-label="TikTok">
+          <div className="min-w-0">
+            <p className="text-[15px] font-semibold">TikTok</p>
+            <p className="text-[13px] text-muted">
+              {tt.conectado ? <>Conectado como <b className="text-ink">{tt.usuario}</b>. Los videos llegan a tus borradores y tú los publicas.</>
+                : tt.configurado ? 'Conecta tu cuenta para mandar videos a tus borradores.'
+                : 'Faltan las claves: en el Apps Script, menú SaaS Reservas → "TikTok: guardar claves de la app".'}
+            </p>
+          </div>
+          {tt.conectado ? (
+            <button type="button" onClick={() => void desconectarTt()} disabled={ocupadoTt} className="rounded-full px-4 py-2 text-[14px] ring-1 ring-line disabled:opacity-50">Desconectar</button>
+          ) : tt.configurado ? (
+            <button type="button" onClick={() => void conectarTt()} disabled={ocupadoTt} className="rounded-full bg-ink px-5 py-2.5 text-[14px] font-semibold text-bg disabled:opacity-50">Conectar TikTok</button>
+          ) : null}
+        </section>
+      )}
 
       {lista && lista.length === 0 && (
         <section className="rounded-3xl bg-surface p-6 text-center shadow-card ring-1 ring-line">
@@ -106,9 +208,16 @@ export function Marketing({ sesion, hoy, alSalir }: { sesion: string; hoy: strin
                 </button>
               ))}
             </div>
-            <button type="button" onClick={() => void importar()} disabled={importando} className="text-[13px] text-muted underline underline-offset-4 disabled:opacity-50">
-              {importando ? 'Importando…' : 'Importar calendario'}
-            </button>
+            <div className="flex flex-wrap justify-end gap-x-4 gap-y-1">
+              {alarmas.length > 0 && (
+                <button type="button" onClick={bajarAlarmas} className="text-[13px] font-semibold underline underline-offset-4">
+                  Alarmas de TikTok ({alarmas.length})
+                </button>
+              )}
+              <button type="button" onClick={() => void importar()} disabled={importando} className="text-[13px] text-muted underline underline-offset-4 disabled:opacity-50">
+                {importando ? 'Importando…' : 'Importar calendario'}
+              </button>
+            </div>
           </div>
 
           {vista === 'cola' && (
@@ -133,7 +242,7 @@ export function Marketing({ sesion, hoy, alSalir }: { sesion: string; hoy: strin
       )}
 
       {abierta && (
-        <Detalle pub={abierta} sesion={sesion} onCerrar={() => setAbierta(null)} onCambio={async () => { setAbierta(null); await cargar() }} falla={falla} />
+        <Detalle tt={tt} pub={abierta} sesion={sesion} onCerrar={() => setAbierta(null)} onCambio={async () => { setAbierta(null); await cargar() }} falla={falla} />
       )}
     </div>
   )
@@ -233,10 +342,12 @@ function Calendario({ lista, mes, hoy, dia, ahora, onMes, onDia, onAbrir }: {
   )
 }
 
-function Detalle({ pub, sesion, onCerrar, onCambio, falla }: { pub: api.Publicacion; sesion: string; onCerrar: () => void; onCambio: () => Promise<void>; falla: (e: unknown) => void }) {
+function Detalle({ tt, pub, sesion, onCerrar, onCambio, falla }: { tt: api.EstadoTikTok | null; pub: api.Publicacion; sesion: string; onCerrar: () => void; onCambio: () => Promise<void>; falla: (e: unknown) => void }) {
   const [f, setF] = useState({ fecha: pub.fecha, hora: pub.hora, titulo: pub.titulo, caption: pub.caption, hashtags: pub.hashtags, media: pub.media, notas: pub.notas })
   const [guardando, setGuardando] = useState(false)
   const [copiado, setCopiado] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const [aviso, setAviso] = useState('')
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onCerrar()
     window.addEventListener('keydown', esc)
@@ -263,6 +374,20 @@ function Detalle({ pub, sesion, onCerrar, onCambio, falla }: { pub: api.Publicac
       setTimeout(() => setCopiado(false), 1800)
     } catch {
       /* sin portapapeles: se copia a mano */
+    }
+  }
+  const esVideo = pub.tipo.startsWith('video')
+  const enviarTt = async () => {
+    setEnviando(true)
+    setAviso('')
+    try {
+      const r = await api.tiktokEnviar(sesion, pub.id)
+      setAviso(`Enviado a los borradores de ${r.usuario || 'tu TikTok'}. Abre TikTok, toca la notificación de tu bandeja y publícalo.`)
+    } catch (e) {
+      if (e instanceof api.ErrorCentral && e.codigo === 'sesion') return falla(e)
+      setAviso((e as Error).message)
+    } finally {
+      setEnviando(false)
     }
   }
   const estados: [api.EstadoPublicacion, string][] =
@@ -296,8 +421,8 @@ function Detalle({ pub, sesion, onCerrar, onCambio, falla }: { pub: api.Publicac
             <textarea value={f.caption} rows={5} maxLength={2200} onChange={(e) => setF({ ...f, caption: e.target.value })} className={claseInput} />
           </Campo>
           <Campo etiqueta="Hashtags"><input value={f.hashtags} onChange={(e) => setF({ ...f, hashtags: e.target.value })} className={claseInput} /></Campo>
-          <Campo etiqueta="Link del video o las imágenes" ayuda="Debe ser un link público (no de Drive) para que Instagram lo pueda descargar.">
-            <input value={f.media} inputMode="url" placeholder="https://…" onChange={(e) => setF({ ...f, media: e.target.value })} className={claseInput} />
+          <Campo etiqueta="Link del video o de las imágenes" ayuda="Links públicos (no de Drive): Instagram no los puede descargar de Drive. En un carrusel, un link por lámina y en orden. Make solo publica si hay link.">
+            <textarea value={f.media} rows={pub.tipo === 'carrusel' ? 4 : 2} inputMode="url" placeholder="https://…" onChange={(e) => setF({ ...f, media: e.target.value })} className={claseInput + ' text-[14px]'} />
           </Campo>
           <Campo etiqueta="Notas"><input value={f.notas} onChange={(e) => setF({ ...f, notas: e.target.value })} className={claseInput} /></Campo>
         </div>
@@ -309,10 +434,23 @@ function Detalle({ pub, sesion, onCerrar, onCambio, falla }: { pub: api.Publicac
           ))}
           {cambios.length > 0 && <button type="button" disabled={guardando} onClick={() => void guardar()} className="rounded-full bg-ink px-5 py-3 text-[15px] font-semibold text-bg disabled:opacity-50">Guardar cambios</button>}
           <button type="button" onClick={() => void copiar()} className="rounded-full px-5 py-3 text-[15px] ring-1 ring-line">{copiado ? '¡Copiado!' : 'Copiar texto'}</button>
+          {f.media.trim() && (
+            <a href={f.media.trim().split(/\s+/)[0]} target="_blank" rel="noreferrer" className="rounded-full px-5 py-3 text-[15px] ring-1 ring-line">Abrir {pub.tipo === 'carrusel' ? 'primera imagen' : 'video'}</a>
+          )}
           {pub.estado !== 'omitido' && pub.estado !== 'publicado' && (
             <button type="button" disabled={guardando} onClick={() => void guardar({ estado: 'omitido' })} className="rounded-full px-5 py-3 text-[15px] text-muted underline underline-offset-4 disabled:opacity-50">Omitir</button>
           )}
         </div>
+        {esVideo && tt?.conectado && f.media.trim() && (
+          <div className="mt-4 rounded-3xl bg-sand p-4">
+            <p className="text-[14px]">Se enviará como borrador a <b>{tt.usuario}</b> en TikTok.</p>
+            <button type="button" onClick={() => void enviarTt()} disabled={enviando || cambios.includes('media')} className="mt-2 rounded-full bg-ink px-5 py-2.5 text-[14px] font-semibold text-bg disabled:opacity-50">
+              {enviando ? 'Enviando…' : 'Enviar a TikTok (borrador)'}
+            </button>
+            {cambios.includes('media') && <p className="mt-1 text-[12px] text-muted">Guarda el link nuevo antes de enviar.</p>}
+            {aviso && <p role="status" className="mt-2 text-[13px]">{aviso}</p>}
+          </div>
+        )}
         <p className="mt-3 text-[12px] text-muted">{capitalize(formatLongDate(pub.fecha))}</p>
       </div>
     </div>
