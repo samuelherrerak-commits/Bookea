@@ -7,3 +7,6 @@ dist
 
 # Renders de la campaña (se regeneran con los scripts de marketing/scripts)
 marketing/salida/
+
+# Muestra de voz de Samuel: no se sube a repos públicos
+marketing/personal/fyp/voz-samuel/

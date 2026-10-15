@@ -24,14 +24,17 @@ const FFMPEG =
 const args = process.argv.slice(2)
 const opcion = (n, def) => (args.includes(n) ? args[args.indexOf(n) + 1] : def)
 const flags = new Set(['--voz', '--vel', '--cuadros'])
-const ids = args.filter((a, i) => !a.startsWith('--') && !flags.has(args[i - 1]))
-const VOZ = opcion('--voz', 'es_MX-claude-high')
+const VOZ = opcion('--voz', 'samuel') // 'samuel' = tu voz clonada (Qwen3-TTS); o una voz de Piper (es_MX-claude-high…)
 const VEL = opcion('--vel', '0.9')
 const CUADROS = opcion('--cuadros', null)
 const COLA = 1.4 // segundos de pantalla final (CTA) después de la última palabra
 const LEAD = 0.35
 
 const todos = JSON.parse(readFileSync(join(RAIZ, 'fyp', 'videos.json'), 'utf8'))
+// --todos: todos los videos que ya tienen escenas (MG y VOZ), en orden. Pensado para dejarlo corriendo de fondo.
+const ids = args.includes('--todos')
+  ? todos.filter((v) => v.escenas && v.tipo !== 'CAM').map((v) => v.id)
+  : args.filter((a, i) => !a.startsWith('--') && !flags.has(args[i - 1]))
 const correr = (cmd, a, o = {}) => {
   const r = spawnSync(cmd, a, { stdio: 'inherit', cwd: RAIZ, ...o })
   if (r.status !== 0) throw new Error(`${cmd} salió con ${r.status}`)
@@ -86,7 +89,7 @@ for (const id of ids) {
   if (v.tipo === 'VOZ') {
     const wav = join(TMP, `${id}-voz.wav`)
     const json = join(TMP, `${id}-palabras.json`)
-    correr('python3', [join(RAIZ, 'fyp', 'voz.py'), v.vozTexto, wav, json, '--voz', VOZ, '--vel', VEL])
+    correr('python3', VOZ === 'samuel' ? [join(RAIZ, 'fyp', 'voz_clon.py'), v.vozTexto, wav, json] : [join(RAIZ, 'fyp', 'voz.py'), v.vozTexto, wav, json, '--voz', VOZ, '--vel', VEL])
     const { duracionVoz, palabras } = JSON.parse(readFileSync(json, 'utf8'))
     voz = `tmp/fyp/${id}-voz.wav`
     total = Math.round((duracionVoz + COLA) * 10) / 10
