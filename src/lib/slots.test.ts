@@ -22,6 +22,8 @@ const config: BusinessConfig = {
   metodosPago: [],
   heroTitulo: '',
   heroSubtitulo: '',
+  facturacionModo: 'interno',
+  ticketReserva: true,
 }
 
 describe('zonedParts', () => {

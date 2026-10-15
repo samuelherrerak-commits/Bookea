@@ -162,6 +162,8 @@ export async function mockValidateCoupon(codigo: string): Promise<Coupon> {
   return c
 }
 
+let reciboDemo = 0
+
 export async function mockSubmitReservation(payload: ReservationPayload): Promise<ReservationResult> {
   await wait(900)
   console.info('[demo] Reservación que se enviaría al Apps Script:', {
@@ -174,5 +176,6 @@ export async function mockSubmitReservation(payload: ReservationPayload): Promis
     totalBs: null,
     tasa: null,
     comprobanteUrl: payload.comprobante ? 'https://drive.google.com/file/d/demo/view' : null,
+    recibo: ++reciboDemo,
   }
 }

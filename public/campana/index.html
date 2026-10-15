@@ -114,6 +114,14 @@
   nav.meses { display: flex; gap: 8px; flex-wrap: wrap; }
   nav.meses a { font: 700 14px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; padding: 9px 14px; border-radius: 99px; border: 2px solid var(--line); }
   nav.meses a[aria-current] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .trio { padding-block: 26px; border-top: 2px solid var(--line); display: grid; gap: 14px; }
+  .trio .fila { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .trio figure { margin: 0; display: grid; gap: 8px; align-content: start; min-width: 0; }
+  .trio img { width: 100%; height: auto; aspect-ratio: 9 / 16; border-radius: 12px; border: 1px solid var(--line); }
+  .trio figcaption { font-size: 14px; color: var(--muted); }
+  .trio figcaption b { display: block; color: var(--fg); font: 700 13px/1.2 var(--display); letter-spacing: 0.1em; text-transform: uppercase; }
+  .trio figcaption a { color: inherit; }
+  @media (max-width: 560px) { .trio .fila { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .trio figcaption { font-size: 12px; } }
   footer { padding-top: 70px; color: var(--muted); font-size: 15px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -126,12 +134,12 @@
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="28" height="26" rx="7" fill="currentColor"/><path d="M10 2.5v5M22 2.5v5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="var(--bg)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>
       bookeaa
     </div>
-    <nav class="meses" aria-label="Campañas"><a href="/campana/index.html" aria-current="page">Octubre · Lanzamiento</a><a href="/campana/noviembre/index.html">Noviembre · Tu negocio</a></nav>
+    <nav class="meses" aria-label="Campañas"><a href="/campana/index.html" aria-current="page">Octubre · Lanzamiento</a><a href="/campana/noviembre/index.html">Noviembre · Tu negocio</a><a href="/campana/marca/index.html">Marca · Instagram · WhatsApp</a></nav>
     <p class="kicker">Instagram · 5 al 29 de octubre de 2026</p>
     <h1>Campaña de lanzamiento</h1>
     <span class="regla"></span>
     <div class="resumen">
-      <span><b>4</b> reels</span><span><b>7</b> carruseles</span><span><b>4</b> semanas</span><span><b>1</b> oferta: 1 mes gratis</span>
+      <span><b>4</b> reels</span><span><b>7</b> carruseles</span><span><b>39</b> historias</span><span><b>4</b> semanas</span><span><b>1</b> oferta: 1 mes gratis</span>
     </div>
     <div class="descargas">
       <a class="descargar" href="#reels">Ver los reels ↓</a>
@@ -166,14 +174,14 @@
           <li>Las reservas llegan solas, las 24 horas.</li>
           <li>Todo queda en tu Google Calendar, sin choques.</li>
           <li>Tu página se ve como tu negocio: 8 estilos y tus colores.</li>
-          <li>1 mes gratis, luego $15 al mes con todo incluido.</li>
+          <li>1 mes gratis, luego $10 al mes con todo incluido.</li>
         </ul>
       </div>
       <div class="caja">
         <p class="kicker">Antes de publicar</p>
         <ul class="lista">
           <li>Bio: "Tu agenda online, sin libreta. Reservas 24/7 + Google Calendar. 1 mes gratis 👇"</li>
-          <li>Link de la bio: WhatsApp +58 412 029 8203 con el mensaje de la prueba (el mismo del botón de la landing).</li>
+          <li>Link de la bio: WhatsApp +58 422 029 8203 con el mensaje de la prueba (el mismo del botón de la landing).</li>
           <li>Fijar arriba en el perfil: carrusel 1, video 1 y carrusel 7.</li>
           <li>Publicar a las 7:00 p. m. y responder comentarios en la primera hora.</li>
         </ul>
@@ -220,6 +228,27 @@
     <div id="lista-carruseles"></div>
   </section>
 
+  <section id="historias" aria-labelledby="t-historias">
+    <p class="kicker">Historias · 1080×1920 · todos los días hábiles</p>
+    <h2 id="t-historias">39 historias: 9 tríos y 12 sueltas</h2>
+    <p class="muted">Cada trío toca un dolor del dueño del negocio, muestra bookeaa como la salida y cierra con lo que gana: respeto, tiempo libre, citas que no se escapan, cobros claros. Sube las tres seguidas el mismo día, a las 12:00 p. m. En la primera agrega la encuesta y en la última el sticker de enlace a WhatsApp: la zona queda libre para eso. Los demás días hábiles va una historia suelta (encuesta, pregunta, quiz, slider o tip) para conversar. Las etiquetas de aquí son solo para ti: en las imágenes no aparecen.</p>
+    <div class="descargas"><a class="descargar" href="/campana/media/bookeaa-historias-octubre.zip" download>Descargar las 39 historias (ZIP)</a></div>
+    <div id="lista-historias-oct"></div>
+  </section>
+
+  <section id="tarjetas" aria-labelledby="t-tarjetas">
+    <p class="kicker">Impresos · 9 × 5 cm, frente y dorso</p>
+    <h2 id="t-tarjetas">Tarjetas de presentación</h2>
+    <p class="muted">Tres propuestas para repartir en la calle. El QR lleva a bookeaa.com. Cada PDF trae 2 páginas (frente y dorso) de 96 × 56 mm: la tarjeta de 90 × 50 más 3 mm de sangrado por lado, con el texto a 4 mm o más del corte. Pídele a la imprenta que lo corte a 90 × 50 mm.</p>
+    <img src="/campana/tarjetas/propuestas.jpg" alt="Las 3 propuestas de tarjeta, frente y dorso" loading="lazy" width="1400" height="954" style="width:100%;height:auto;border-radius:12px;border:1px solid var(--line)" />
+    <div class="descargas">
+      <a class="descargar" href="/campana/tarjetas/bookeaa-tarjeta-1.pdf" download>1 · Sin libreta (PDF)</a>
+      <a class="descargar" href="/campana/tarjetas/bookeaa-tarjeta-2.pdf" download>2 · Minimal (PDF)</a>
+      <a class="descargar" href="/campana/tarjetas/bookeaa-tarjeta-3.pdf" download>3 · Nueva reserva (PDF)</a>
+      <a class="descargar" href="/campana/tarjetas/bookeaa-tarjetas-png.zip" download>Las 6 caras en PNG, 600 dpi (ZIP)</a>
+    </div>
+  </section>
+
   <section id="leads" aria-labelledby="t-leads">
     <p class="kicker">Cuando escriben</p>
     <h2 id="t-leads">Respuesta por WhatsApp</h2>
@@ -243,6 +272,7 @@ Con eso te dejo tu página lista. El primer mes es gratis y no necesitas tarjeta
   </footer>
 </div>
 
+<script src="/campana/historias-octubre.js"></script>
 <script>
   const TAGS_BASE = '#agendaonline #reservasonline #citasonline #emprendedores #negociosvenezuela'
 
@@ -258,7 +288,7 @@ Con eso te dejo tu página lista. El primer mes es gratis y no necesitas tarjeta
         ['0:15', 'Tu cliente elige servicio y hora: dos pantallas reales del flujo.'],
         ['0:20', 'Y cae en tu Google Calendar: aparece el evento de la cita.'],
         ['0:25', 'Tu marca, tus colores: tres plantillas en abanico.'],
-        ['0:29', 'Cierre: 1 mes gratis, luego $15 al mes. Escríbenos, link en la bio.'],
+        ['0:29', 'Cierre: 1 mes gratis, luego $10 al mes. Escríbenos, link en la bio.'],
       ],
       caption: 'Si tu agenda es una libreta y diez chats abiertos, esto es para ti 👇\n\nbookeaa es tu página de reservas: compartes tu link, tus clientes eligen servicio, día y hora, y la cita cae sola en tu Google Calendar.\n\nSin mensajes de ida y vuelta. Sin citas cruzadas.\n\nPrueba 1 mes gratis. Escríbenos por WhatsApp desde el link de la bio.',
       tags: '#bookeaa #agendadigital #googlecalendar #barberia #uñas',
@@ -301,10 +331,10 @@ Con eso te dejo tu página lista. El primer mes es gratis y no necesitas tarjeta
         ['0:03', 'Para quién: barberías, uñas, consultorios, estética, spas, tatuajes, entrenadores.'],
         ['0:07', 'Una o varias sedes, o a domicilio: pantalla real del selector de lugar.'],
         ['0:12', 'Tu mensaje de WhatsApp: cálido, formal o breve.'],
-        ['0:16', 'Precio: $0 por 30 días, luego $15 al mes con todo incluido.'],
+        ['0:16', 'Precio: $0 por 30 días, luego $10 al mes con todo incluido.'],
         ['0:21', 'Cierre: 1 mes gratis. Escríbenos.'],
       ],
-      caption: 'Barberías, uñas, consultorios, estética, spas, tatuajes, entrenadores… si trabajas con cita, bookeaa es para ti.\n\n✓ Una o varias sedes, o a domicilio\n✓ Todo en tu Google Calendar\n✓ Tu mensaje de WhatsApp, a tu manera\n\n30 días gratis. Luego $15 al mes con todo incluido. Sin tarjeta.\n\nEscríbenos por WhatsApp desde el link de la bio y te dejamos tu página lista.',
+      caption: 'Barberías, uñas, consultorios, estética, spas, tatuajes, entrenadores… si trabajas con cita, bookeaa es para ti.\n\n✓ Una o varias sedes, o a domicilio\n✓ Todo en tu Google Calendar\n✓ Tu mensaje de WhatsApp, a tu manera\n\n30 días gratis. Luego $10 al mes con todo incluido. Sin tarjeta.\n\nEscríbenos por WhatsApp desde el link de la bio y te dejamos tu página lista.',
       tags: '#bookeaa #consultorio #tatuajes #entrenadorpersonal #agendaonline',
     },
   ]
@@ -323,7 +353,7 @@ Con eso te dejo tu página lista. El primer mes es gratis y no necesitas tarjeta
     { n: 6, titulo: 'Hecho para tu tipo de negocio', fecha: 'Vie 23 oct', laminas: 6,
       caption: '¿Consultorio? ¿Barbería? ¿Spa? bookeaa se adapta a cómo trabajas:\n\n→ Tu página dice el nombre de tu lugar\n→ Una o varias sedes, con una sola agenda\n→ Domicilio con recargo y minutos de traslado\n→ Tu mensaje de WhatsApp: cálido, formal o breve\n\nEtiqueta a alguien que necesita esto 👇', tags: '#bookeaa #barberia #consultorio #spa' },
     { n: 7, titulo: 'Precio y preguntas', fecha: 'Jue 29 oct', laminas: 5,
-      caption: '¿Cuánto cuesta bookeaa?\n\nEl primer mes, nada: 30 días gratis con todo incluido y sin tarjeta.\nDespués, $15 al mes. Reservas ilimitadas, Google Calendar, tu página con tu marca, los 8 estilos, sedes, domicilio y soporte por WhatsApp.\n\nEscríbenos desde el link de la bio y te dejamos tu página lista.', tags: '#bookeaa #precios #emprendimiento' },
+      caption: '¿Cuánto cuesta bookeaa?\n\nEl primer mes, nada: 30 días gratis con todo incluido y sin tarjeta.\nDespués, $10 al mes. Reservas ilimitadas, Google Calendar, tu página con tu marca, los 8 estilos, sedes, domicilio y soporte por WhatsApp.\n\nEscríbenos desde el link de la bio y te dejamos tu página lista.', tags: '#bookeaa #precios #emprendimiento' },
   ]
 
   const el = (tag, attrs = {}, ...kids) => {
@@ -369,6 +399,26 @@ Con eso te dejo tu página lista. El primer mes es gratis y no necesitas tarjeta
       el('div', { class: 'tira', tabindex: '0', 'aria-label': `Láminas de ${c.titulo}` }, imgs),
       el('a', { class: 'descargar', href: `/campana/media/bookeaa-carrusel-${c.n}.zip`, download: '', text: `Descargar carrusel ${c.n} (ZIP, 1080×1350)` }),
       bloqueCopia(`cap-c${c.n}`, `${c.caption}\n\n${c.tags} ${TAGS_BASE}`),
+    ))
+  })
+
+  // Historias de octubre, por día: un trío o una suelta
+  const listaHO = document.getElementById('lista-historias-oct')
+  const FASES = { problema: 'El problema', solucion: 'La solución', recompensa: 'Lo que ganas', sencilla: 'Suelta' }
+  const dias = {}
+  ;(window.HISTORIAS_OCTUBRE || []).forEach((h) => (dias[h.dia] ||= []).push(h))
+  Object.keys(dias).sort().forEach((dia) => {
+    const hs = dias[dia]
+    const suelta = hs[0].fase === 'sencilla'
+    listaHO.append(el('article', { class: 'trio', id: suelta ? `dia-${dia}` : `trio-${hs[0].trio}` },
+      el('p', { class: 'kicker', text: `${hs[0].fecha} · ${suelta ? 'Historia suelta · ' + hs[0].kicker : hs[0].angulo}` }),
+      el('div', { class: 'fila' }, hs.map((h) => {
+        const src = `/campana/media/historias-octubre/${String(h.id).padStart(2, '0')}.jpg`
+        const st = h.sticker ? `${h.sticker.tipo}: ${h.sticker.texto}${h.sticker.opciones ? ' · ' + h.sticker.opciones.join(' / ') : ''}` : 'Sin sticker'
+        return el('figure', {},
+          el('img', { src, alt: `${FASES[h.fase]}: ${h.titulo.join(' ')}`, loading: 'lazy', width: '1080', height: '1920' }),
+          el('figcaption', {}, el('b', { text: suelta ? FASES[h.fase] : `${h.paso}/3 · ${FASES[h.fase]}` }), st + ' · ', el('a', { href: src, download: `bookeaa-octubre-${String(h.id).padStart(2, '0')}.jpg`, text: 'Descargar' })))
+      })),
     ))
   })
 

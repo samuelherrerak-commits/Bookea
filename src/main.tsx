@@ -9,21 +9,40 @@ import { createRoot } from 'react-dom/client'
 import { Toaster } from 'sonner'
 import App from './App'
 import { readCatalogCache } from './lib/catalogCache'
+import { registrarServiceWorker } from './lib/pwa'
 import { applyBranding } from './lib/theme'
 import { slugFromLocation } from './lib/tenant'
 import { OrderProvider } from './state/order'
 
-// /campana y /campana/noviembre son páginas estáticas (public/campana/). Si el servidor cae
-// en la app (por ejemplo sin la barra final), se manda al archivo real.
-const campana = window.location.pathname.match(/^\/campana(\/noviembre)?\/?$/)
-if (campana) window.location.replace(`/campana${campana[1] ?? ''}/index.html`)
+// /campana (y /campana/noviembre y /campana/marca), /proyeccion, /terminos, /privacidad, /guia-legal y /ar, /ar1… son
+// páginas estáticas (public/). Si el servidor cae en la app (por ejemplo sin la barra final), se manda al archivo real.
+const estatica = window.location.pathname.match(/^\/(campana(?:\/noviembre|\/marca)?|proyeccion|terminos|privacidad|guia-legal|ar\d*)\/?$/)
+if (estatica) window.location.replace(`/${estatica[1]}/index.html`)
 
 const slug = slugFromLocation()
 const root = createRoot(document.getElementById('root')!)
 
-// La raíz del dominio (sin /u/<slug>) es la landing de bookeaa. Va en su propio
-// chunk para que quien reserva en un negocio no descargue la landing.
-if (!slug) {
+// /central: la central de bookeaa (administración de los negocios). Su propio chunk.
+if (/^\/central\/?$/.test(window.location.pathname)) {
+  void import('./central/CentralApp').then(({ default: CentralApp }) => {
+    root.render(
+      <StrictMode>
+        <CentralApp />
+      </StrictMode>,
+    )
+  })
+} else if (/^\/negocio\/?$/.test(window.location.pathname)) {
+  // /negocio: la app de cada dueño ("Mi negocio"). Su propio chunk.
+  void import('./negocio/NegocioApp').then(({ default: NegocioApp }) => {
+    root.render(
+      <StrictMode>
+        <NegocioApp />
+      </StrictMode>,
+    )
+  })
+} else if (!slug) {
+  // La raíz del dominio (sin /u/<slug>) es la landing de bookeaa. Va en su propio
+  // chunk para que quien reserva en un negocio no descargue la landing.
   void import('./landing/Landing').then(({ default: Landing }) => {
     root.render(
       <StrictMode>
@@ -69,3 +88,5 @@ if (!slug) {
     </StrictMode>,
   )
 }
+
+registrarServiceWorker()

@@ -102,3 +102,49 @@ describe('Code.gs · topes anti-spam', () => {
     expect(vencido.tokenValido_(viejo)).toBe(false)
   })
 })
+
+describe('Code.gs · montos en el calendario', () => {
+  const { lineaTotalEvento_ } = funcionesGs<{ lineaTotalEvento_: (o: object, m: string, bs: number | null, t: number | null) => string }>(
+    gs,
+    ['lineaTotalEvento_'],
+  )
+  const orden = { total: 18, recargo: 0 }
+
+  it('con pago en la cita guarda solo el valor de referencia', () => {
+    const l = lineaTotalEvento_(orden, 'EUR', null, null)
+    expect(l).toBe('Total (referencia): 18.00 EUR')
+    expect(l).not.toMatch(/Bs/)
+  })
+
+  it('con Pago Móvil agrega lo pagado en bolívares y la tasa', () => {
+    expect(lineaTotalEvento_(orden, 'USD', 720, 40)).toBe('Total (referencia): 18.00 USD · pagado Bs. 720.00 (tasa BCV 40.00)')
+  })
+
+  it('en bolívares el total ya es el monto', () => {
+    expect(lineaTotalEvento_({ total: 720, recargo: 0 }, 'BS', null, null)).toBe('Total: Bs. 720.00')
+  })
+})
+
+describe('logo subido (Code.gs y Configurador.gs validan igual)', () => {
+  const cfgGs = Object.values(import.meta.glob('../../apps-script/cliente/Configurador.gs', { query: '?raw', import: 'default', eager: true }) as Record<string, string>)[0] ?? ''
+  const Utilities = { base64Decode: (b: string) => Array.from(Buffer.from(b, 'base64')).map((x) => (x > 127 ? x - 256 : x)) }
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+  const maestro = funcionesGs<{ logoValido_: (v: string) => boolean }>(gs, ['logoValido_', 'esImagen_', 'bytesDe_'], { Utilities, LOGO_MAX: 45000 })
+  const cliente = funcionesGs<{ logoValido_: (v: string) => boolean }>(cfgGs, ['logoValido_'], { Utilities, LOGO_MAX: 45000 })
+
+  it('acepta un PNG real y rechaza lo demás', () => {
+    for (const v of [maestro, cliente]) {
+      expect(v.logoValido_(PNG)).toBe(true)
+      expect(v.logoValido_('data:image/png;base64,' + Buffer.from('<html>no soy imagen</html>').toString('base64'))).toBe(false)
+      expect(v.logoValido_('data:image/svg+xml;base64,PHN2Zz4=')).toBe(false)
+      expect(v.logoValido_('javascript:alert(1)')).toBe(false)
+      expect(v.logoValido_(PNG + 'A'.repeat(46000))).toBe(false)
+    }
+  })
+
+  it('el logo se agrega al JSON del catálogo sin romperlo', () => {
+    const { conLogo_ } = funcionesGs<{ conLogo_: (t: string, l: string) => string }>(gs, ['conLogo_'])
+    expect(JSON.parse(conLogo_('{"negocio":"X"}', PNG))).toEqual({ logo: PNG, negocio: 'X' })
+    expect(conLogo_('{"negocio":"X"}', '')).toBe('{"negocio":"X"}')
+  })
+})

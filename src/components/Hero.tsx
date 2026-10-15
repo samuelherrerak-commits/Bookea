@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useState } from 'react'
 import { DEMO_MODE } from '../config'
 import { toHHMM } from '../lib/format'
 import { spring } from '../lib/motion'
@@ -77,6 +78,8 @@ function HeroSkeleton() {
 }
 
 export function Hero({ config, loading = false }: { config: BusinessConfig | null; loading?: boolean }) {
+  // El hook va antes de cualquier return: React exige el mismo orden en cada render.
+  const [logoRoto, setLogoRoto] = useState('')
   if (loading) return <HeroSkeleton />
   const c = config ?? DEFAULT_CONFIG
   const marca = (c.marca || c.nombreNegocio).trim() || DEFAULT_CONFIG.marca
@@ -90,8 +93,15 @@ export function Hero({ config, loading = false }: { config: BusinessConfig | nul
       <div aria-hidden className="halo pointer-events-none absolute -left-20 top-24 size-56 rounded-full bg-sand blur-3xl" />
 
       <div className="relative flex items-center justify-between">
-        {c.logoUrl ? (
-          <img src={c.logoUrl} alt={marca} className="h-9 w-auto max-w-[60vw] object-contain" />
+        {c.logoUrl && logoRoto !== c.logoUrl ? (
+          <img
+            src={c.logoUrl}
+            alt={marca}
+            referrerPolicy="no-referrer"
+            // Si la imagen no carga (enlace vencido o sin permiso), se muestra el nombre.
+            onError={() => setLogoRoto(c.logoUrl)}
+            className="h-9 w-auto max-w-[60vw] object-contain"
+          />
         ) : (
           <Wordmark marca={marca} />
         )}

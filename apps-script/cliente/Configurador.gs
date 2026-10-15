@@ -21,8 +21,9 @@ const CLAVES_POR_SECCION = {
   estilo: ['tema_estilo', 'color_principal', 'color_fondo', 'paleta'],
   lugar: ['lugar_tipo', 'lugar_nombre', 'permite_domicilio', 'recargo_domicilio_pct', 'minutos_extra_domicilio'],
   mensaje: ['mensaje_plantilla'],
-  horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria'],
+  horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria', 'recordatorio_minutos'],
   pagos: ['whatsapp', 'moneda', 'metodos_pago', 'pm_banco', 'pm_telefono', 'pm_cedula', 'tasa_eur_manual', 'tasa_usd_manual'],
+  comprobantes: ['facturacion_modo', 'ticket_reserva', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
 };
 
 /** Mismo texto que Code.gs y src/lib/mensajes.ts: "Restaurar las originales" las vuelve a escribir. */
@@ -145,6 +146,7 @@ function leerTodo() {
     }).filter(function (m) { return m.nombre; }),
     faltan: faltan,
     paginaUrl: paginaUrl_(config),
+    logoData: leerLogo_(ss),
   };
 }
 
@@ -178,6 +180,56 @@ function guardar(seccion, datos) {
   } finally {
     lock.releaseLock();
   }
+  return { ok: true, errores: [], refrescada: refrescarPagina_(leerConfig_(ss)) };
+}
+
+// ---------- Logo ----------
+// La ventana comprime el logo en el navegador (≤ 320 px) y lo manda como data URL.
+// Se guarda en la pestaña oculta "Logo" (A2); el maestro lo lee de ahí y lo sirve con la página.
+const LOGO_MAX = 45000;
+
+function leerLogo_(ss) {
+  const sheet = ss.getSheetByName('Logo');
+  const v = sheet ? String(sheet.getRange('A2').getValue() || '').trim() : '';
+  return logoValido_(v) ? v : '';
+}
+
+/** JPEG, PNG o WEBP de verdad (por sus bytes), en data URL y de tamaño razonable. */
+function logoValido_(valor) {
+  const v = String(valor || '').trim();
+  const m = /^data:image\/(png|webp|jpeg);base64,([A-Za-z0-9+\/=]+)$/.exec(v);
+  if (!m || v.length > LOGO_MAX) return false;
+  let bytes;
+  try { bytes = Utilities.base64Decode(m[2]); } catch (_) { return false; }
+  if (!bytes || bytes.length < 12) return false;
+  const b = function (i) { return bytes[i] & 0xff; };
+  const ascii = function (i, n) { let t = ''; for (let k = i; k < i + n; k++) t += String.fromCharCode(b(k)); return t; };
+  return (b(0) === 0xff && b(1) === 0xd8 && b(2) === 0xff) ||
+    (b(0) === 0x89 && ascii(1, 3) === 'PNG') ||
+    (ascii(0, 4) === 'RIFF' && ascii(8, 4) === 'WEBP');
+}
+
+function guardarLogo(dataUrl) {
+  if (!logoValido_(dataUrl)) {
+    return { ok: false, errores: ['La imagen no se pudo guardar. Prueba con un PNG o JPG más liviano.'], refrescada: false };
+  }
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Logo');
+  if (!sheet) {
+    sheet = ss.insertSheet('Logo');
+    sheet.getRange('A1').setValue('Logo (lo maneja la ventana de configuración; no lo edites)');
+    sheet.hideSheet();
+  }
+  sheet.getRange('A2').setValue(String(dataUrl).trim());
+  SpreadsheetApp.flush();
+  return { ok: true, errores: [], refrescada: refrescarPagina_(leerConfig_(ss)) };
+}
+
+function quitarLogo() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Logo');
+  if (sheet) sheet.getRange('A2').clearContent();
+  SpreadsheetApp.flush();
   return { ok: true, errores: [], refrescada: refrescarPagina_(leerConfig_(ss)) };
 }
 
@@ -237,12 +289,27 @@ function validar_(seccion, datos) {
     numero('intervalo_min', 5, 240);
     numero('dias_anticipacion', 1, 365);
     numero('anticipacion_min_horas', 0, 168);
+    if (!alertasValidas_(c.recordatorio_minutos)) {
+      errores.push('Alerta: elige hasta 5 tiempos, de 0 minutos a 4 semanas antes de la cita.');
+    }
     (datos.horarios || []).forEach(function (h) {
       if (!h.inicio && !h.fin) return;
       if (!/^\d{1,2}:\d{2}$/.test(h.inicio || '') || !/^\d{1,2}:\d{2}$/.test(h.fin || '') || minutos_(h.fin) <= minutos_(h.inicio)) {
         errores.push(h.dia + ': revisa las horas (la de cierre va después de la de apertura).');
       }
     });
+  }
+  if (seccion === 'comprobantes') {
+    const modo = String(c.facturacion_modo || 'interno').trim().toLowerCase();
+    if (modo !== 'interno' && modo !== 'fiscal') errores.push('Elige un modo: control interno o facturación fiscal.');
+    const ticket = String(c.ticket_reserva || 'si').trim().toLowerCase();
+    if (ticket !== 'si' && ticket !== 'no') errores.push('Ticket de reserva: elige si se emite o no.');
+    if (modo === 'fiscal') {
+      if (!/^[VJEGP]-?\d{6,9}-?\d$/i.test(String(c.facturacion_rif || '').trim())) {
+        errores.push('Escribe tu RIF completo, por ejemplo J-12345678-9.');
+      }
+      if (!String(c.facturacion_razon_social || '').trim()) errores.push('Escribe tu nombre o razón social como sale en el RIF.');
+    }
   }
   if (seccion === 'pagos' && c.whatsapp && String(c.whatsapp).replace(/\D/g, '').length < 10) {
     errores.push('El WhatsApp necesita el código de país, por ejemplo 584121234567.');
@@ -330,6 +397,14 @@ function leerConfig_(ss) {
     if (k) out[k] = String(r[1]).trim();
   });
   return out;
+}
+
+/** recordatorio_minutos: vacío, "no" o hasta 5 minutos (0–40320) separados por comas. Igual que Code.gs. */
+function alertasValidas_(valor) {
+  const v = String(valor === undefined || valor === null ? '' : valor).trim().toLowerCase();
+  if (v === '' || v === 'no') return true;
+  const partes = v.split(/[\s,;]+/);
+  return partes.length <= 5 && partes.every(function (t) { return /^\d{1,5}$/.test(t) && Number(t) <= 40320; });
 }
 
 function setClave_(sheet, clave, valor) {

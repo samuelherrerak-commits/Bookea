@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
   rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;600&family=Plus+Jakarta+Sans:wght@700&family=Newsreader:ital,wght@0,500;1,500&family=Source+Sans+3:wght@400;600&family=Nunito:wght@400;800&family=Playfair+Display:ital,wght@0,600;1,600&family=Lato:wght@400;700&family=DM+Sans:wght@400;500&family=Fraunces:ital,wght@0,600;1,600&family=Figtree:wght@400;600&display=swap"
+  href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;600&family=Plus+Jakarta+Sans:wght@700&family=Newsreader:ital,wght@0,500;1,500&family=Source+Sans+3:wght@400;600&family=Nunito:wght@400;800&family=Playfair+Display:ital,wght@0,600;1,600&family=Lato:wght@400;700&family=DM+Sans:wght@400;500&family=Fraunces:ital,wght@0,600;1,600&family=Figtree:wght@400;600&family=Chivo+Mono:wght@400;700&display=swap"
 />
 <style>
   :root {
@@ -95,6 +95,8 @@
     border: 1.5px solid var(--rule); border-radius: 999px; background: var(--paper); padding: 4px 9px 4px 5px;
     display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px;
   }
+  .chip.alerta { padding: 5px 11px; cursor: pointer; }
+  .chip.alerta[aria-pressed='true'] { border-color: var(--coal); background: var(--coal); color: var(--paper); }
   .chip i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12); display: inline-block; }
 
   /* Vista previa */
@@ -2745,6 +2747,7 @@ var Logica = (function () {
     { id: 'mensaje', titulo: 'Mensaje' },
     { id: 'horario', titulo: 'Horario' },
     { id: 'pagos', titulo: 'Pagos' },
+    { id: 'comprobantes', titulo: 'Comprobantes' },
     { id: 'qr', titulo: 'Código QR' },
   ];
   var DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -2843,7 +2846,7 @@ var Logica = (function () {
     }
     // El QR no guarda nada en la hoja: ahí el botón Guardar sobra.
     document.getElementById('guardar').style.display = S.activa === 'qr' ? 'none' : '';
-    main.appendChild(({ marca: vMarca, estilo: vEstilo, lugar: vLugar, mensaje: vMensaje, horario: vHorario, pagos: vPagos, qr: vQr })[S.activa]());
+    main.appendChild(({ marca: vMarca, estilo: vEstilo, lugar: vLugar, mensaje: vMensaje, horario: vHorario, pagos: vPagos, comprobantes: vComprobantes, qr: vQr })[S.activa]());
   }
 
   // ---------- Marca ----------
@@ -2852,10 +2855,102 @@ var Logica = (function () {
       cabecera('Marca', 'Cómo te ven tus clientes en la parte de arriba de tu página.'),
       campo('Nombre del negocio', texto('marca', 'nombre_negocio')),
       campo('Nombre que se muestra', texto('marca', 'marca'), 'Si lo dejas vacío se usa el nombre del negocio.'),
-      campo('Logo (enlace a la imagen)', texto('marca', 'logo_url', { type: 'url', placeholder: 'https://…' }),
-        'Sube el logo a Drive o a tu Instagram y pega el enlace directo a la imagen.'),
+      vLogo(),
       campo('Título grande', texto('marca', 'hero_titulo', { placeholder: 'Reserva tu cita en minutos' })),
       campo('Texto debajo del título', texto('marca', 'hero_subtitulo', { placeholder: 'Elige tus servicios y confirma por WhatsApp.' })));
+  }
+
+  // ---------- Logo ----------
+  var LOGO_MAX = 45000;
+
+  /**
+   * Achica el logo en el navegador y lo devuelve como data URL que entre en una celda:
+   * 320 px de lado mayor (si no entra, 256 y 200), con transparencia (WebP o PNG).
+   */
+  function comprimirLogo(file) {
+    return new Promise(function (resolve, reject) {
+      if (!/^image\//.test(file.type)) return reject(new Error('El archivo tiene que ser una imagen (PNG o JPG).'));
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('No pudimos leer esa imagen. Prueba con otra.')); };
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var lados = [320, 256, 200, 160];
+        for (var i = 0; i < lados.length; i++) {
+          var k = Math.min(1, lados[i] / Math.max(img.naturalWidth, img.naturalHeight));
+          var c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(img.naturalWidth * k));
+          c.height = Math.max(1, Math.round(img.naturalHeight * k));
+          var ctx = c.getContext('2d');
+          ctx.clearRect(0, 0, c.width, c.height);
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          var dato = c.toDataURL('image/webp', 0.9);
+          if (dato.indexOf('data:image/webp') !== 0) dato = c.toDataURL('image/png');
+          if (dato.length <= LOGO_MAX) return resolve(dato);
+        }
+        reject(new Error('La imagen es muy pesada. Prueba con un PNG más simple o recórtala.'));
+      };
+      img.src = url;
+    });
+  }
+
+  function vLogo() {
+    var logo = S.datos.logoData || '';
+    var aviso = h('p', { class: 'hint', 'aria-live': 'polite' });
+    var archivo = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', style: { display: 'none' } });
+    var c = L.colores(S.datos.config);
+    var vista = h('div', {
+      style: { display: 'grid', placeItems: 'center', minHeight: '86px', borderRadius: '12px', padding: '12px',
+        background: c.bg, border: '1.5px solid var(--rule)' },
+    }, logo
+      ? h('img', { src: logo, alt: 'Tu logo', style: { maxHeight: '62px', maxWidth: '100%', objectFit: 'contain' } })
+      : h('span', { class: 'hint', text: 'Todavía no subiste tu logo: se muestra el nombre del negocio.' }));
+    function ocupado(si, msg) {
+      subir.disabled = si;
+      if (quitar) quitar.disabled = si;
+      aviso.textContent = msg || '';
+    }
+    archivo.addEventListener('change', function () {
+      var f = archivo.files && archivo.files[0];
+      archivo.value = '';
+      if (!f) return;
+      ocupado(true, 'Preparando tu logo…');
+      comprimirLogo(f).then(function (dato) {
+        ocupado(true, 'Guardando…');
+        google.script.run
+          .withSuccessHandler(function (r) {
+            if (!r.ok) { ocupado(false, r.errores.join(' ')); return; }
+            S.datos.logoData = dato;
+            pintar();
+            estado(r.refrescada ? 'Logo guardado. Tu página ya lo muestra.' : 'Logo guardado. Tu página lo mostrará en unos minutos.', 'ok');
+          })
+          .withFailureHandler(function (err) { ocupado(false, ''); fallo(err); })
+          .guardarLogo(dato);
+      }, function (err) { ocupado(false, err.message); });
+    });
+    var subir = h('button', { type: 'button', class: 'btn small', text: logo ? 'Cambiar logo' : 'Subir logo', on: { click: function () { archivo.click(); } } });
+    var quitar = logo ? h('button', {
+      type: 'button', class: 'btn ghost small', text: 'Quitar logo',
+      on: { click: function () {
+        ocupado(true, 'Quitando…');
+        google.script.run
+          .withSuccessHandler(function () { S.datos.logoData = ''; pintar(); estado('Logo quitado.', 'ok'); })
+          .withFailureHandler(function (err) { ocupado(false, ''); fallo(err); })
+          .quitarLogo();
+      } },
+    }) : null;
+    var enlace = h('details', { style: { marginTop: '10px' } },
+      h('summary', { class: 'hint', style: { cursor: 'pointer' }, text: 'Usar un enlace en vez de subir la imagen' }),
+      campo('Enlace a la imagen', texto('marca', 'logo_url', { type: 'url', placeholder: 'https://…' }),
+        'Si es de Drive: Compartir → "Cualquier persona con el enlace" y pega ese enlace. Los de Instagram no sirven: vencen. El logo subido tiene prioridad.'));
+    return h('div', { class: 'field', style: { marginTop: '12px' } },
+      h('span', { style: { display: 'block', fontWeight: 600, fontSize: '13px', marginBottom: '6px' }, text: 'Logo' }),
+      vista,
+      h('div', { style: { display: 'flex', gap: '8px', marginTop: '8px' } }, subir, quitar),
+      archivo,
+      h('p', { class: 'hint', text: 'PNG con fondo transparente se ve mejor. Lo achicamos solos para que la página cargue rápido.' }),
+      aviso,
+      enlace);
   }
 
   // ---------- Estilo ----------
@@ -2927,7 +3022,9 @@ var Logica = (function () {
     prev.style.color = c.ink;
     prev.style.fontFamily = "'" + e.sans + "', sans-serif";
     prev.appendChild(h('div', { class: 'top' },
-      h('div', { class: 'wm', style: display, text: marca }),
+      S.datos.logoData
+        ? h('img', { src: S.datos.logoData, alt: marca, style: { maxHeight: '28px', maxWidth: '60%', objectFit: 'contain', display: 'block' } })
+        : h('div', { class: 'wm', style: display, text: marca }),
       h('div', { class: 'kick', style: { color: c.deep }, text: '✦ Reserva en un minuto' }),
       h('div', { class: 'title', style: display, text: titulo })));
     prev.appendChild(h('div', {
@@ -3120,7 +3217,64 @@ var Logica = (function () {
         campo('Días a mostrar', texto('horario', 'dias_anticipacion', { type: 'number', inputmode: 'numeric' }))),
       campo('Horas mínimas de aviso', texto('horario', 'anticipacion_min_horas', { type: 'number', inputmode: 'numeric' }),
         'Cuánto antes tienen que reservar para hoy.'),
-      campo('Zona horaria', seleccion('horario', 'zona_horaria', ZONAS.map(function (z) { return [z, z.replace(/_/g, ' ')]; }))));
+      campo('Zona horaria', seleccion('horario', 'zona_horaria', ZONAS.map(function (z) { return [z, z.replace(/_/g, ' ')]; }))),
+      vAlertas());
+  }
+
+  // Alertas del evento en tu calendario: "no", vacío (la del calendario) o minutos "1440, 60".
+  var ALERTAS = [[0, 'Al empezar'], [5, '5 min'], [15, '15 min'], [30, '30 min'], [60, '1 h'], [120, '2 h'], [1440, '1 día'], [2880, '2 días']];
+  function alertasElegidas() {
+    var v = String(cfg('recordatorio_minutos')).trim().toLowerCase();
+    if (v === 'no') return [];
+    if (!v) return null;
+    var out = [];
+    v.split(/[\s,;]+/).forEach(function (t) { if (/^\d+$/.test(t) && out.indexOf(+t) < 0) out.push(+t); });
+    return out.sort(function (a, b) { return b - a; });
+  }
+  function textoAlerta(m) {
+    var a = ALERTAS.filter(function (x) { return x[0] === m; })[0];
+    if (a) return m === 0 ? 'al empezar' : a[1] + ' antes';
+    return m % 1440 === 0 ? (m / 1440) + ' días antes' : m % 60 === 0 ? (m / 60) + ' h antes' : m + ' min antes';
+  }
+  function vAlertas() {
+    var caja = h('div', {});
+    function pintarAlertas() {
+      caja.textContent = '';
+      var elegidas = alertasElegidas();
+      function guardarLista(lista) {
+        setCfg('horario', 'recordatorio_minutos', lista.length ? lista.sort(function (a, b) { return b - a; }).join(', ') : 'no');
+        pintarAlertas();
+      }
+      var fichas = [h('button', {
+        type: 'button', class: 'chip alerta', 'aria-pressed': String(!!elegidas && elegidas.length === 0),
+        on: { click: function () { guardarLista([]); } },
+      }, 'Sin alerta')].concat(ALERTAS.map(function (a) {
+        var activa = !!elegidas && elegidas.indexOf(a[0]) >= 0;
+        return h('button', {
+          type: 'button', class: 'chip alerta', 'aria-pressed': String(activa),
+          on: { click: function () {
+            var lista = (elegidas || []).filter(function (m) { return m !== a[0]; });
+            if (!activa) {
+              if (lista.length >= 5) { estado('Puedes elegir hasta 5 alertas.', 'error'); return; }
+              lista.push(a[0]);
+            }
+            guardarLista(lista);
+          } },
+        }, a[1]);
+      }));
+      var resumen = elegidas === null
+        ? 'Aún no eliges: se usa la alerta por defecto de tu calendario de Google.'
+        : elegidas.length === 0
+          ? 'Las citas no tendrán alerta.'
+          : 'Cada cita te avisará ' + elegidas.map(textoAlerta).join(', ').replace(/, ([^,]*)$/, ' y $1') + '.';
+      caja.appendChild(h('div', { class: 'chips' }, fichas));
+      caja.appendChild(h('p', { class: 'hint', text: resumen }));
+    }
+    pintarAlertas();
+    return h('div', {},
+      h('h3', { text: 'Alerta de cada cita' }),
+      h('p', { class: 'hint', text: 'Suena en tu teléfono, en el calendario de Google donde llegan las citas. Puedes marcar varias. Aplica a las citas nuevas.' }),
+      caja);
   }
 
   // ---------- Pagos ----------
@@ -3154,6 +3308,84 @@ var Logica = (function () {
         campo('Euro', texto('pagos', 'tasa_eur_manual', { inputmode: 'decimal' })),
         campo('Dólar', texto('pagos', 'tasa_usd_manual', { inputmode: 'decimal' }))),
       h('p', { class: 'hint', text: 'Solo se usa si no se puede leer la tasa del BCV.' }));
+  }
+
+  // ---------- Comprobantes ----------
+  var LEYENDA_NO_FISCAL = 'DOCUMENTO NO FISCAL - VÁLIDO ÚNICAMENTE COMO COMPROBANTE DE CONTROL INTERNO';
+  function vComprobantes() {
+    var modo = (cfg('facturacion_modo') || 'interno').toLowerCase() === 'fiscal' ? 'fiscal' : 'interno';
+    function opcion(id, titulo, texto) {
+      return h('button', {
+        type: 'button', class: 'plantilla-qr', 'aria-pressed': String(modo === id),
+        on: { click: function () { setCfg('comprobantes', 'facturacion_modo', id); pintar(); } },
+      }, h('b', { text: titulo }), h('small', { text: texto }));
+    }
+    var modos = h('div', { class: 'plantillas-qr', style: { gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' } },
+      opcion('interno', 'Control interno', 'Puedes darle a tu cliente un ticket de reserva no fiscal al reservar.'),
+      opcion('fiscal', 'Facturación fiscal (SENIAT)', 'Facturas con tu imprenta digital autorizada. bookeaa no emite tickets.'));
+
+    var izquierda, vista = null;
+    if (modo === 'interno') {
+      var activo = (cfg('ticket_reserva') || 'si').toLowerCase() !== 'no';
+      var c = L.colores(S.datos.config);
+      var mono = "'Chivo Mono', ui-monospace, Menlo, Consolas, monospace";
+      var fila = function (a, b, fuerte) {
+        return h('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '10px', fontWeight: fuerte ? 700 : 400 } },
+          h('span', { style: { color: fuerte ? '#2A2926' : '#6B6860' }, text: a }), h('span', { text: b }));
+      };
+      var corte = function () { return h('div', { style: { borderTop: '1.5px dashed #C9C4B8', margin: '8px 0' } }); };
+      var barras = h('div', { style: { height: '30px', margin: '8px auto 2px', width: '190px',
+        background: 'repeating-linear-gradient(90deg,#2A2926 0 2px,transparent 2px 4px,#2A2926 4px 5px,transparent 5px 8px,#2A2926 8px 11px,transparent 11px 13px)' } });
+      var dientes = '-webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/12px 51% repeat-x,conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) top/12px 51% repeat-x;' +
+        'mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/12px 51% repeat-x,conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) top/12px 51% repeat-x;';
+      var papel = h('div', { style: { background: '#FFFDF6', color: '#2A2926', padding: '18px 16px 22px', fontFamily: mono, fontSize: '11px', lineHeight: 1.45 } },
+        h('div', { style: { textAlign: 'center', fontWeight: 700, fontSize: '16px' }, text: (cfg('marca') || cfg('nombre_negocio') || 'Tu negocio').toUpperCase() }),
+        h('div', { style: { textAlign: 'center', fontWeight: 700, fontSize: '10px', letterSpacing: '0.18em', color: c.deep }, text: 'TICKET DE RESERVA' }),
+        h('div', { style: { textAlign: 'center', fontSize: '8px', color: '#6B6860', marginTop: '4px' }, text: LEYENDA_NO_FISCAL }),
+        corte(), fila('EMITIDO', '15/10/2026 10:24'), fila('REF.', '#AB12CD34'), fila('CLIENTE', 'CARLOS MÉNDEZ'),
+        corte(),
+        h('div', { style: { display: 'grid', placeItems: 'center', padding: '4px 0' } },
+          h('div', { style: { display: 'inline-grid', justifyItems: 'center', padding: '6px 14px 4px', border: '3px double ' + c.deep, borderRadius: '10px', color: c.deep, transform: 'rotate(-7deg)' } },
+            h('small', { style: { fontSize: '9px', letterSpacing: '0.2em', fontWeight: 700 }, text: 'RESERVA' }),
+            h('strong', { style: { fontSize: '20px', lineHeight: 1 }, text: 'N° 000123' }))),
+        corte(), fila('DÍA', 'JUEVES 15 DE OCTUBRE'), fila('HORA', '2:00 P. M.'),
+        corte(), fila('CORTE Y BARBA', '16,00 €'), corte(), fila('TOTAL (REF.)', '16,00 €', true), fila('PAGO', 'EN LA CITA'),
+        barras,
+        h('div', { style: { textAlign: 'center', fontSize: '9px', letterSpacing: '0.3em', color: '#6B6860' }, text: 'RS 000123' }),
+        h('div', { style: { textAlign: 'center', fontWeight: 700, marginTop: '6px' }, text: '¡GRACIAS POR SU RESERVA!' }));
+      papel.setAttribute('style', papel.getAttribute('style') + ';' + dientes);
+      var muestra = h('div', { class: 'preview', style: { background: '#EFEDE8', padding: '18px', display: 'grid', placeItems: 'center' } },
+        h('div', { style: { width: '100%', maxWidth: '270px', filter: 'drop-shadow(0 8px 16px rgb(20 22 24 / 0.12))', opacity: activo ? 1 : 0.35 } }, papel));
+      var interruptor = h('label', { class: 'toggle', style: { marginTop: '6px' } }, h('input', {
+        type: 'checkbox', checked: activo,
+        on: { change: function (e) { setCfg('comprobantes', 'ticket_reserva', e.target.checked ? 'si' : 'no'); pintar(); } },
+      }), 'Emitir ticket de reserva');
+      izquierda = [
+        h('h3', { text: 'Ticket de reserva' }), interruptor,
+        h('p', { class: 'hint', text: activo
+          ? 'Al reservar, tu cliente ve su ticket imprimirse y lo descarga como imagen. No es una factura.'
+          : 'Apagado: al reservar, tu cliente pasa directo a WhatsApp sin ticket.' }),
+        h('h3', { text: 'Cómo funciona' }),
+        h('ul', { class: 'hint', style: { paddingLeft: '18px', margin: '6px 0 0' } },
+          h('li', { text: 'Cada ticket lleva un número correlativo (columna Recibo_N de Reservaciones).' }),
+          h('li', { text: 'Se llama "Ticket de reserva", lleva la leyenda de documento no fiscal y no desglosa IVA.' }),
+          h('li', { text: 'Con pago en la cita muestra solo el valor de referencia: los bolívares dependen de la tasa del día de la cita.' }),
+          h('li', { text: 'Con Pago Móvil muestra además lo que se pagó en bolívares y la tasa de ese día.' })),
+      ];
+      vista = [h('h3', { text: activo ? 'Así se ve' : 'Así se vería (apagado)' }), muestra];
+    } else {
+      izquierda = [
+        h('div', { class: 'aviso', style: { marginTop: '14px' }, text: 'Tus facturas las emite tu imprenta digital autorizada por el SENIAT. La conexión automática con bookeaa llegará más adelante; mientras tanto, factura desde el portal de tu proveedor. Verifica que tu proveedor aparezca en el listado oficial de imprentas digitales del SENIAT.' }),
+        campo('RIF', texto('comprobantes', 'facturacion_rif', { placeholder: 'J-12345678-9' })),
+        campo('Nombre o razón social', texto('comprobantes', 'facturacion_razon_social', { placeholder: 'Como sale en tu RIF' })),
+        campo('Imprenta digital', texto('comprobantes', 'facturacion_proveedor', { placeholder: 'Nombre de tu proveedor autorizado' })),
+      ];
+    }
+    return h('section', {},
+      cabecera('Comprobantes', 'Qué recibe tu cliente después de reservar.'),
+      h('div', { class: 'con-vista' },
+        h('div', {}, h('h3', { text: 'Modo' }), modos, izquierda),
+        vista ? h('div', { class: 'vista' }, vista) : h('div')));
   }
 
   // ---------- Código QR ----------
@@ -3195,16 +3427,15 @@ var Logica = (function () {
       return h('label', { class: 'toggle', style: { marginTop: '10px' } },
         h('input', { type: 'checkbox', checked: q[k], on: { change: function (e) { q[k] = e.target.checked; redibujar(); } } }), texto);
     }
-    var enlace = h('input', {
-      type: 'url', value: q.enlace, placeholder: 'https://…',
-      on: { input: function (e) { q.enlace = e.target.value.trim(); redibujar(); } },
-    });
+    // El QR lleva siempre a la página del negocio (pagina_url, la escribe el maestro): no se cambia.
+    q.enlace = S.datos.paginaUrl || '';
+    var enlace = h('input', { type: 'url', value: q.enlace, readonly: true, 'aria-readonly': 'true', placeholder: 'Tu hoja todavía no tiene el link' });
     var conTextos = q.plantilla !== 'solo';
     var descargar = h('button', { type: 'button', class: 'btn', text: 'Descargar PNG', on: { click: function () { descargarQr(canvas, q); } } });
 
     var nodo = h('section', {},
       cabecera('Código QR', 'Un cartel o una imagen con el QR de tu página, con tus colores. Imprímelo o súbelo a tus redes.'),
-      S.datos.paginaUrl ? null : h('div', { class: 'aviso', text: 'Tu hoja todavía no tiene el link de tu página. Pídele a bookeaa que la actualice, o escríbelo abajo.' }),
+      S.datos.paginaUrl ? null : h('div', { class: 'aviso', text: 'Tu hoja todavía no tiene el link de tu página. Pídele a bookeaa que la actualice.' }),
       h('div', { class: 'con-vista' },
         h('div', {},
           h('h3', { text: 'Formato' }), plantillas,
@@ -3220,7 +3451,7 @@ var Logica = (function () {
           h('h3', { text: 'Colores' }),
           campo('Estilo de color', modos, 'Usa los colores y las fuentes de tu página.'),
           h('h3', { text: 'Link' }),
-          campo('A dónde lleva el QR', enlace, 'Es el link de tu página. Solo cámbialo si sabes lo que haces.')),
+          campo('A dónde lleva el QR', enlace, 'Es el link de tu página de reservas. No se puede cambiar.')),
         h('div', { class: 'vista' },
           h('h3', { text: 'Así queda' }),
           h('div', { class: 'lienzo' }, canvas),
@@ -3310,7 +3541,7 @@ var Logica = (function () {
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, W, H);
         if (qr) pintarModulos(ctx, qr, 0, 0, W, col.modulos);
-        return qr ? '' : 'Escribe un link que empiece con https:// para generar el código.';
+        return qr ? '' : 'Tu hoja todavía no tiene el link de tu página: pídele a bookeaa que la actualice.';
       }
 
       ctx.fillStyle = col.fondo;
@@ -3348,7 +3579,7 @@ var Logica = (function () {
           b.lineas.forEach(function (l) { y += b.lh; ctx.fillText(l, x, y - b.lh * 0.2); });
           y += b.gap;
         });
-        return qr ? '' : 'Escribe un link que empiece con https:// para generar el código.';
+        return qr ? '' : 'Tu hoja todavía no tiene el link de tu página: pídele a bookeaa que la actualice.';
       }
 
       // Vertical: nombre, título, texto, tarjeta con el QR, frase destacada y link.
@@ -3417,7 +3648,7 @@ var Logica = (function () {
       ctx.globalAlpha = 0.8;
       ctx.fillText(marca.s, W / 2, H - margen * 0.6);
       ctx.globalAlpha = 1;
-      return qr ? '' : 'Escribe un link que empiece con https:// para generar el código.';
+      return qr ? '' : 'Tu hoja todavía no tiene el link de tu página: pídele a bookeaa que la actualice.';
     });
   }
 
@@ -3442,8 +3673,9 @@ var Logica = (function () {
     estilo: ['tema_estilo', 'color_principal', 'color_fondo', 'paleta'],
     lugar: ['lugar_tipo', 'lugar_nombre', 'permite_domicilio', 'recargo_domicilio_pct', 'minutos_extra_domicilio'],
     mensaje: ['mensaje_plantilla'],
-    horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria'],
+    horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria', 'recordatorio_minutos'],
     pagos: ['whatsapp', 'moneda', 'metodos_pago', 'pm_banco', 'pm_telefono', 'pm_cedula', 'tasa_eur_manual', 'tasa_usd_manual'],
+    comprobantes: ['facturacion_modo', 'ticket_reserva', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
   };
   function paquete(seccion) {
     var c = {};

@@ -169,5 +169,6 @@ export async function submitReservation(payload: ReservationPayload): Promise<Re
     totalBs: data.totalBs === null || data.totalBs === undefined ? null : toNumber(data.totalBs),
     tasa: data.tasa === null || data.tasa === undefined ? null : toNumber(data.tasa),
     comprobanteUrl: str(data.comprobanteUrl) || null,
+    recibo: toNumber(data.recibo) > 0 ? toNumber(data.recibo) : null,
   }
 }

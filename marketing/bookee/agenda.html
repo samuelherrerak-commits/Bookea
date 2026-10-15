@@ -1,0 +1,64 @@
+<!doctype html><meta charset="utf-8">
+<!-- Boceto de la agenda malvada (segunda historia): la misma construcción de bookee (cuerpo
+     redondeado, argollas arriba, brazos y piernas "rubber hose"), pero más grande, con espiral de
+     agenda, ojos triangulares rojos y una boca grande con colmillos. Dibujo en SVG, de frente. -->
+<style>
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 800; src: url('/public/ar-comun/fuentes/barlow-condensed-latin-800-normal.woff2'); }
+  @font-face { font-family: 'Barlow'; font-weight: 600; src: url('/public/ar-comun/fuentes/barlow-latin-600-normal.woff2'); }
+  body { margin: 0; width: 1600px; font-family: 'Barlow', sans-serif; color: #0f0f0e; background: #fff; }
+  header { padding: 40px 48px 0; } h1 { font: 800 64px/0.9 'Barlow Condensed'; margin: 0; text-transform: uppercase; }
+  header p { margin: 10px 0 0; font-size: 20px; color: #5b5b57; max-width: 75ch; }
+  .fila { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 8px 48px; }
+  figure { margin: 0; text-align: center; } svg { width: 100%; height: auto; display: block; }
+  figcaption { font: 800 22px/1 'Barlow Condensed'; text-transform: uppercase; letter-spacing: .04em; }
+  figcaption small { display: block; font: 600 15px/1.3 'Barlow'; text-transform: none; letter-spacing: 0; color: #5b5b57; margin-top: 4px; }
+  .abajo { display: grid; grid-template-columns: 1fr 1.4fr; gap: 40px; padding: 24px 48px 48px; align-items: start; }
+  .comparar { background: #f4f4f2; border-radius: 16px; padding: 16px 16px 8px; }
+  .notas { font-size: 17px; line-height: 1.5; columns: 2; column-gap: 36px; }
+  .notas h2 { font: 800 26px/1 'Barlow Condensed'; text-transform: uppercase; margin: 0 0 6px; break-after: avoid; }
+  .notas div { break-inside: avoid; margin-bottom: 18px; }
+</style>
+<header><h1>La agenda malvada · boceto</h1>
+<p>La villana de la segunda historia. Está hecha como bookee (cuerpo redondeado, argollas arriba, brazos y piernas de goma), pero es una agenda de papel: más grande, con espiral, hojas a la vista, ojos rojos y colmillos.</p></header>
+<div class="fila" id="poses"></div>
+<section class="abajo">
+  <figure class="comparar"><svg id="comparar" viewBox="-60 -96 150 102"></svg>
+    <figcaption>Tamaño<small>1,7 veces bookee</small></figcaption></figure>
+  <div class="notas">
+    <div><h2>Cuerpo</h2>
+    Tapa carbón de 44 × 52 con esquinas redondeadas (bookee: 28 × 30). Arriba, 7 argollas de espiral en vez de las 2 de bookee. Por el costado y abajo asoma el bloque de hojas, con rayas. Elástico de cierre vertical a la derecha.</div>
+    <div><h2>Cara</h2>
+    Ojos triangulares rojos, inclinados hacia el centro, con brillo y contorno claro para que resalten sobre la tapa negra. Cejas gruesas en ángulo. Boca ancha, roja por dentro, con dos colmillos grandes arriba, dos abajo y dientes chicos entre medio.</div>
+    <div><h2>Brazos y piernas</h2>
+    Más gruesos que los de bookee. Guantes negros con garras blancas y botas pesadas. Se mueve con pasos lentos que hacen temblar la tarjeta.</div>
+    <div><h2>Colores</h2>
+    Carbón #0f0f0e, papel #ffffff y grafito #5b5b57, como bookee. El rojo #e3261c es solo de ella (ojos, boca y lengua): así se distingue de inmediato quién es el malo.</div>
+  </div>
+</section>
+<script type="module">
+await document.fonts.ready
+import { villana, C, P, N, G, R } from './villana.js'
+const suelo = `<ellipse cx="0" cy=".5" rx="34" ry="2.4" fill="${C}" opacity=".12"/>`
+const extras = {
+  rugido: [[-46, -70, -32, -76], [-48, -56, -34, -58], [46, -70, 32, -76], [48, -56, 34, -58]].map(([a, b, c, d]) => `<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="${G}" stroke-width="1.6" stroke-linecap="round"/>`).join(''),
+  corre: [[-56, -50, 12], [-60, -38, 16], [-54, -26, 10]].map(([x, y, l]) => `<line x1="${x}" y1="${y}" x2="${x + l}" y2="${y}" stroke="${G}" stroke-width="1.6" stroke-linecap="round"/>`).join(''),
+  vencida: `<path d="M-8 -82 l1.5 3 l3.3 .4 l-2.4 2.3 l.6 3.3 l-3 -1.6 l-3 1.6 l.6 -3.3 l-2.4 -2.3 l3.3 -.4 Z" fill="${C}"/><path d="M14 -85 l1.2 2.4 l2.6 .3 l-1.9 1.8 l.5 2.6 l-2.4 -1.3 l-2.4 1.3 l.5 -2.6 l-1.9 -1.8 l2.6 -.3 Z" fill="${C}"/>` +
+    [[-38, -40, -20], [40, -48, 25], [-42, -14, 10]].map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r})"><rect x="-5" y="-6.5" width="10" height="13" fill="${P}" stroke="${C}" stroke-width=".9"/>${[-3.5, -1, 1.5, 4].map((yy) => `<line x1="-3.4" y1="${yy}" x2="3.4" y2="${yy}" stroke="${G}" stroke-width=".5"/>`).join('')}</g>`).join(''),
+}
+const poses = [
+  ['Amenaza', 'de pie, garras listas', villana({})],
+  ['Rugido', 'boca abierta, colmillos', extras.rugido + villana({ brazos: 'rugido', boca: 'rugido' })],
+  ['Persigue', 'inclinada, a zancadas', extras.corre + villana({ brazos: 'corre', piernas: 'corre', inclina: 8 })],
+  ['Vencida', 'ojos en X, se le caen las hojas', extras.vencida + villana({ brazos: 'vencida', piernas: 'vencida', boca: 'vencida', ojos: 'x', inclina: -5 })],
+]
+for (const [nombre, nota, dibujo] of poses) {
+  const f = document.createElement('figure')
+  f.innerHTML = `<svg viewBox="-62 -92 124 98">${suelo}${dibujo}</svg><figcaption>${nombre}<small>${nota}</small></figcaption>`
+  document.getElementById('poses').append(f)
+}
+// tamaño junto a bookee (misma unidad: la grilla de 32 del logo). La imagen de bookee cubre x -29..29, y +21..-28.
+document.getElementById('comparar').innerHTML = `<line x1="-60" y1=".3" x2="90" y2=".3" stroke="${G}" stroke-width=".5"/>
+  <image href="bookee-feliz-negro.png" x="-58" y="-46" width="58" height="49"/>
+  <g transform="translate(48 0)">${villana({ brazos: 'amenaza' })}</g>`
+window.listo = true
+</script>

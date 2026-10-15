@@ -48,7 +48,7 @@ const SHEETS = [
     name: 'Reservaciones',
     headers: ['ID', 'Fecha_Solicitud', 'Cliente', 'Telefono', 'Servicios', 'Total', 'Fecha_Cita', 'Hora_Cita',
       'Metodo_Pago', 'Referencia', 'Cupon', 'Estado', 'Tasa_BCV', 'Total_Bs',
-      'Modalidad', 'Direccion', 'Recargo', 'Comprobante'],
+      'Modalidad', 'Direccion', 'Recargo', 'Comprobante', 'Recibo_N'],
   },
   { name: 'Servicios', headers: ['ID', 'Nombre', 'Precio', 'Duracion_Min', 'Tipo'] },
   { name: 'Promociones', headers: ['ID', 'Nombre', 'Servicios_Incluidos', 'Precio_Promo'] },
@@ -152,7 +152,8 @@ const PLANTILLAS_MENSAJE = [
   },
 ];
 
-const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado'];
+// Telefono, Vence, Ultimo_Pago y Notas los usa la central (/central): el cobro mensual de bookeaa.
+const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado', 'Telefono', 'Vence', 'Ultimo_Pago', 'Notas', 'Suspendido_Auto'];
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -168,6 +169,10 @@ const CONFIG_DEFAULTS = [
   ['dias_laborales', '1,2,3,4,5,6'], // 0 = domingo … 6 = sábado
   ['dias_anticipacion', '21'],
   ['anticipacion_min_horas', '2'],
+  // Alertas del evento en el calendario, en minutos antes de la cita ("1440, 60").
+  // "no" = sin alerta; vacío = la alerta por defecto del calendario. Se elige en la
+  // ventana de configuración (Horario).
+  ['recordatorio_minutos', ''],
   ['zona_horaria', ZONA],
   ['paleta', 'Rosa Clásico'], // dropdown: aplica base/soft/deep a la vez
   ['tema_base', ''], // hex manual; si está vacío manda la paleta
@@ -196,6 +201,14 @@ const CONFIG_DEFAULTS = [
   ['slug', ''], // lo escribe crearTenant; la barra lateral lo usa para refrescar la página
   ['api_url', ''], // URL /exec de este script; idem
   ['pagina_url', ''], // enlace público del negocio (propiedad del script sitio_url + /u/slug)
+  // Comprobantes: "interno" = el negocio puede dar el ticket de reserva NO fiscal (por defecto).
+  // "fiscal" = el negocio factura con su imprenta digital autorizada; bookeaa no emite tickets.
+  ['facturacion_modo', 'interno'],
+  ['ticket_reserva', 'si'], // "no" apaga el ticket de reserva (solo cuenta en modo interno)
+  ['facturacion_rif', ''],
+  ['facturacion_razon_social', ''],
+  ['facturacion_proveedor', ''], // imprenta digital autorizada por el SENIAT
+  ['recibo_ultimo', '0'], // último número de ticket de reserva; lo lleva el script
 ];
 
 /**
@@ -387,6 +400,11 @@ function onOpen() {
     .addSeparator()
     .addItem('Generar token de la API', 'promptGenerarToken')
     .addItem('Actualizar la tasa cada 2 horas', 'instalarDisparadorTasa')
+    .addSeparator()
+    .addItem('Bot de WhatsApp: generar token', 'promptGenerarTokenBot')
+    .addItem('Bot de WhatsApp: avisos y calendario', 'promptAjustesBot')
+    .addItem('Bot de WhatsApp: probar agenda', 'probarAgendaBot')
+    .addItem('Cobros: activar automáticos (correos del banco y cortes)', 'instalarCobros')
     .addToUi();
 }
 
@@ -625,6 +643,16 @@ function aplicarOpcionesConfig_(ss, configSheet) {
       celda.setNote('"si" agrega la opción "A domicilio" con el recargo y los minutos extra de más abajo.');
     } else if (clave === 'moneda') {
       celda.setDataValidation(lista(['EUR', 'USD', 'Bs']));
+    } else if (clave === 'facturacionmodo') {
+      celda.setDataValidation(lista(['interno', 'fiscal']));
+      celda.setNote('interno: el negocio puede dar el ticket de reserva NO fiscal (control interno; ver ticket_reserva). ' +
+        'fiscal: el negocio factura con su imprenta digital autorizada por el SENIAT y bookeaa no emite tickets.');
+    } else if (clave === 'ticketreserva') {
+      celda.setDataValidation(lista(['si', 'no']));
+      celda.setNote('"si": al reservar, el cliente ve su ticket de reserva imprimirse y lo descarga como imagen. ' +
+        '"no": pasa directo a WhatsApp, sin ticket. Solo cuenta con facturacion_modo = interno.');
+    } else if (clave === 'reciboultimo') {
+      celda.setNote('Último número de ticket de reserva. Lo lleva el script: no lo cambies a mano.');
     } else if (clave === 'mensajeplantilla') {
       const mensajes = ss.getSheetByName('Mensajes');
       if (mensajes) {
@@ -871,7 +899,7 @@ function doGet(e) {
     // Solo el catálogo (GET sin action) se cachea; cupon y demás van directo a la hoja.
     if (!p.action && p.fresh !== '1') {
       const hit = leerCacheCatalogo_(tenant.slug);
-      if (hit) return jsonDeTexto_(hit);
+      if (hit) return jsonDeTexto_(conLogo_(hit, logoNegocio_(tenant, null)));
     }
 
     const ss = openTenant_(tenant);
@@ -909,7 +937,8 @@ function doGet(e) {
         })),
     });
     guardarCacheCatalogo_(tenant.slug, texto, CACHE_CATALOGO_SEG);
-    return jsonDeTexto_(texto);
+    // El logo va aparte de la caché del catálogo (puede pesar ~40 KB): se agrega al responder.
+    return jsonDeTexto_(conLogo_(texto, logoNegocio_(tenant, ss)));
   } catch (err) {
     console.error(err);
     return json_({ error: 'servidor', mensaje: 'Error del servidor. Intenta de nuevo.' });
@@ -920,7 +949,10 @@ function doGet(e) {
 function configPublica_(config) {
   const out = {};
   Object.keys(config).forEach(function (k) {
-    if (k !== 'api_token' && k !== 'api_url') out[k] = config[k];
+    // Lo interno no viaja al navegador. facturacion_modo y ticket_reserva sí: la página decide si da el ticket.
+    const interna = k === 'api_token' || k === 'api_url' || k === 'recibo_ultimo' ||
+      (k.indexOf('facturacion_') === 0 && k !== 'facturacion_modo');
+    if (!interna) out[k] = config[k];
   });
   return out;
 }
@@ -935,6 +967,32 @@ function doPost(e) {
     data = JSON.parse(e.postData.contents);
   } catch (err) {
     return json_({ error: 'datos_invalidos', mensaje: 'Solicitud inválida.' });
+  }
+  // El bot de WhatsApp tiene su propio token (no el público de la web) y no es de un negocio.
+  if (data && data.accion === 'central') {
+    try {
+      return json_(atenderCentral_(data, Date.now()));
+    } catch (err) {
+      console.error('central: ' + err);
+      return json_({ error: 'servidor', mensaje: 'Error del servidor. Intenta de nuevo.' });
+    }
+  }
+  if (data && data.accion === 'dueno') {
+    try {
+      return json_(atenderDueno_(data, Date.now()));
+    } catch (err) {
+      console.error('dueno: ' + err);
+      return json_({ error: 'servidor', mensaje: 'Error del servidor. Intenta de nuevo.' });
+    }
+  }
+  if (data && data.accion === 'bot') {
+    // Si algo revienta (permisos de Calendar, servicio sin activar), el bot recibe el motivo
+    // en JSON en vez de la página de error de Google.
+    try {
+      return json_(atenderBot_(data, Date.now()));
+    } catch (err) {
+      return json_({ error: 'excepcion', mensaje: String(err && err.message || err).slice(0, 300) });
+    }
   }
   if (!tokenValido_(data.token)) return json_({ error: 'no_autorizado' });
 
@@ -1078,8 +1136,13 @@ function doPost(e) {
     // ejecución. Acá solo se lee la caché o el último valor bueno: la tasa sirve
     // para mostrar el equivalente en bolívares, no para decidir nada. La versión
     // fresca se busca DESPUÉS de agendar la cita, y si sale se parchea la celda.
-    let tasa = moneda === 'BS' ? null : tasaCache_(moneda, ss);
-    let totalBs = moneda === 'BS' ? orden.total : tasa ? round2_(orden.total * tasa.valor) : null;
+    // Con "Pago en la cita" se guarda solo el valor de referencia (EUR/USD): el monto en
+    // bolívares depende de la tasa del día de la cita, no la de hoy. Con Pago Móvil sí
+    // se guarda lo que se pagó hoy en Bs y su tasa.
+    const conBs = moneda === 'BS' || esPagoMovil;
+    let tasa = moneda === 'BS' || !esPagoMovil ? null : tasaCache_(moneda, ss);
+    let totalBs = moneda === 'BS' ? orden.total : esPagoMovil && tasa ? round2_(orden.total * tasa.valor) : null;
+    const recibo = emiteTicket_(config) ? siguienteRecibo_(ss) : null;
 
     const id = reservaIdPedida || Utilities.getUuid();
     const serviciosTexto = orden.lineas.map(function (l) { return l.nombre; }).join(', ');
@@ -1127,12 +1190,14 @@ function doPost(e) {
       Direccion: modalidad === 'domicilio' ? direccion : (sede.direccion || sede.nombre),
       Recargo: orden.recargo,
       Comprobante: comprobanteUrl || (comprobante ? 'no se pudo subir' : 'N/A'),
+      Recibo_N: recibo === null ? '' : recibo,
     });
     const fila = hoja.getLastRow();
 
     if (calendar) {
+      let evento = null;
       try {
-        calendar.createEvent(
+        evento = calendar.createEvent(
           (modalidad === 'domicilio' ? '🏠 Domicilio · ' : sedes.length > 1 ? '📍 ' + sede.nombre + ' · ' : '') +
             'Cita: ' + cliente + ' - ' + serviciosTexto,
           inicio, fin, {
@@ -1144,8 +1209,7 @@ function doPost(e) {
               modalidad === 'domicilio'
                 ? 'A domicilio: ' + direccion + ' (incluye ' + config_min_extra_(config) + ' min de traslado)'
                 : lugarTexto + (sede.direccion ? ' · ' + sede.direccion : ''),
-              'Total: ' + orden.total.toFixed(2) + ' ' + moneda + (totalBs !== null ? ' (Bs. ' + totalBs.toFixed(2) + ')' : '') +
-                (orden.recargo > 0 ? ' · recargo domicilio ' + orden.recargo.toFixed(2) + ' ' + moneda : ''),
+              lineaTotalEvento_(orden, moneda, esPagoMovil ? totalBs : null, esPagoMovil && tasa ? tasa.valor : null),
               'Pago: ' + metodoPago,
               'Capture: ' + (comprobanteUrl || 'N/A'),
               'Cupón: ' + (orden.cupon ? orden.cupon.codigo : 'N/A'),
@@ -1158,6 +1222,12 @@ function doPost(e) {
         // registro que miente que una hora libre que alguien más puede tomar.
         borrarFilaReserva_(hoja, fila);
         throw err;
+      }
+      // La cita ya está agendada: si la alerta falla, la reserva sigue valiendo.
+      try {
+        ponerAlertas_(evento, recordatoriosDe_(config));
+      } catch (err) {
+        console.warn('No se pudo poner la alerta: ' + err);
       }
     }
 
@@ -1174,7 +1244,9 @@ function doPost(e) {
     limpiarCacheCatalogo_(tenant.slug); // la ocupación cambió: la próxima carga recalcula
     sumar_(claveTelefono, 86400);
 
-    hecha = { ss: ss, id: id, orden: orden, moneda: moneda, tasa: tasa, totalBs: totalBs, comprobanteUrl: comprobanteUrl };
+    hecha = { ss: ss, id: id, orden: orden, moneda: moneda, tasa: tasa, totalBs: totalBs, comprobanteUrl: comprobanteUrl,
+      conBs: conBs, esPagoMovil: esPagoMovil, recibo: recibo,
+      cita: { cliente: cliente, servicios: serviciosTexto, fecha: fechaCita, hora: horaCita } };
   } catch (err) {
     console.error(err);
     return json_({ error: 'servidor', mensaje: 'No se pudo guardar la reserva. Intenta de nuevo.' });
@@ -1187,7 +1259,8 @@ function doPost(e) {
   // los demás negocios por un sitio externo lento. Nada de esto puede perder la reserva.
   let tasa = hecha.tasa;
   let totalBs = hecha.totalBs;
-  if (hecha.moneda !== 'BS') {
+  // Solo Pago Móvil necesita la tasa: con pago en la cita no se guardan bolívares.
+  if (hecha.moneda !== 'BS' && hecha.esPagoMovil) {
     try {
       const fresca = getTasa(hecha.moneda, hecha.ss);
       if (fresca && (!tasa || fresca.valor !== tasa.valor)) {
@@ -1200,14 +1273,80 @@ function doPost(e) {
     }
   }
 
+  // Notificación al dueño (la manda el Worker del bot). No puede tumbar la reserva.
+  try {
+    avisarReserva_(tenant.slug, {
+      id: hecha.id, cliente: hecha.cita.cliente, servicios: hecha.cita.servicios, fecha: hecha.cita.fecha, hora: hecha.cita.hora,
+      estado: hecha.esPagoMovil ? ESTADO_POR_VERIFICAR : 'Confirmada',
+    });
+  } catch (err) {
+    console.warn('Aviso al dueño: ' + err);
+  }
+
   return json_({
     success: true,
     id: hecha.id,
     total: hecha.orden.total,
-    totalBs: totalBs,
-    tasa: tasa ? tasa.valor : null,
+    totalBs: hecha.conBs ? totalBs : null,
+    tasa: hecha.esPagoMovil && tasa ? tasa.valor : null,
     comprobanteUrl: hecha.comprobanteUrl || null,
+    recibo: hecha.recibo,
   });
+}
+
+/**
+ * Siguiente número de ticket de reserva (interno, no fiscal) del negocio. Se llama
+ * dentro del lock de doPost, así dos reservas no se llevan el mismo número.
+ */
+/** Ticket de reserva: activo (ticket_reserva distinto de "no") y el negocio no factura en modo fiscal. */
+function emiteTicket_(config) {
+  if (String(config.facturacion_modo || '').trim().toLowerCase() === 'fiscal') return false;
+  return !/^(no|false|0|off)$/i.test(String(config.ticket_reserva == null ? '' : config.ticket_reserva).trim());
+}
+
+function siguienteRecibo_(ss) {
+  const sheet = ss.getSheetByName('Configuracion');
+  const n = Math.max(0, Math.floor(toNumber_(getConfig_(ss).recibo_ultimo))) + 1;
+  setConfigKey_(sheet, 'recibo_ultimo', n);
+  return n;
+}
+
+/**
+ * Línea del total para el evento del calendario. Siempre el valor de referencia; los
+ * bolívares solo si ya se pagaron (Pago Móvil), con la tasa de ese día.
+ */
+/**
+ * Minutos antes de la cita para las alertas del evento ("1440, 60" → [1440, 60]).
+ * Enteros de 0 a 40320 (4 semanas, el máximo de Google), sin repetir, máx. 5.
+ * "no" → [] (sin alerta). Vacío o ilegible → null: no se toca, manda la del calendario.
+ */
+function recordatoriosDe_(config) {
+  const v = String((config && config.recordatorio_minutos) || '').trim().toLowerCase();
+  if (v === 'no') return [];
+  const out = [];
+  v.split(/[\s,;]+/).forEach(function (t) {
+    if (!/^\d{1,5}$/.test(t)) return;
+    const n = Number(t);
+    if (n <= 40320 && out.indexOf(n) === -1) out.push(n);
+  });
+  return out.length ? out.sort(function (a, b) { return b - a; }).slice(0, 5) : null;
+}
+
+/** Reemplaza las alertas del evento; con [] queda sin alerta, con null no se toca. */
+function ponerAlertas_(evento, minutos) {
+  if (!evento || !minutos) return;
+  evento.removeAllReminders();
+  minutos.forEach(function (m) { evento.addPopupReminder(m); });
+}
+
+function lineaTotalEvento_(orden, moneda, bsPagados, tasa) {
+  let linea = (moneda === 'BS' ? 'Total: Bs. ' + orden.total.toFixed(2)
+    : 'Total (referencia): ' + orden.total.toFixed(2) + ' ' + moneda);
+  if (moneda !== 'BS' && bsPagados !== null && bsPagados !== undefined) {
+    linea += ' · pagado Bs. ' + Number(bsPagados).toFixed(2) + (tasa ? ' (tasa BCV ' + Number(tasa).toFixed(2) + ')' : '');
+  }
+  if (orden.recargo > 0) linea += ' · recargo domicilio ' + orden.recargo.toFixed(2) + ' ' + moneda;
+  return linea;
 }
 
 // ============================================================================
@@ -1467,6 +1606,50 @@ function json_(obj) {
 
 function jsonTexto_(obj) {
   return JSON.stringify(obj);
+}
+
+// ---------- Logo subido desde la ventana de configuración ----------
+// Vive en la pestaña oculta "Logo" (A2) como data URL, comprimido en el navegador.
+const LOGO_MAX = 45000;
+
+/** Un data URL de imagen chico y con bytes de imagen de verdad. */
+function logoValido_(valor) {
+  const v = String(valor || '').trim();
+  const m = /^data:image\/(png|webp|jpeg);base64,([A-Za-z0-9+\/=]+)$/.exec(v);
+  return !!m && v.length <= LOGO_MAX && esImagen_(bytesDe_(m[2]));
+}
+
+function leerLogoHoja_(ss) {
+  const sheet = ss.getSheetByName('Logo');
+  if (!sheet) return '';
+  const v = String(sheet.getRange('A2').getValue() || '').trim();
+  return logoValido_(v) ? v : '';
+}
+
+/**
+ * El logo del negocio. Con `ss` (la hoja ya abierta) se relee y se refresca la caché;
+ * sin ella se usa la caché (6 h) y solo se abre la hoja si no está. "-" = sin logo.
+ */
+function logoNegocio_(tenant, ss) {
+  const cache = CacheService.getScriptCache();
+  const clave = 'logo_' + tenant.slug;
+  if (!ss) {
+    const hit = cache.get(clave);
+    if (hit !== null) return hit === '-' ? '' : hit;
+  }
+  let logo = '';
+  try {
+    logo = leerLogoHoja_(ss || openTenant_(tenant));
+  } catch (err) {
+    console.warn('No se pudo leer el logo de ' + tenant.slug + ': ' + err);
+  }
+  try { cache.put(clave, logo || '-', 6 * 60 * 60); } catch (_) {}
+  return logo;
+}
+
+/** Agrega "logo" al JSON del catálogo sin volver a parsearlo. */
+function conLogo_(texto, logo) {
+  return logo ? '{"logo":' + JSON.stringify(logo) + ',' + texto.slice(1) : texto;
 }
 
 function jsonDeTexto_(texto) {
@@ -2037,6 +2220,7 @@ function buscarReservaPorId_(ss, reservaId, fechaCita, horaCita) {
     const totalBs = leer('Total_Bs');
     const tasa = leer('Tasa_BCV');
     const comp = String(leer('Comprobante') || '');
+    const recibo = leer('Recibo_N');
     return {
       success: true,
       id: String(reservaId),
@@ -2046,6 +2230,7 @@ function buscarReservaPorId_(ss, reservaId, fechaCita, horaCita) {
       // Lo único que sirve de la columna es un enlace a Drive; el resto son
       // marcadores como "pendiente" o "no se pudo subir".
       comprobanteUrl: /^https:\/\//.test(comp) ? comp : null,
+      recibo: recibo === null || recibo === '' ? null : toNumber_(recibo),
     };
   }
   return null;
@@ -2065,4 +2250,1872 @@ function toNumber_(value) {
 
 function round2_(n) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+// ============================================================================
+// Bot de WhatsApp de bookeaa (Cloudflare Worker en bot/)
+// ============================================================================
+// El Worker llama a doPost con { accion: 'bot', token: <bot_token>, op, ... }.
+// - disponibilidad: horas libres para la cita de configuración e inducción
+//   (presencial solo sábados; Google Meet de lunes a viernes)
+// - agendar / reprogramar / cancelar: eventos en el calendario "Afiliaciones bookeaa"
+//   con invitación al Gmail del negocio (y enlace de Meet si es virtual)
+// - soporte / persona: fila en la hoja Soporte y correo de aviso
+// Los horarios se cambian en las propiedades del script (claves bot_*).
+// Requiere el servicio avanzado "Google Calendar API" (identificador Calendar).
+
+const BOT_DEFAULTS = {
+  bot_sabado_desde: '08:00', bot_sabado_hasta: '17:00', bot_sabado_min: '90', bot_sabados: '4',
+  bot_meet_desde: '09:00', bot_meet_hasta: '17:00', bot_meet_min: '60', bot_dias_meet: '8',
+  bot_anticipacion_horas: '12',
+};
+const BOT_CAMPOS_PROSPECTO = ['Fecha', 'Teléfono', 'Nombre en WhatsApp', 'Negocio', 'Rubro', 'Servicios', 'Horario', 'Correo', 'Logo',
+  'Foto de servicios', 'Modalidad', 'Dirección', 'Cita', 'Meet', 'Estado', 'Id evento'];
+const BOT_CAMPOS_SOPORTE = ['Fecha', 'Caso', 'Tipo', 'Teléfono', 'Nombre en WhatsApp', 'Negocio', 'Tema', 'Descripción', 'Captura', 'Estado'];
+
+function botConfig_() {
+  const props = PropertiesService.getScriptProperties().getProperties();
+  const out = {};
+  Object.keys(BOT_DEFAULTS).forEach(function (k) { out[k] = String(props[k] || BOT_DEFAULTS[k]).trim(); });
+  return out;
+}
+
+function minutosDe_(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ''));
+  return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+}
+
+function hhmm_(min) {
+  return ('0' + Math.floor(min / 60)).slice(-2) + ':' + ('0' + (min % 60)).slice(-2);
+}
+
+/** "2026-10-03" + "09:30" en Caracas (UTC−4) → ms. */
+function msCaracas_(fecha, hora) {
+  const p = fecha.split('-').map(Number);
+  return Date.UTC(p[0], p[1] - 1, p[2]) + minutosDe_(hora) * 60000 + 4 * 3600000;
+}
+
+/** Inicios posibles de un día: cada `duracion` minutos, terminando antes de `hasta`. */
+function horasDelDia_(desde, hasta, duracion) {
+  const out = [];
+  const ini = minutosDe_(desde), fin = minutosDe_(hasta), d = Number(duracion);
+  if (!(d > 0) || isNaN(ini) || isNaN(fin)) return out;
+  for (let m = ini; m + d <= fin; m += d) out.push(hhmm_(m));
+  return out;
+}
+
+/** Fechas candidatas (en Caracas) desde `ahoraMs`: los próximos N sábados o N días hábiles. */
+function diasCandidatos_(modalidad, ahoraMs, cfg) {
+  const out = [];
+  const hoy = new Date(ahoraMs - 4 * 3600000);
+  const base = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate());
+  const quiere = modalidad === 'presencial' ? Number(cfg.bot_sabados) : Number(cfg.bot_dias_meet);
+  for (let i = 0; i < 60 && out.length < quiere; i++) {
+    const d = new Date(base + i * 86400000);
+    const dia = d.getUTCDay();
+    const vale = modalidad === 'presencial' ? dia === 6 : dia >= 1 && dia <= 5;
+    if (vale) out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+/** Horas que no chocan con ningún evento y que empiezan después de `minimoMs`. */
+function horasLibres_(fecha, horas, duracion, ocupados, minimoMs) {
+  return horas.filter(function (h) {
+    const ini = msCaracas_(fecha, h), fin = ini + Number(duracion) * 60000;
+    if (ini < minimoMs) return false;
+    return !ocupados.some(function (o) { return o.ini < fin && o.fin > ini; });
+  });
+}
+
+function calendarioAfiliaciones_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('bot_calendario');
+  const cal = id ? CalendarApp.getCalendarById(id) : null;
+  if (cal) return cal;
+  const nuevo = CalendarApp.createCalendar('Afiliaciones bookeaa', { timeZone: ZONA });
+  props.setProperty('bot_calendario', nuevo.getId());
+  return nuevo;
+}
+
+function botDuracion_(modalidad, cfg) {
+  return Number(modalidad === 'presencial' ? cfg.bot_sabado_min : cfg.bot_meet_min);
+}
+
+/** Días con horas libres. `excluir`: id de un evento que no cuenta como ocupado (al reprogramar). */
+function botDisponibilidad_(modalidad, ahoraMs, cfg, cal, excluir) {
+  const fechas = diasCandidatos_(modalidad, ahoraMs, cfg);
+  if (!fechas.length) return [];
+  const horas = modalidad === 'presencial'
+    ? horasDelDia_(cfg.bot_sabado_desde, cfg.bot_sabado_hasta, cfg.bot_sabado_min)
+    : horasDelDia_(cfg.bot_meet_desde, cfg.bot_meet_hasta, cfg.bot_meet_min);
+  const desde = new Date(msCaracas_(fechas[0], '00:00'));
+  const hasta = new Date(msCaracas_(fechas[fechas.length - 1], '23:59'));
+  const limpio = String(excluir || '').replace(/@google\.com$/, '');
+  const ocupados = cal.getEvents(desde, hasta)
+    .filter(function (ev) { return !limpio || String(ev.getId()).replace(/@google\.com$/, '') !== limpio; })
+    .map(function (ev) { return { ini: ev.getStartTime().getTime(), fin: ev.getEndTime().getTime() }; });
+  const minimo = ahoraMs + Number(cfg.bot_anticipacion_horas) * 3600000;
+  return fechas
+    .map(function (f) { return { fecha: f, horas: horasLibres_(f, horas, botDuracion_(modalidad, cfg), ocupados, minimo) }; })
+    .filter(function (d) { return d.horas.length; });
+}
+
+function hojaBot_(nombre, campos) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(nombre);
+  if (!sheet) {
+    sheet = ss.insertSheet(nombre);
+    sheet.appendRow(campos);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, campos.length).setFontWeight('bold');
+  }
+  return sheet;
+}
+
+/** Guarda una imagen del chat en la carpeta "bookeaa · bot" y devuelve el enlace. */
+function botGuardarImagen_(img, nombre) {
+  if (!img || !img.base64) return '';
+  try {
+    const bytes = Utilities.base64Decode(img.base64);
+    if (!esImagen_(bytes)) return '';
+    const props = PropertiesService.getScriptProperties();
+    let carpeta = null;
+    const id = props.getProperty('bot_carpeta');
+    try { carpeta = id ? DriveApp.getFolderById(id) : null; } catch (_) {}
+    if (!carpeta) {
+      carpeta = DriveApp.createFolder('bookeaa · bot');
+      props.setProperty('bot_carpeta', carpeta.getId());
+    }
+    return carpeta.createFile(Utilities.newBlob(bytes, img.mime || 'image/jpeg', nombre)).getUrl();
+  } catch (err) {
+    console.warn('No se pudo guardar la imagen: ' + err);
+    return '';
+  }
+}
+
+function botAvisar_(asunto, lineas) {
+  const props = PropertiesService.getScriptProperties();
+  const para = props.getProperty('aviso_email') || Session.getEffectiveUser().getEmail();
+  if (!para) return;
+  try {
+    MailApp.sendEmail({ to: para, subject: '[bookeaa bot] ' + asunto, body: lineas.filter(Boolean).join('\n') + '\n\nBandeja: ' + (props.getProperty('bot_bandeja_url') || '(pon bot_bandeja_url en las propiedades)') });
+  } catch (err) {
+    console.warn('No se pudo mandar el aviso: ' + err);
+  }
+}
+
+function botTexto_(v, max) {
+  return paraCelda_(String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, max));
+}
+
+function botCita_(modalidad, fecha, hora, cfg) {
+  const ini = msCaracas_(fecha, hora);
+  return { ini: new Date(ini), fin: new Date(ini + botDuracion_(modalidad, cfg) * 60000) };
+}
+
+/** Punto de entrada desde doPost. */
+function atenderBot_(data, ahoraMs) {
+  const esperado = String(PropertiesService.getScriptProperties().getProperty('bot_token') || '');
+  if (esperado.length < 24 || String(data.token || '') !== esperado) return { error: 'no_autorizado' };
+  if (limite_('bot', 240, 60)) return { error: 'limite' };
+  const cfg = botConfig_();
+  const op = String(data.op || '');
+  const quien = { telefono: String(data.telefono || '').replace(/\D/g, '').slice(0, 20), nombre: botTexto_(data.nombre, 80) };
+
+  if (op === 'disponibilidad') {
+    const modalidad = data.modalidad === 'presencial' ? 'presencial' : 'meet';
+    return { dias: botDisponibilidad_(modalidad, ahoraMs, cfg, calendarioAfiliaciones_()) };
+  }
+  if (op === 'agendar') return botAgendar_(data, quien, ahoraMs, cfg);
+  if (op === 'reprogramar') return botReprogramar_(data, quien, ahoraMs, cfg);
+  if (op === 'cancelar') return botCancelar_(data, quien);
+  if (op === 'soporte' || op === 'persona') return botSoporte_(op, data, quien);
+  if (op === 'agenda') return agendaParaWorker_(data, ahoraMs);
+  return { error: 'op_desconocida' };
+}
+
+function botLibre_(modalidad, fecha, hora, ahoraMs, cfg, cal, excluir) {
+  return botDisponibilidad_(modalidad, ahoraMs, cfg, cal, excluir).some(function (d) {
+    return d.fecha === fecha && d.horas.indexOf(hora) !== -1;
+  });
+}
+
+function botAgendar_(data, quien, ahoraMs, cfg) {
+  const af = data.af || {};
+  const modalidad = af.modalidad === 'presencial' ? 'presencial' : 'meet';
+  const fecha = String(af.fecha || ''), hora = String(af.hora || '');
+  const correo = String(af.correo || '').trim().toLowerCase();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !/^\d{2}:\d{2}$/.test(hora) || !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(correo)) {
+    return { ok: false, motivo: 'error', mensaje: 'Datos incompletos: fecha ' + fecha + ', hora ' + hora + ', correo ' + correo };
+  }
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { ok: false, motivo: 'error' };
+  try {
+    const cal = calendarioAfiliaciones_();
+    if (!botLibre_(modalidad, fecha, hora, ahoraMs, cfg, cal)) return { ok: false, motivo: 'ocupado' };
+    const negocio = botTexto_(af.negocio, 80);
+    const logo = botGuardarImagen_(data.logo, 'logo-' + negocio);
+    const foto = botGuardarImagen_(data.serviciosFoto, 'servicios-' + negocio);
+    const direccion = modalidad === 'presencial' ? botTexto_(af.direccion, 300) : '';
+    const c = botCita_(modalidad, fecha, hora, cfg);
+    // El bot solo pide lo mínimo; servicios, precios y horario se toman en la cita.
+    const descripcion = [
+      'Cita de configuración e inducción de bookeaa.',
+      '',
+      'Negocio: ' + negocio,
+      'WhatsApp: +' + quien.telefono + (quien.nombre ? ' (' + quien.nombre + ')' : ''),
+      'Correo: ' + correo,
+      direccion ? 'Dirección: ' + direccion : '',
+      af.rubro ? 'Rubro: ' + botTexto_(af.rubro, 80) : '',
+      af.horario ? 'Horario: ' + botTexto_(af.horario, 200) : '',
+      af.servicios ? 'Servicios:\n' + botTexto_(af.servicios, 1500) : '',
+      logo ? 'Logo: ' + logo : '',
+      foto ? 'Foto de servicios: ' + foto : '',
+      '',
+      'En la cita: servicios con precio y duración, horario, dirección, logo y colores.',
+    ].filter(function (l, i, a) { return l !== '' || (i > 0 && a[i - 1] !== ''); }).join('\n');
+    const evento = {
+      summary: 'Afiliación bookeaa · ' + negocio + (modalidad === 'presencial' ? ' (presencial)' : ' (Google Meet)'),
+      description: descripcion,
+      start: { dateTime: c.ini.toISOString(), timeZone: ZONA },
+      end: { dateTime: c.fin.toISOString(), timeZone: ZONA },
+      attendees: [{ email: correo }],
+      reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 1440 }, { method: 'popup', minutes: 60 }] },
+    };
+    if (direccion) evento.location = direccion;
+    if (modalidad === 'meet') evento.conferenceData = { createRequest: { requestId: Utilities.getUuid(), conferenceSolutionKey: { type: 'hangoutsMeet' } } };
+    const creado = botCrearEvento_(cal, evento, c);
+    const meet = creado.hangoutLink || '';
+    hojaBot_('Prospectos', BOT_CAMPOS_PROSPECTO).appendRow([
+      new Date(ahoraMs), "'+" + quien.telefono, quien.nombre, negocio, botTexto_(af.rubro, 80), botTexto_(af.servicios, 1500),
+      botTexto_(af.horario, 200), correo, logo, foto, modalidad === 'presencial' ? 'Presencial' : 'Google Meet', direccion,
+      c.ini, meet, 'Agendada', creado.id,
+    ]);
+    botAvisar_('Nueva afiliación: ' + negocio, [
+      negocio + ' agendó su cita de configuración.',
+      'Cuándo: ' + Utilities.formatDate(c.ini, ZONA, "EEEE d 'de' MMMM, h:mm a"),
+      modalidad === 'presencial' ? 'Presencial en: ' + direccion : 'Google Meet: ' + (meet || 'sin enlace. Activa el servicio Google Calendar API en Apps Script y crea el Meet a mano en el evento.'),
+      'WhatsApp: +' + quien.telefono, 'Correo: ' + correo,
+    ]);
+    return { ok: true, cita: { idEvento: creado.id, modalidad: modalidad, fecha: fecha, hora: hora, direccion: direccion || undefined, meet: meet || undefined } };
+  } catch (err) {
+    console.error('botAgendar_: ' + err);
+    return { ok: false, motivo: 'error', mensaje: String(err && err.message || err).slice(0, 300) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Con el servicio avanzado "Google Calendar API" el evento lleva Meet. Sin él, se crea igual
+// con CalendarApp (sin enlace de Meet) para que la cita nunca se pierda. Los ids de CalendarApp
+// terminan en @google.com; así se sabe con qué servicio moverlos o borrarlos después.
+function botCalAvanzado_() {
+  return typeof Calendar !== 'undefined' && Calendar.Events;
+}
+
+function botCrearEvento_(cal, evento, c) {
+  if (botCalAvanzado_()) {
+    try {
+      return Calendar.Events.insert(evento, cal.getId(), { conferenceDataVersion: 1, sendUpdates: 'all' });
+    } catch (err) {
+      console.warn('Calendar.Events.insert falló, uso CalendarApp: ' + err);
+    }
+  }
+  const ev = cal.createEvent(evento.summary, c.ini, c.fin, {
+    description: evento.description, location: evento.location || '', guests: evento.attendees[0].email, sendInvites: true,
+  });
+  ev.addEmailReminder(1440);
+  ev.addPopupReminder(60);
+  return { id: ev.getId(), hangoutLink: '' };
+}
+
+function botMoverEvento_(cal, id, c) {
+  if (botCalAvanzado_() && !/@/.test(id)) {
+    Calendar.Events.patch({ start: { dateTime: c.ini.toISOString(), timeZone: ZONA }, end: { dateTime: c.fin.toISOString(), timeZone: ZONA } },
+      cal.getId(), id, { sendUpdates: 'all' });
+    return;
+  }
+  const ev = cal.getEventById(id);
+  if (!ev) throw new Error('No encuentro el evento ' + id);
+  ev.setTime(c.ini, c.fin);
+}
+
+function botBorrarEvento_(cal, id) {
+  if (botCalAvanzado_() && !/@/.test(id)) {
+    Calendar.Events.remove(cal.getId(), id, { sendUpdates: 'all' });
+    return;
+  }
+  const ev = cal.getEventById(id);
+  if (ev) ev.deleteEvent();
+}
+
+/** Fila de Prospectos de un evento (por su id). */
+function botFilaDeEvento_(idEvento) {
+  const sheet = hojaBot_('Prospectos', BOT_CAMPOS_PROSPECTO);
+  const n = sheet.getLastRow();
+  if (n < 2) return null;
+  const col = BOT_CAMPOS_PROSPECTO.indexOf('Id evento') + 1;
+  const ids = sheet.getRange(2, col, n - 1, 1).getValues();
+  for (let i = ids.length - 1; i >= 0; i--) if (String(ids[i][0]) === String(idEvento)) return { sheet: sheet, fila: i + 2 };
+  return null;
+}
+
+function botReprogramar_(data, quien, ahoraMs, cfg) {
+  const cita = data.cita || {};
+  const fecha = String(data.fecha || ''), hora = String(data.hora || '');
+  const modalidad = cita.modalidad === 'presencial' ? 'presencial' : 'meet';
+  if (!cita.idEvento || !/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !/^\d{2}:\d{2}$/.test(hora)) return { ok: false, motivo: 'error' };
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { ok: false, motivo: 'error' };
+  try {
+    const cal = calendarioAfiliaciones_();
+    if (!botLibre_(modalidad, fecha, hora, ahoraMs, cfg, cal, cita.idEvento)) return { ok: false, motivo: 'ocupado' };
+    const c = botCita_(modalidad, fecha, hora, cfg);
+    botMoverEvento_(cal, cita.idEvento, c);
+    const f = botFilaDeEvento_(cita.idEvento);
+    if (f) {
+      f.sheet.getRange(f.fila, BOT_CAMPOS_PROSPECTO.indexOf('Cita') + 1).setValue(c.ini);
+      f.sheet.getRange(f.fila, BOT_CAMPOS_PROSPECTO.indexOf('Estado') + 1).setValue('Reprogramada');
+    }
+    botAvisar_('Cita reprogramada', ['+' + quien.telefono + ' cambió su cita para ' + Utilities.formatDate(c.ini, ZONA, "EEEE d 'de' MMMM, h:mm a") + '.']);
+    return { ok: true, cita: { idEvento: cita.idEvento, modalidad: modalidad, fecha: fecha, hora: hora, direccion: cita.direccion, meet: cita.meet } };
+  } catch (err) {
+    console.error('botReprogramar_: ' + err);
+    return { ok: false, motivo: 'error', mensaje: String(err && err.message || err).slice(0, 300) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function botCancelar_(data, quien) {
+  const cita = data.cita || {};
+  if (!cita.idEvento) return { ok: false };
+  try {
+    botBorrarEvento_(calendarioAfiliaciones_(), cita.idEvento);
+    const f = botFilaDeEvento_(cita.idEvento);
+    if (f) f.sheet.getRange(f.fila, BOT_CAMPOS_PROSPECTO.indexOf('Estado') + 1).setValue('Cancelada');
+    botAvisar_('Cita cancelada', ['+' + quien.telefono + ' canceló su cita de ' + cita.fecha + ' ' + cita.hora + '.']);
+    return { ok: true };
+  } catch (err) {
+    console.error('botCancelar_: ' + err);
+    return { ok: false };
+  }
+}
+
+function botSoporte_(op, data, quien) {
+  const props = PropertiesService.getScriptProperties();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  let caso;
+  try {
+    caso = Number(props.getProperty('bot_caso_ultimo') || 0) + 1;
+    props.setProperty('bot_caso_ultimo', String(caso));
+  } finally {
+    lock.releaseLock();
+  }
+  const sop = data.sop || {};
+  const captura = op === 'soporte' ? botGuardarImagen_(data.captura, 'caso-' + caso) : '';
+  hojaBot_('Soporte', BOT_CAMPOS_SOPORTE).appendRow([
+    new Date(), caso, op === 'soporte' ? 'Soporte' : 'Pidió una persona', "'+" + quien.telefono, quien.nombre,
+    botTexto_(sop.negocio, 120), botTexto_(sop.tema, 80), botTexto_(sop.descripcion, 1500), captura, 'Abierto',
+  ]);
+  botAvisar_(op === 'soporte' ? 'Caso de soporte #' + caso : 'Te piden hablar con una persona', [
+    'WhatsApp: +' + quien.telefono + (quien.nombre ? ' (' + quien.nombre + ')' : ''),
+    sop.negocio ? 'Negocio: ' + sop.negocio : '',
+    sop.tema ? 'Tema: ' + sop.tema : '',
+    sop.descripcion ? 'Descripción: ' + sop.descripcion : '',
+    captura ? 'Captura: ' + captura : '',
+  ]);
+  return { ok: true, caso: caso };
+}
+
+function promptGenerarTokenBot() {
+  const ui = SpreadsheetApp.getUi();
+  const token = 'bot_' + Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').slice(0, 12);
+  PropertiesService.getScriptProperties().setProperty('bot_token', token);
+  ui.alert('Token del bot', token + '\n\nCópialo en GitHub > Settings > Secrets and variables > Actions > BOT_TOKEN.\nEl anterior deja de servir ahora.', ui.ButtonSet.OK);
+}
+
+/** Revisa, desde el editor, lo mismo que necesita el bot para agendar. */
+function probarAgendaBot() {
+  const ui = SpreadsheetApp.getUi();
+  const lineas = [];
+  const token = String(PropertiesService.getScriptProperties().getProperty('bot_token') || '');
+  lineas.push(token.length >= 24 ? '✅ Token del bot creado (termina en …' + token.slice(-4) + '). Debe ser igual a BOT_TOKEN en GitHub.' : '❌ No hay token del bot: usa "Bot de WhatsApp: generar token" y ponlo en GitHub como BOT_TOKEN.');
+  lineas.push(typeof Calendar !== 'undefined' ? '✅ Servicio Google Calendar API activado.' : '❌ Falta activar Servicios (+) → Google Calendar API, identificador "Calendar".');
+  ['meet', 'presencial'].forEach(function (m) {
+    try {
+      const dias = botDisponibilidad_(m, Date.now(), botConfig_(), calendarioAfiliaciones_());
+      const horas = dias.reduce(function (n, d) { return n + d.horas.length; }, 0);
+      lineas.push((horas ? '✅ ' : '⚠️ ') + (m === 'meet' ? 'Google Meet' : 'Presencial') + ': ' + horas + ' horas libres en ' + dias.length + ' días.');
+    } catch (err) {
+      lineas.push('❌ ' + m + ': ' + (err && err.message || err));
+    }
+  });
+  lineas.push('', 'Si todo sale ✅ y el bot sigue fallando: Implementar → Gestionar implementaciones → editar → Nueva versión (el bot usa la versión publicada, no la del editor).');
+  ui.alert('Prueba de la agenda del bot', lineas.join('\n'), ui.ButtonSet.OK);
+}
+
+function promptAjustesBot() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getScriptProperties();
+  const r = ui.prompt('Avisos del bot', 'Correo que recibe los avisos (afiliaciones, soporte). Actual: ' +
+    (props.getProperty('aviso_email') || Session.getEffectiveUser().getEmail()), ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  const correo = r.getResponseText().trim();
+  if (correo) props.setProperty('aviso_email', correo);
+  const b = ui.prompt('Bandeja del bot', 'Dirección de la bandeja (https://…workers.dev/bandeja), para el enlace de los correos:', ui.ButtonSet.OK_CANCEL);
+  if (b.getSelectedButton() === ui.Button.OK && b.getResponseText().trim()) props.setProperty('bot_bandeja_url', b.getResponseText().trim());
+  calendarioAfiliaciones_();
+  ui.alert('Listo. El calendario "Afiliaciones bookeaa" ya existe: ahí caen las citas y, si bloqueas una hora, el bot no la ofrece.');
+}
+
+// ============================================================================
+// Mi negocio: la app de cada dueño (bookeaa.com/negocio)
+// ============================================================================
+// El dueño entra con Google: el navegador manda el ID token, acá se verifica con
+// Google (aud = google_client_id) y el correo se busca en la columna Email de
+// Tenants. Después se usa una sesión propia firmada (30 días) para no pedir Google
+// en cada consulta. Propiedades del script:
+//   google_client_id  ID de cliente OAuth (tipo Web) de Google Cloud
+//   dueno_admins      correos que ven todos los negocios (separados por coma)
+//   sesion_secreto    lo crea el script la primera vez; cambiarlo cierra todas las sesiones
+// Las notificaciones las manda el Worker del bot (bot_bandeja_url sin /bandeja).
+
+const SESION_DIAS = 30;
+const ESTADO_POR_VERIFICAR = 'Pago por verificar';
+
+function secretoSesion_() {
+  const props = PropertiesService.getScriptProperties();
+  let s = props.getProperty('sesion_secreto');
+  if (!s) {
+    s = Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty('sesion_secreto', s);
+  }
+  return s;
+}
+
+function firmar_(texto) {
+  return Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(texto, secretoSesion_())).replace(/=+$/, '');
+}
+
+/** Sesión "correo|vence(ms)|firma". */
+function crearSesion_(email, ahoraMs) {
+  const cuerpo = String(email).toLowerCase() + '|' + (ahoraMs + SESION_DIAS * 86400000);
+  return cuerpo + '|' + firmar_(cuerpo);
+}
+
+/** El correo de una sesión válida, o null. */
+function leerSesion_(sesion, ahoraMs) {
+  const partes = String(sesion || '').split('|');
+  if (partes.length !== 3) return null;
+  const cuerpo = partes[0] + '|' + partes[1];
+  if (firmar_(cuerpo) !== partes[2]) return null;
+  if (!(Number(partes[1]) > ahoraMs)) return null;
+  return partes[0];
+}
+
+/** Verifica el ID token con Google. Devuelve el correo verificado o null. */
+function correoDeGoogle_(credencial, ahoraMs) {
+  const clientId = String(PropertiesService.getScriptProperties().getProperty('google_client_id') || '').trim();
+  if (!clientId || !credencial) return null;
+  const r = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(credencial), { muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) return null;
+  const t = JSON.parse(r.getContentText());
+  if (t.aud !== clientId) return null;
+  if (String(t.email_verified) !== 'true' || !t.email) return null;
+  if (!(Number(t.exp) * 1000 > ahoraMs)) return null;
+  if (['accounts.google.com', 'https://accounts.google.com'].indexOf(String(t.iss)) === -1) return null;
+  return String(t.email).toLowerCase();
+}
+
+function esAdminDueno_(email) {
+  const lista = String(PropertiesService.getScriptProperties().getProperty('dueno_admins') || '');
+  return lista.split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean).indexOf(email) !== -1;
+}
+
+/** Negocios activos de un correo (la columna Email de Tenants admite varios, separados por coma). */
+function negociosDe_(email, tenants) {
+  const admin = esAdminDueno_(email);
+  return tenants.filter(function (t) {
+    if (!t.slug || !tenantActivo_(t)) return false;
+    if (admin) return true;
+    return String(t.email || '').toLowerCase().split(/[,;\s]+/).indexOf(email) !== -1;
+  });
+}
+
+function horaTexto_(v) {
+  if (v && typeof v.getTime === 'function' && !isNaN(v.getTime())) return Utilities.formatDate(v, ZONA, 'HH:mm');
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(v || '').trim());
+  return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : '';
+}
+
+/** Citas de Reservaciones con fecha entre `desde` y `hasta` (yyyy-MM-dd, ambas incluidas), por fecha y hora. */
+function citasEntre_(filas, desde, hasta) {
+  return filas
+    .map(function (r) {
+      return {
+        id: String(r.ID || ''),
+        cliente: String(r.Cliente || ''),
+        telefono: String(r.Telefono || ''),
+        servicios: String(r.Servicios || ''),
+        total: toNumber_(r.Total),
+        totalBs: r.Total_Bs === '' || r.Total_Bs == null ? null : toNumber_(r.Total_Bs),
+        fecha: ymd_(r.Fecha_Cita) || '',
+        hora: horaTexto_(r.Hora_Cita),
+        metodo: String(r.Metodo_Pago || ''),
+        estado: String(r.Estado || ''),
+        lugar: String(r.Modalidad || ''),
+        direccion: String(r.Direccion || ''),
+        capture: /^https:\/\//.test(String(r.Comprobante || '')) ? String(r.Comprobante) : '',
+        recibo: r.Recibo_N === '' || r.Recibo_N == null ? null : toNumber_(r.Recibo_N),
+      };
+    })
+    .filter(function (c) { return c.id && c.fecha && c.fecha >= desde && c.fecha <= hasta; })
+    .sort(function (a, b) { return (a.fecha + a.hora).localeCompare(b.fecha + b.hora); });
+}
+
+function sumarDias_(ymd, n) {
+  const p = ymd.split('-').map(Number);
+  return Utilities.formatDate(new Date(Date.UTC(p[0], p[1] - 1, p[2] + n, 12)), 'UTC', 'yyyy-MM-dd');
+}
+
+/** Base del Worker del bot (de bot_bandeja_url) o '' si no está configurada. */
+function urlWorker_() {
+  return String(PropertiesService.getScriptProperties().getProperty('bot_bandeja_url') || '').trim().replace(/\/bandeja\/?$/, '');
+}
+
+/** Como llamarWorker_, pero devuelve el código HTTP para explicar qué falló (aviso de prueba). */
+function llamarWorkerDetalle_(ruta, datos) {
+  const base = urlWorker_();
+  const token = String(PropertiesService.getScriptProperties().getProperty('bot_token') || '');
+  if (!/^https:/.test(base)) return { codigo: 0, error: 'Falta la propiedad bot_bandeja_url del Apps Script (la dirección de la bandeja del bot).' };
+  if (!token) return { codigo: 0, error: 'Falta la propiedad bot_token del Apps Script.' };
+  try {
+    const r = UrlFetchApp.fetch(base + ruta, {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(datos),
+      headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true,
+    });
+    const codigo = r.getResponseCode();
+    let json = null;
+    try { json = JSON.parse(r.getContentText()); } catch (_) { /* no es JSON */ }
+    if (codigo === 401) return { codigo: codigo, error: 'El bot_token del Apps Script no coincide con BOT_TOKEN del servidor de avisos (GitHub).' };
+    if (codigo !== 200) return { codigo: codigo, error: 'El servidor de avisos respondió ' + codigo + (json && json.error ? ': ' + json.error : '') + '.' };
+    return { codigo: codigo, json: json };
+  } catch (err) {
+    return { codigo: 0, error: 'No se pudo hablar con el servidor de avisos: ' + err };
+  }
+}
+
+/** POST al Worker con el token del bot. Nunca lanza: los avisos no pueden tumbar nada. */
+function llamarWorker_(ruta, datos) {
+  const base = urlWorker_();
+  const token = String(PropertiesService.getScriptProperties().getProperty('bot_token') || '');
+  if (!/^https:\/\//.test(base) || !token) return null;
+  try {
+    const r = UrlFetchApp.fetch(base + ruta, {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(datos),
+      headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true,
+    });
+    return r.getResponseCode() === 200 ? JSON.parse(r.getContentText()) : null;
+  } catch (err) {
+    console.warn('Worker ' + ruta + ': ' + err);
+    return null;
+  }
+}
+
+/** Clave pública VAPID del Worker (para suscribirse a las notificaciones). */
+function claveVapid_() {
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('vapid_publica');
+  if (hit) return hit;
+  const base = urlWorker_();
+  if (!/^https:\/\//.test(base)) return '';
+  try {
+    const r = UrlFetchApp.fetch(base + '/push/clave', { muteHttpExceptions: true });
+    const clave = r.getResponseCode() === 200 ? String(JSON.parse(r.getContentText()).clave || '') : '';
+    if (clave) cache.put('vapid_publica', clave, 21600);
+    return clave;
+  } catch (err) {
+    return '';
+  }
+}
+
+/** Avisa al Worker de una reserva nueva (notificación al dueño). Fuera del lock. */
+function avisarReserva_(slug, cita) {
+  llamarWorker_('/push/evento', { tipo: 'reserva', slug: slug, cita: cita });
+}
+
+/** Punto de entrada desde doPost (accion: 'dueno'). */
+function atenderDueno_(data, ahoraMs) {
+  if (limite_('dueno', 600, 60)) return { error: 'limite', mensaje: 'Demasiadas consultas. Intenta en un minuto.' };
+  const op = String(data.op || '');
+  if (op === 'entrar') {
+    const email = correoDeGoogle_(data.credencial, ahoraMs);
+    if (!email) return { error: 'no_autorizado', mensaje: 'No pudimos verificar tu cuenta de Google.' };
+    const negocios = negociosDe_(email, getTenants_());
+    if (!negocios.length) return { error: 'sin_negocio', mensaje: email + ' no tiene un negocio en bookeaa. Entra con el correo que diste al afiliarte.' };
+    return {
+      sesion: crearSesion_(email, ahoraMs), email: email, vapid: claveVapid_(),
+      negocios: negocios.map(function (t) { return { slug: t.slug, nombre: t.nombre }; }),
+    };
+  }
+
+  const email = leerSesion_(data.sesion, ahoraMs);
+  if (!email) return { error: 'sesion', mensaje: 'Tu sesión venció. Entra otra vez.' };
+  const tenant = negociosDe_(email, getTenants_()).filter(function (t) { return t.slug === String(data.slug || ''); })[0];
+  if (!tenant) return { error: 'no_autorizado', mensaje: 'Ese negocio no es tuyo.' };
+
+  if (op === 'citas') {
+    const desde = /^\d{4}-\d{2}-\d{2}$/.test(String(data.desde || '')) ? String(data.desde) : Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+    const dias = Math.max(1, Math.min(62, Math.floor(Number(data.dias) || 14)));
+    const libro = openTenant_(tenant);
+    const config = getConfig_(libro);
+    return {
+      negocio: { slug: tenant.slug, nombre: config.marca || config.nombre_negocio || tenant.nombre, moneda: normalizarMoneda_(config.moneda) },
+      hoy: Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd'),
+      citas: citasEntre_(getSheetData_(libro, 'Reservaciones'), desde, sumarDias_(desde, dias - 1)),
+    };
+  }
+  if (op === 'confirmar_pago') {
+    const datos = openTenant_(tenant);
+    const cita = getSheetData_(datos, 'Reservaciones').filter(function (r) { return String(r.ID) === String(data.id || ''); })[0];
+    if (!cita) return { error: 'no_existe', mensaje: 'No encontramos esa reserva.' };
+    if (String(cita.Estado) !== ESTADO_POR_VERIFICAR) return { ok: true, estado: String(cita.Estado) };
+    actualizarReserva_(datos, cita.ID, { Estado: 'Confirmada' });
+    return { ok: true, estado: 'Confirmada' };
+  }
+  if (op === 'config') return duenoLeerConfig_(openTenant_(tenant), tenant, ahoraMs);
+  if (op === 'guardar') return duenoGuardar_(openTenant_(tenant), tenant, String(data.seccion || ''), data.datos, ahoraMs);
+  if (op === 'plan') return planNegocio_(tenant, ahoraMs);
+  if (op === 'reportar_pago') {
+    const lockPago = LockService.getScriptLock();
+    if (!lockPago.tryLock(20000)) return { error: 'servidor', mensaje: 'Intenta de nuevo en un momento.' };
+    try {
+      return reportarPago_(tenant, email, data, ahoraMs);
+    } finally {
+      lockPago.releaseLock();
+    }
+  }
+  if (op === 'vapid') {
+    // La app la pide cada vez que abre Avisos: la de la sesión pudo quedar vacía si se
+    // entró antes de configurar bot_bandeja_url.
+    return { vapid: claveVapid_(), servidor: /^https:/.test(urlWorker_()) };
+  }
+  if (op === 'probar_avisos') {
+    const r = llamarWorkerDetalle_('/push/evento', { tipo: 'prueba', slug: tenant.slug });
+    if (r.error) return { error: 'servidor', mensaje: r.error };
+    return { ok: true, equipos: r.json.equipos || 0, enviadas: r.json.enviadas || 0, fallos: r.json.fallos || [] };
+  }
+  if (op === 'avisos') {
+    const s = data.suscripcion || {};
+    if (!/^https:/.test(String(s.endpoint || ''))) return { error: 'datos_invalidos', mensaje: 'Suscripción inválida.' };
+    const r = llamarWorkerDetalle_(data.quitar ? '/push/quitar' : '/push/suscribir', { slug: tenant.slug, email: email, suscripcion: s });
+    return r.json && r.json.ok ? { ok: true } : { error: 'servidor', mensaje: 'No se pudieron activar los avisos. ' + (r.error || 'Intenta de nuevo.') };
+  }
+  return { error: 'op_desconocida' };
+}
+
+/** Para el Worker (accion 'bot', op 'agenda'): las citas de un día de varios negocios. */
+function agendaParaWorker_(data, ahoraMs) {
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(data.fecha || '')) ? String(data.fecha) : Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const pedidos = (Array.isArray(data.slugs) ? data.slugs : []).map(String).slice(0, 200);
+  const agenda = {};
+  getTenants_().forEach(function (t) {
+    if (pedidos.indexOf(t.slug) === -1 || !tenantActivo_(t)) return;
+    try {
+      agenda[t.slug] = citasEntre_(getSheetData_(openTenant_(t), 'Reservaciones'), fecha, fecha)
+        .filter(function (c) { return !/cancel/i.test(c.estado); })
+        .map(function (c) { return { id: c.id, cliente: c.cliente, servicios: c.servicios, fecha: c.fecha, hora: c.hora, estado: c.estado }; });
+    } catch (err) {
+      console.warn('agenda ' + t.slug + ': ' + err);
+    }
+  });
+  return { fecha: fecha, agenda: agenda };
+}
+
+// ---------- Mi negocio: configuración (lo mismo que la ventana de la hoja) ----------
+// Igual que CLAVES_POR_SECCION de apps-script/cliente/Configurador.gs (un test las compara).
+const CLAVES_DUENO = {
+  marca: ['nombre_negocio', 'marca', 'logo_url', 'hero_titulo', 'hero_subtitulo'],
+  estilo: ['tema_estilo', 'color_principal', 'color_fondo', 'paleta'],
+  lugar: ['lugar_tipo', 'lugar_nombre', 'permite_domicilio', 'recargo_domicilio_pct', 'minutos_extra_domicilio'],
+  mensaje: ['mensaje_plantilla'],
+  horario: ['intervalo_min', 'dias_anticipacion', 'anticipacion_min_horas', 'zona_horaria', 'recordatorio_minutos'],
+  pagos: ['whatsapp', 'moneda', 'metodos_pago', 'pm_banco', 'pm_telefono', 'pm_cedula', 'tasa_eur_manual', 'tasa_usd_manual'],
+  comprobantes: ['facturacion_modo', 'ticket_reserva', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
+};
+/** Secciones que solo tocan tablas (sin claves de Configuracion). */
+const TABLAS_DUENO = ['servicios', 'bloqueos', 'logo', 'cupones'];
+const MAX_CUPONES = 200;
+const MAX_SERVICIOS = 120;
+
+/** Filas de datos como texto visible (las horas no se vuelven fechas). */
+function cfgFilas_(ss, nombre, columnas) {
+  const sheet = ss.getSheetByName(nombre);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, columnas).getDisplayValues()
+    .filter(function (r) { return r.some(function (c) { return String(c).trim() !== ''; }); });
+}
+
+function cfgHora_(v) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(v || '').trim());
+  return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : '';
+}
+
+function cfgActiva_(v) {
+  return ['false', 'falso', 'no', '0'].indexOf(String(v).trim().toLowerCase()) === -1;
+}
+
+/** recordatorio_minutos: vacío, "no" o hasta 5 números (0–40320) separados por comas. */
+function cfgAlertas_(valor) {
+  const v = String(valor == null ? '' : valor).trim().toLowerCase();
+  if (v === '' || v === 'no') return true;
+  const partes = v.split(/[\s,;]+/);
+  return partes.length <= 5 && partes.every(function (t) { return /^\d{1,5}$/.test(t) && Number(t) <= 40320; });
+}
+
+function cfgReemplazar_(sheet, columnas, filas) {
+  const ultima = sheet.getLastRow();
+  if (ultima > 1) sheet.getRange(2, 1, ultima - 1, columnas).clearContent();
+  if (filas.length) sheet.getRange(2, 1, filas.length, columnas).setValues(filas);
+}
+
+function cfgHoja_(ss, nombre) {
+  const sheet = ss.getSheetByName(nombre);
+  if (sheet) return sheet;
+  const def = SHEETS.filter(function (s) { return s.name === nombre; })[0];
+  const nueva = ss.insertSheet(nombre);
+  if (def) nueva.getRange(1, 1, 1, def.headers.length).setValues([def.headers]);
+  return nueva;
+}
+
+/** Todo lo que la pestaña Configurar muestra, en una sola llamada. */
+function duenoLeerConfig_(ss, tenant, ahoraMs) {
+  const todo = getConfig_(ss);
+  const config = {};
+  Object.keys(CLAVES_DUENO).forEach(function (s) {
+    CLAVES_DUENO[s].forEach(function (k) { config[k] = todo[k] == null ? '' : todo[k]; });
+  });
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const bloqueos = [];
+  const bs = ss.getSheetByName('Bloqueos');
+  if (bs && bs.getLastRow() >= 2) {
+    const n = bs.getLastRow() - 1;
+    const fechas = bs.getRange(2, 1, n, 1).getValues();
+    const resto = bs.getRange(2, 2, n, 3).getDisplayValues();
+    for (let i = 0; i < n; i++) {
+      const fecha = ymd_(fechas[i][0]);
+      if (!fecha || fecha < hoy) continue;
+      bloqueos.push({ fecha: fecha, inicio: cfgHora_(resto[i][0]), fin: cfgHora_(resto[i][1]), motivo: String(resto[i][2] || '').trim() });
+    }
+    bloqueos.sort(function (a, b) { return (a.fecha + a.inicio).localeCompare(b.fecha + b.inicio); });
+  }
+  return {
+    config: config,
+    paginaUrl: /^https?:\/\//.test(String(todo.pagina_url || '')) ? String(todo.pagina_url) : '',
+    servicios: cfgFilas_(ss, 'Servicios', 5).map(function (r) {
+      const tipo = String(r[4] || '').trim();
+      const adicional = /adic|extra/i.test(tipo);
+      return {
+        id: String(r[0] || '').trim(), nombre: String(r[1] || '').trim(), precio: toNumber_(r[2]),
+        duracion: toNumber_(r[3]) || 60, adicional: adicional,
+        categoria: adicional || /^base$/i.test(tipo) ? '' : tipo,
+      };
+    }).filter(function (s) { return s.nombre; }),
+    horarios: cfgFilas_(ss, 'Horarios', 3).map(function (r) {
+      return { dia: String(r[0]).trim(), inicio: cfgHora_(r[1]), fin: cfgHora_(r[2]) };
+    }),
+    sedes: cfgFilas_(ss, 'Sedes', 4).map(function (r) {
+      return { nombre: String(r[0]).trim(), direccion: String(r[1]).trim(), mapsUrl: String(r[2]).trim(), activa: cfgActiva_(r[3]) };
+    }).filter(function (s) { return s.nombre || s.direccion; }),
+    mensajes: cfgFilas_(ss, 'Mensajes', 2).map(function (r) {
+      return { nombre: String(r[0]).trim(), texto: String(r[1]) };
+    }).filter(function (m) { return m.nombre; }),
+    bloqueos: bloqueos,
+    // Usos vacío = ilimitado (como lo lee buscarCupon_ al reservar).
+    cupones: cfgFilas_(ss, 'Cupones', 4).map(function (r) {
+      return {
+        codigo: String(r[0] || '').trim().toUpperCase(),
+        porcentaje: String(r[1]).trim() === '' ? 0 : toNumber_(r[1]),
+        monto: String(r[2]).trim() === '' ? 0 : toNumber_(r[2]),
+        usos: String(r[3]).trim() === '' ? null : Math.max(0, Math.floor(toNumber_(r[3]))),
+      };
+    }).filter(function (c) { return c.codigo; }),
+    logo: leerLogoHoja_(ss),
+  };
+}
+
+/** Los mismos errores que la ventana de la hoja, más servicios y días libres. */
+function duenoValidar_(seccion, datos) {
+  const c = datos.config || {};
+  const errores = [];
+  const hex = /^#?(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+  const hora = /^\d{1,2}:\d{2}$/;
+  const numero = function (k, min, max, nombre) {
+    if (!(k in c) || String(c[k]).trim() === '') return;
+    const n = Number(String(c[k]).replace(',', '.'));
+    if (!isFinite(n) || n < min || n > max) errores.push((nombre || k) + ': escribe un número entre ' + min + ' y ' + max + '.');
+  };
+  if (seccion === 'estilo') {
+    ['color_principal', 'color_fondo'].forEach(function (k) {
+      if (c[k] && !hex.test(String(c[k]).trim())) errores.push('Escribe el color en hex, como #1F6F5C.');
+    });
+  }
+  if (seccion === 'marca') {
+    if (!String(c.marca || c.nombre_negocio || '').trim()) errores.push('Escribe el nombre de tu negocio.');
+    if (c.logo_url && !/^https?:\/\//i.test(String(c.logo_url).trim())) errores.push('El logo tiene que ser un enlace que empiece por https://');
+  }
+  if (seccion === 'lugar') {
+    numero('recargo_domicilio_pct', 0, 300, 'Recargo a domicilio');
+    numero('minutos_extra_domicilio', 0, 240, 'Minutos de traslado');
+    const sedes = (datos.sedes || []).filter(function (s) { return String(s.nombre || '').trim(); });
+    if (!sedes.some(function (s) { return s.activa !== false; })) errores.push('Deja al menos una sede activa.');
+    const nombres = sedes.map(function (s) { return normKey_(s.nombre); });
+    if (nombres.some(function (n, i) { return nombres.indexOf(n) !== i; })) errores.push('Dos sedes tienen el mismo nombre.');
+    sedes.forEach(function (s) {
+      if (s.mapsUrl && !/^https?:\/\//i.test(String(s.mapsUrl).trim())) errores.push('El enlace de Maps de "' + s.nombre + '" tiene que empezar por https://');
+    });
+    if (normKey_(c.lugar_tipo || '') === 'otro' && !String(c.lugar_nombre || '').trim()) errores.push('Con "Otro", escribe cómo se llama tu lugar.');
+  }
+  if (seccion === 'mensaje') {
+    const mensajes = (datos.mensajes || []).filter(function (m) { return String(m.nombre || '').trim(); });
+    if (!mensajes.length) errores.push('Deja al menos una plantilla de mensaje.');
+    if (!mensajes.some(function (m) { return normKey_(m.nombre) === normKey_(c.mensaje_plantilla || ''); })) errores.push('Elige cuál plantilla se usa.');
+  }
+  if (seccion === 'horario') {
+    numero('intervalo_min', 5, 240, 'Cada cuántos minutos');
+    numero('dias_anticipacion', 1, 365, 'Días a mostrar');
+    numero('anticipacion_min_horas', 0, 168, 'Horas mínimas de aviso');
+    if (!cfgAlertas_(c.recordatorio_minutos)) errores.push('Alerta: elige hasta 5 tiempos, de 0 minutos a 4 semanas antes de la cita.');
+    (datos.horarios || []).forEach(function (h) {
+      if (!h.inicio && !h.fin) return;
+      if (!hora.test(h.inicio || '') || !hora.test(h.fin || '') || toMinutes_(h.fin) <= toMinutes_(h.inicio)) {
+        errores.push(h.dia + ': la hora de cierre va después de la de apertura.');
+      }
+    });
+  }
+  if (seccion === 'comprobantes') {
+    const modo = String(c.facturacion_modo || 'interno').trim().toLowerCase();
+    if (modo !== 'interno' && modo !== 'fiscal') errores.push('Elige un modo: control interno o facturación fiscal.');
+    const ticket = String(c.ticket_reserva || 'si').trim().toLowerCase();
+    if (ticket !== 'si' && ticket !== 'no') errores.push('Ticket de reserva: elige si se emite o no.');
+    if (modo === 'fiscal') {
+      if (!/^[VJEGP]-?\d{6,9}-?\d$/i.test(String(c.facturacion_rif || '').trim())) errores.push('Escribe tu RIF completo, por ejemplo J-12345678-9.');
+      if (!String(c.facturacion_razon_social || '').trim()) errores.push('Escribe tu nombre o razón social como sale en el RIF.');
+    }
+  }
+  if (seccion === 'pagos') {
+    if (c.whatsapp && String(c.whatsapp).replace(/\D/g, '').length < 10) errores.push('El WhatsApp necesita el código de país, por ejemplo 584121234567.');
+    if ('metodos_pago' in c && !String(c.metodos_pago || '').trim()) errores.push('Deja al menos un método de pago.');
+  }
+  if (seccion === 'servicios') {
+    const lista = datos.servicios || [];
+    if (lista.length > MAX_SERVICIOS) errores.push('Máximo ' + MAX_SERVICIOS + ' servicios.');
+    if (!lista.some(function (s) { return String(s.nombre || '').trim() && !s.adicional; })) errores.push('Deja al menos un servicio principal (que no sea adicional).');
+    const vistos = [];
+    lista.forEach(function (s) {
+      const nombre = String(s.nombre || '').trim();
+      if (!nombre) return errores.push('Hay un servicio sin nombre.');
+      if (vistos.indexOf(normKey_(nombre)) !== -1) errores.push('"' + nombre + '" está repetido.');
+      vistos.push(normKey_(nombre));
+      if (!(Number(s.precio) >= 0) || !isFinite(Number(s.precio))) errores.push(nombre + ': revisa el precio.');
+      if (!(Number(s.duracion) >= 5 && Number(s.duracion) <= 720)) errores.push(nombre + ': la duración va de 5 a 720 minutos.');
+    });
+  }
+  if (seccion === 'bloqueos') {
+    (datos.bloqueos || []).forEach(function (b) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(b.fecha || ''))) return errores.push('Hay un día libre sin fecha.');
+      const parcial = b.inicio || b.fin;
+      if (parcial && (!hora.test(b.inicio || '') || !hora.test(b.fin || '') || toMinutes_(b.fin) <= toMinutes_(b.inicio))) {
+        errores.push(b.fecha + ': la hora de fin va después de la de inicio (o deja las dos vacías para todo el día).');
+      }
+    });
+  }
+  if (seccion === 'cupones') {
+    const lista = datos.cupones || [];
+    if (lista.length > MAX_CUPONES) errores.push('Máximo ' + MAX_CUPONES + ' cupones.');
+    const codigos = [];
+    lista.forEach(function (c) {
+      const codigo = String(c.codigo || '').trim().toUpperCase();
+      if (!/^[A-Z0-9][A-Z0-9_-]{2,19}$/.test(codigo)) return errores.push((codigo || 'Un cupón') + ': el código lleva de 3 a 20 letras o números, sin espacios.');
+      if (codigos.indexOf(codigo) !== -1) errores.push(codigo + ' está repetido.');
+      codigos.push(codigo);
+      const pct = Number(c.porcentaje) || 0, monto = Number(c.monto) || 0;
+      if (pct && monto) errores.push(codigo + ': elige porcentaje o monto, no los dos.');
+      else if (!pct && !monto) errores.push(codigo + ': escribe cuánto descuenta.');
+      if (pct && !(pct > 0 && pct <= 100)) errores.push(codigo + ': el porcentaje va de 1 a 100.');
+      if (monto && !(monto > 0)) errores.push(codigo + ': revisa el monto.');
+      if (c.usos !== null && c.usos !== undefined && c.usos !== '' && !(Number(c.usos) >= 0 && Number(c.usos) <= 100000)) errores.push(codigo + ': revisa los usos.');
+    });
+  }
+  if (seccion === 'logo' && datos.logo && !logoValido_(datos.logo)) errores.push('La imagen no se pudo guardar. Prueba con un PNG o JPG más liviano.');
+  return errores;
+}
+
+/** Guarda una sección en la hoja del negocio. Devuelve { ok, errores } y la configuración nueva. */
+function duenoGuardar_(ss, tenant, seccion, datos, ahoraMs) {
+  const permitidas = CLAVES_DUENO[seccion];
+  if (!permitidas && TABLAS_DUENO.indexOf(seccion) === -1) return { ok: false, errores: ['Sección desconocida.'] };
+  datos = datos || {};
+  const errores = duenoValidar_(seccion, datos);
+  if (errores.length) return { ok: false, errores: errores };
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { ok: false, errores: ['La hoja está ocupada. Intenta de nuevo.'] };
+  try {
+    const valores = datos.config || {};
+    if (permitidas) {
+      const hojaConfig = ss.getSheetByName('Configuracion');
+      permitidas.forEach(function (k) {
+        if (k in valores) setConfigKey_(hojaConfig, k, paraCelda_(String(valores[k] == null ? '' : valores[k]).trim()));
+      });
+    }
+    if (seccion === 'lugar' && Array.isArray(datos.sedes)) {
+      const filas = datos.sedes.filter(function (s) { return String(s.nombre || '').trim(); }).map(function (s) {
+        return [paraCelda_(limpiarTexto_(s.nombre, 80)), paraCelda_(limpiarTexto_(s.direccion, 200)), paraCelda_(String(s.mapsUrl || '').trim().slice(0, 500)), s.activa !== false];
+      });
+      const hojaSedes = cfgHoja_(ss, 'Sedes');
+      cfgReemplazar_(hojaSedes, 4, filas);
+      if (filas.length) hojaSedes.getRange(2, 4, filas.length, 1).insertCheckboxes();
+    }
+    if (seccion === 'mensaje' && Array.isArray(datos.mensajes)) {
+      cfgReemplazar_(cfgHoja_(ss, 'Mensajes'), 2, datos.mensajes.filter(function (m) { return String(m.nombre || '').trim(); })
+        .map(function (m) { return [paraCelda_(limpiarTexto_(m.nombre, 60)), paraCelda_(String(m.texto || '').slice(0, 2000))]; }));
+    }
+    if (seccion === 'horario' && Array.isArray(datos.horarios)) {
+      const filas = [];
+      [1, 2, 3, 4, 5, 6, 0].map(function (d) { return DIAS_SEMANA[d]; }).forEach(function (dia) {
+        const tramos = datos.horarios.filter(function (h) { return normKey_(h.dia) === normKey_(dia) && h.inicio && h.fin; });
+        if (!tramos.length) filas.push([dia, '', '']);
+        tramos.forEach(function (t) { filas.push([dia, cfgHora_(t.inicio), cfgHora_(t.fin)]); });
+      });
+      const hojaHorarios = cfgHoja_(ss, 'Horarios');
+      hojaHorarios.getRange('A:C').setNumberFormat('@');
+      cfgReemplazar_(hojaHorarios, 3, filas);
+    }
+    if (seccion === 'servicios') {
+      cfgReemplazar_(cfgHoja_(ss, 'Servicios'), 5, (datos.servicios || []).map(function (s) {
+        const tipo = s.adicional ? 'Adicional' : paraCelda_(limpiarTexto_(s.categoria || '', 40));
+        return [paraCelda_(limpiarTexto_(s.id || '', 60)), paraCelda_(limpiarTexto_(s.nombre, 80)), round2_(Number(s.precio) || 0), Math.round(Number(s.duracion)), tipo];
+      }));
+    }
+    if (seccion === 'bloqueos') {
+      // Se reemplazan solo los de hoy en adelante: los días pasados quedan como historia.
+      const hojaBloqueos = cfgHoja_(ss, 'Bloqueos');
+      const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+      const pasados = [];
+      if (hojaBloqueos.getLastRow() >= 2) {
+        const n = hojaBloqueos.getLastRow() - 1;
+        const fechas = hojaBloqueos.getRange(2, 1, n, 1).getValues();
+        const resto = hojaBloqueos.getRange(2, 2, n, 3).getDisplayValues();
+        for (let i = 0; i < n; i++) {
+          const f = ymd_(fechas[i][0]);
+          if (f && f < hoy) pasados.push([f, resto[i][0], resto[i][1], resto[i][2]]);
+        }
+      }
+      const nuevos = (datos.bloqueos || []).filter(function (b) { return String(b.fecha) >= hoy; }).map(function (b) {
+        return [String(b.fecha), b.inicio ? cfgHora_(b.inicio) : '', b.fin ? cfgHora_(b.fin) : '', paraCelda_(limpiarTexto_(b.motivo || '', 80))];
+      });
+      hojaBloqueos.getRange('A:C').setNumberFormat('@');
+      cfgReemplazar_(hojaBloqueos, 4, pasados.concat(nuevos));
+    }
+    if (seccion === 'cupones') {
+      cfgReemplazar_(cfgHoja_(ss, 'Cupones'), 4, (datos.cupones || []).map(function (c) {
+        const usos = c.usos === null || c.usos === undefined || c.usos === '' ? '' : Math.floor(Number(c.usos));
+        return [String(c.codigo).trim().toUpperCase(), Number(c.porcentaje) || '', Number(c.monto) ? round2_(Number(c.monto)) : '', usos];
+      }));
+    }
+    if (seccion === 'logo') {
+      let hojaLogo = ss.getSheetByName('Logo');
+      if (!hojaLogo) {
+        hojaLogo = ss.insertSheet('Logo');
+        hojaLogo.getRange('A1').setValue('Logo (lo maneja la configuración; no lo edites)');
+        hojaLogo.hideSheet();
+      }
+      if (datos.logo) hojaLogo.getRange('A2').setValue(String(datos.logo).trim());
+      else hojaLogo.getRange('A2').clearContent();
+    }
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
+  }
+  limpiarCacheCatalogo_(tenant.slug); // la página muestra el cambio en la próxima carga
+  return { ok: true, errores: [], datos: duenoLeerConfig_(ss, tenant, ahoraMs) };
+}
+
+// ============================================================================
+// Central de bookeaa (bookeaa.com/central): administración de los negocios
+// ============================================================================
+// Solo para los correos de la propiedad dueno_admins. Entran con Google igual que en
+// "Mi negocio" (op 'entrar' de la rama dueno) y usan la misma sesión.
+// El cobro mensual vive en la pestaña Tenants (Vence, Ultimo_Pago) y cada pago queda
+// en la pestaña Pagos del archivo maestro.
+
+const PRECIO_MENSUAL = 10;
+const DIAS_PRUEBA = 30;
+const DIAS_AVISO_VENCE = 5;
+const PAGOS_HEADERS = ['Fecha', 'Slug', 'Negocio', 'Monto', 'Meses', 'Metodo', 'Referencia', 'Vence_Antes', 'Vence_Nuevo', 'Registrado_Por'];
+
+/** Estado de cobro de un negocio: suspendido, pendiente (venció), prueba, activo o sin_fecha. */
+/**
+ * Estado de cobro: suspendido, sin_fecha, prueba o activo (al día), pendiente (pasó el
+ * corte y está en los DIAS_GRACIA para pagar) o vencido (pasó la gracia; revisarCortes
+ * lo suspende).
+ */
+function estadoCobro_(t, hoy) {
+  if (!tenantActivo_(t)) return 'suspendido';
+  const vence = ymd_(t.vence);
+  if (!vence) return 'sin_fecha';
+  if (vence < hoy) return diasEntre_(vence, hoy) <= DIAS_GRACIA ? 'pendiente' : 'vencido';
+  return ymd_(t.ultimoPago) ? 'activo' : 'prueba';
+}
+
+/**
+ * Nuevo vencimiento al pagar `meses`. El corte es siempre el mismo día del mes (el de
+ * ingreso): se suma desde el vencimiento anterior, no desde el día en que pagó. Si
+ * venció hace meses, se salta hasta el primer corte que quede en el futuro.
+ */
+function extenderVence_(antes, meses, hoy) {
+  if (!antes) return sumarMeses_(hoy, meses);
+  let n = meses;
+  while (sumarMeses_(antes, n) < hoy && n < 240) n++;
+  return sumarMeses_(antes, n);
+}
+
+/** Próxima fecha de corte (mismo día del mes que el ingreso) que sea hoy o después. */
+function proximoCorte_(creado, hoy) {
+  if (!creado) return '';
+  let n = 1;
+  while (sumarMeses_(creado, n) < hoy && n < 600) n++;
+  return sumarMeses_(creado, n);
+}
+
+function diasEntre_(a, b) {
+  const pa = a.split('-').map(Number), pb = b.split('-').map(Number);
+  return Math.round((Date.UTC(pb[0], pb[1] - 1, pb[2]) - Date.UTC(pa[0], pa[1] - 1, pa[2])) / 86400000);
+}
+
+/** Suma meses a una fecha yyyy-MM-dd (el 31 de enero + 1 mes = 28/29 de febrero). */
+function sumarMeses_(ymd, meses) {
+  const p = ymd.split('-').map(Number);
+  const destino = new Date(Date.UTC(p[0], p[1] - 1 + meses, 1));
+  const ultimo = new Date(Date.UTC(destino.getUTCFullYear(), destino.getUTCMonth() + 1, 0)).getUTCDate();
+  destino.setUTCDate(Math.min(p[2], ultimo));
+  return destino.toISOString().slice(0, 10);
+}
+
+/** La pestaña Tenants con los encabezados de la central (los agrega si faltan). */
+function hojaTenants_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Tenants');
+  if (!sheet) throw new Error('Falta la pestaña Tenants (ejecuta setupMaster).');
+  const actuales = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map(String);
+  TENANT_HEADERS.forEach(function (h) {
+    if (actuales.indexOf(h) === -1) {
+      actuales.push(h);
+      sheet.getRange(1, actuales.length).setValue(h);
+    }
+  });
+  return { sheet: sheet, headers: actuales };
+}
+
+/** Todas las filas de Tenants como objetos con su número de fila. */
+function filasTenants_() {
+  const t = hojaTenants_();
+  const n = t.sheet.getLastRow() - 1;
+  if (n < 1) return [];
+  const valores = t.sheet.getRange(2, 1, n, t.headers.length).getValues();
+  return valores.map(function (r, i) {
+    const o = { fila: i + 2 };
+    t.headers.forEach(function (h, j) { o[h] = r[j]; });
+    return o;
+  }).filter(function (o) { return String(o.Slug || '').trim(); });
+}
+
+/** Escribe columnas (por encabezado) de la fila de un negocio. */
+function escribirTenant_(slug, campos) {
+  const t = hojaTenants_();
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(slug); })[0];
+  if (!fila) throw new Error('No existe el negocio ' + slug + '.');
+  Object.keys(campos).forEach(function (h) {
+    const c = t.headers.indexOf(h);
+    if (c !== -1) t.sheet.getRange(fila.fila, c + 1).setValue(campos[h]);
+  });
+  limpiarCacheTenants_();
+}
+
+function negocioCentral_(o, hoy) {
+  const t = {
+    slug: String(o.Slug).trim(), nombre: String(o.Nombre || '').trim(), activo: String(o.Activo || 'si'),
+    vence: o.Vence, ultimoPago: o.Ultimo_Pago,
+  };
+  const vence = ymd_(o.Vence) || '';
+  return {
+    slug: t.slug,
+    nombre: t.nombre,
+    email: String(o.Email || '').trim(),
+    telefono: String(o.Telefono || '').replace(/[^\d+]/g, ''),
+    creado: ymd_(o.Creado) || '',
+    vence: vence,
+    ultimoPago: ymd_(o.Ultimo_Pago) || '',
+    notas: String(o.Notas || ''),
+    activo: tenantActivo_(t),
+    estado: estadoCobro_(t, hoy),
+    dias: vence ? diasEntre_(hoy, vence) : null,
+    hoja: o.Spreadsheet_Id ? 'https://docs.google.com/spreadsheets/d/' + o.Spreadsheet_Id + '/edit' : '',
+  };
+}
+
+function hojaPagos_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Pagos');
+  if (!sheet) {
+    sheet = ss.insertSheet('Pagos');
+    sheet.appendRow(PAGOS_HEADERS);
+    sheet.getRange(1, 1, 1, PAGOS_HEADERS.length).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function pagosRecientes_(limite) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Pagos');
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const n = sheet.getLastRow() - 1;
+  const desde = Math.max(2, sheet.getLastRow() - limite + 1);
+  return sheet.getRange(desde, 1, sheet.getLastRow() - desde + 1, PAGOS_HEADERS.length).getValues().map(function (r) {
+    return {
+      fecha: r[0] instanceof Date ? Utilities.formatDate(r[0], ZONA, "yyyy-MM-dd'T'HH:mm") : String(r[0]),
+      slug: String(r[1]), negocio: String(r[2]), monto: toNumber_(r[3]), meses: toNumber_(r[4]),
+      metodo: String(r[5]), referencia: String(r[6]), venceNuevo: ymd_(r[8]) || '',
+    };
+  }).reverse();
+}
+
+/** Lo que el bot agendó para afiliar (pestaña Prospectos), sin los ya convertidos en negocio. */
+function prospectosCentral_(negocios) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Prospectos');
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  const col = function (h) { return headers.indexOf(h); };
+  const correos = negocios.map(function (n) { return n.email.toLowerCase(); });
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues().map(function (r) {
+    const cita = r[col('Cita')];
+    return {
+      fecha: ymd_(r[col('Fecha')]) || '',
+      telefono: String(r[col('Teléfono')] || '').replace(/[^\d+]/g, ''),
+      nombre: String(r[col('Nombre en WhatsApp')] || ''),
+      negocio: String(r[col('Negocio')] || ''),
+      correo: String(r[col('Correo')] || '').trim(),
+      modalidad: String(r[col('Modalidad')] || ''),
+      cita: cita instanceof Date ? Utilities.formatDate(cita, ZONA, "yyyy-MM-dd'T'HH:mm") : String(cita || ''),
+      estado: String(r[col('Estado')] || ''),
+    };
+  }).filter(function (p) {
+    return p.negocio && !/cancel/i.test(p.estado) && (!p.correo || correos.indexOf(p.correo.toLowerCase()) === -1);
+  }).reverse().slice(0, 100);
+}
+
+function resumenCentral_(ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const negocios = filasTenants_().map(function (o) { return negocioCentral_(o, hoy); });
+  const cuenta = function (e) { return negocios.filter(function (n) { return n.estado === e; }).length; };
+  return {
+    hoy: hoy,
+    precio: PRECIO_MENSUAL,
+    totales: {
+      activos: cuenta('activo'), prueba: cuenta('prueba'), pendientes: cuenta('pendiente'),
+      suspendidos: cuenta('suspendido'), sinFecha: cuenta('sin_fecha'),
+      porVencer: negocios.filter(function (n) { return (n.estado === 'activo' || n.estado === 'prueba') && n.dias !== null && n.dias <= DIAS_AVISO_VENCE; }).length,
+    },
+    negocios: negocios,
+    pagos: pagosRecientes_(60),
+    prospectos: prospectosCentral_(negocios),
+  };
+}
+
+/** Registra un pago: extiende Vence desde la fecha de vencimiento (o desde hoy si ya venció). */
+function registrarPagoCentral_(data, email, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const meses = Math.max(1, Math.min(12, Math.floor(Number(data.meses) || 1)));
+  const monto = round2_(Number(String(data.monto == null ? '' : data.monto).replace(',', '.')));
+  if (!(monto >= 0)) return { error: 'datos_invalidos', mensaje: 'Revisa el monto.' };
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(data.slug || ''); })[0];
+  if (!fila) return { error: 'no_existe', mensaje: 'Ese negocio no existe.' };
+  const antes = ymd_(fila.Vence) || '';
+  const nuevo = extenderVence_(antes, meses, hoy);
+  hojaPagos_().appendRow([new Date(ahoraMs), String(fila.Slug), String(fila.Nombre), monto, meses,
+    limpiarTexto_(data.metodo || 'Pago Móvil', 40), paraCelda_(limpiarTexto_(data.referencia || '', 60)), antes, nuevo, email]);
+  // Pagar reactiva un negocio suspendido.
+  escribirTenant_(fila.Slug, { Vence: nuevo, Ultimo_Pago: hoy, Activo: 'si', Suspendido_Auto: '' });
+  return { ok: true, vence: nuevo };
+}
+
+function crearNegocioCentral_(data, ahoraMs) {
+  const nombre = limpiarTexto_(data.nombre, 80);
+  const slug = String(data.slug || '').trim().toLowerCase();
+  const email = String(data.email || '').trim().toLowerCase();
+  if (!nombre) return { error: 'datos_invalidos', mensaje: 'Escribe el nombre del negocio.' };
+  if (email && !/^[^\s@,]+@[^\s@,]+\.[a-z]{2,}$/i.test(email)) return { error: 'datos_invalidos', mensaje: 'Revisa el correo (Gmail del dueño).' };
+  const dias = Math.max(0, Math.min(365, Math.floor(Number(data.diasPrueba == null ? DIAS_PRUEBA : data.diasPrueba))));
+  let creado;
+  try {
+    creado = crearTenant(slug, nombre, email);
+  } catch (err) {
+    return { error: 'datos_invalidos', mensaje: String(err.message || err) };
+  }
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  escribirTenant_(creado.slug, {
+    Telefono: paraCelda_(String(data.telefono || '').replace(/[^\d]/g, '').slice(0, 20)),
+    Vence: sumarDias_(hoy, dias), // primer mes gratis (o los días de prueba que se elijan)
+    Notas: paraCelda_(limpiarTexto_(data.notas || '', 300)),
+  });
+  return { ok: true, slug: creado.slug, hoja: creado.url };
+}
+
+/** Punto de entrada desde doPost (accion: 'central'). */
+function atenderCentral_(data, ahoraMs) {
+  const email = leerSesion_(data.sesion, ahoraMs);
+  if (!email) return { error: 'sesion', mensaje: 'Tu sesión venció. Entra otra vez.' };
+  if (!esAdminDueno_(email)) return { error: 'no_autorizado', mensaje: email + ' no es administrador de bookeaa (propiedad dueno_admins).' };
+  const op = String(data.op || '');
+  if (op === 'resumen') return resumenCentral_(ahoraMs);
+  if (op === 'cobros') return cobrosCentral_(ahoraMs);
+  if (op === 'metricas') return metricasCentral_(ahoraMs, !!data.fresco);
+  if (op === 'negocio') return negocioDetalleCentral_(String(data.slug || ''), ahoraMs);
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { error: 'servidor', mensaje: 'Hay otra operación en curso. Intenta de nuevo.' };
+  try {
+    if (op === 'pago') return registrarPagoCentral_(data, email, ahoraMs);
+    if (op === 'crear') return crearNegocioCentral_(data, ahoraMs);
+    if (op === 'aprobar' || op === 'rechazar') {
+      const hojaPN = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+      const pago = objetos_(hojaPN, PAGOS_NEGOCIO_HEADERS).filter(function (o) { return String(o.ID) === String(data.id || ''); })[0];
+      if (!pago || String(pago.Estado) !== 'Por verificar') return { error: 'no_existe', mensaje: 'Ese pago ya no está por verificar.' };
+      if (op === 'aprobar') return { ok: true, vence: aprobarPago_(pago.fila, 'Aprobado a mano', email, ahoraMs) };
+      const motivo = limpiarTexto_(data.motivo || 'No encontramos el pago en el banco', 160);
+      escribirFila_(hojaPN, PAGOS_NEGOCIO_HEADERS, pago.fila, { Estado: 'Rechazado', Motivo: paraCelda_(motivo), Revisado_Por: email, Fecha_Revision: new Date(ahoraMs) });
+      avisarNegocio_(String(pago.Slug), '❌ Pago no confirmado', motivo + '. Revisa los datos y repórtalo otra vez en Mi plan y pagos.');
+      return { ok: true };
+    }
+    if (op === 'movimientos') {
+      const nuevos = guardarMovimientos_(data.filas, 'estado de cuenta', ahoraMs);
+      const r = conciliar_(ahoraMs);
+      return { ok: true, nuevos: nuevos, aprobados: r.aprobados.length };
+    }
+    if (op === 'leer_correos') return leerCorreosBanco();
+    if (op === 'instalar_cobros') return instalarCobros();
+    if (op === 'ajustes_cobro') return guardarAjustesCobro_(data);
+    if (op === 'usar_ingreso') {
+      const t = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(data.slug || ''); })[0];
+      const creado = t ? ymd_(t.Creado) : '';
+      if (!creado) return { error: 'datos_invalidos', mensaje: 'Ese negocio no tiene fecha de ingreso.' };
+      const corte = proximoCorte_(creado, Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd'));
+      escribirTenant_(String(t.Slug), { Vence: corte });
+      return { ok: true, vence: corte };
+    }
+    if (op === 'activo') {
+      escribirTenant_(String(data.slug || ''), { Activo: data.activo ? 'si' : 'no', Suspendido_Auto: '' });
+      return { ok: true };
+    }
+    if (op === 'editar') {
+      const campos = {};
+      if ('email' in data) campos.Email = String(data.email || '').trim().toLowerCase();
+      if ('telefono' in data) campos.Telefono = paraCelda_(String(data.telefono || '').replace(/[^\d]/g, '').slice(0, 20));
+      if ('notas' in data) campos.Notas = paraCelda_(limpiarTexto_(data.notas || '', 300));
+      if ('vence' in data) {
+        if (data.vence && !/^\d{4}-\d{2}-\d{2}$/.test(String(data.vence))) return { error: 'datos_invalidos', mensaje: 'Revisa la fecha de vencimiento.' };
+        campos.Vence = String(data.vence || '');
+      }
+      escribirTenant_(String(data.slug || ''), campos);
+      return { ok: true };
+    }
+    return { error: 'op_desconocida' };
+  } catch (err) {
+    return { error: 'servidor', mensaje: String(err.message || err) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ============================================================================
+// Cobros de bookeaa: corte mensual, Pago Móvil reportado y conciliación
+// ============================================================================
+// - El corte es el día de ingreso de cada mes (el primer mes es gratis). Después del
+//   corte hay DIAS_GRACIA para pagar; al día siguiente revisarCortes suspende la página
+//   (Suspendido_Auto = si) y al aprobarse un pago se reactiva sola.
+// - El negocio reporta su Pago Móvil desde Mi negocio (pestaña PagosNegocio).
+// - Los movimientos del banco llegan del estado de cuenta (lo sube la central) o de
+//   los correos de aviso del banco en el Gmail de bookeaa (leerCorreosBanco, cada
+//   10 min). conciliar_ cruza referencia, monto y fecha y aprueba lo que coincide.
+// Propiedades: pm_banco, pm_telefono, pm_cedula, pm_titular (el Pago Móvil de bookeaa)
+// y correo_banco_query (la búsqueda de Gmail de los avisos del banco).
+
+const DIAS_GRACIA = 3;
+const PAGOS_NEGOCIO_HEADERS = [
+  'ID', 'Fecha_Registro', 'Slug', 'Negocio', 'Fecha_Pago', 'Banco_Origen', 'Telefono_Origen', 'Referencia',
+  'Monto_Bs', 'Tasa', 'Monto_USD', 'Meses', 'Estado', 'Conciliado_Con', 'Motivo', 'Revisado_Por', 'Fecha_Revision',
+];
+const MOVIMIENTOS_HEADERS = ['Clave', 'Fecha', 'Referencia', 'Descripcion', 'Monto', 'Fuente', 'Cargado', 'Pago_ID'];
+const CORREO_BANCO_QUERY = 'from:(bdvenlinea OR banvenez OR bancodevenezuela) newer_than:7d';
+
+function hojaCon_(nombre, headers) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(nombre);
+  if (!sheet) {
+    sheet = ss.insertSheet(nombre);
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/** Filas de una pestaña como objetos (con su número de fila). */
+function objetos_(sheet, headers) {
+  const n = sheet.getLastRow() - 1;
+  if (n < 1) return [];
+  return sheet.getRange(2, 1, n, headers.length).getValues().map(function (r, i) {
+    const o = { fila: i + 2 };
+    headers.forEach(function (h, j) { o[h] = r[j]; });
+    return o;
+  });
+}
+
+function escribirFila_(sheet, headers, fila, campos) {
+  Object.keys(campos).forEach(function (h) {
+    const c = headers.indexOf(h);
+    if (c !== -1) sheet.getRange(fila, c + 1).setValue(campos[h]);
+  });
+}
+
+const soloDigitos_ = function (v) { return String(v == null ? '' : v).replace(/\D/g, ''); };
+
+/** Misma referencia: coinciden los últimos dígitos (al menos 4; los bancos recortan distinto). */
+function refCoincide_(a, b) {
+  const da = soloDigitos_(a).replace(/^0+/, ''), db = soloDigitos_(b).replace(/^0+/, '');
+  const n = Math.min(6, da.length, db.length);
+  return n >= 4 && da.slice(-n) === db.slice(-n);
+}
+
+/** Mismo monto, con medio bolívar o 0,5 % de holgura (redondeos de la tasa). */
+function montoCoincide_(a, b) {
+  const x = Number(a), y = Number(b);
+  return x > 0 && y > 0 && Math.abs(x - y) <= Math.max(0.5, y * 0.005);
+}
+
+/** "1.234,56" / "1234.56" / 1234.56 → 1234.56 */
+function montoVe_(v) {
+  if (typeof v === 'number') return v;
+  let t = String(v || '').replace(/[^\d.,-]/g, '');
+  if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+  else if ((t.match(/\./g) || []).length > 1) t = t.replace(/\./g, '');
+  const n = Number(t);
+  return isFinite(n) ? n : 0;
+}
+
+function datosPagoMovil_() {
+  const p = PropertiesService.getScriptProperties();
+  return {
+    banco: p.getProperty('pm_banco') || 'Banco de Venezuela (0102)',
+    telefono: p.getProperty('pm_telefono') || '',
+    cedula: p.getProperty('pm_cedula') || '',
+    titular: p.getProperty('pm_titular') || '',
+  };
+}
+
+function tasaUsd_() {
+  try {
+    const t = getTasa('USD', null);
+    return t && t.valor > 0 ? t.valor : 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+function pagoNegocioJson_(o) {
+  return {
+    id: String(o.ID), registrado: o.Fecha_Registro instanceof Date ? Utilities.formatDate(o.Fecha_Registro, ZONA, "yyyy-MM-dd'T'HH:mm") : String(o.Fecha_Registro),
+    slug: String(o.Slug), negocio: String(o.Negocio), fecha: ymd_(o.Fecha_Pago) || '', banco: String(o.Banco_Origen),
+    telefono: String(o.Telefono_Origen), referencia: String(o.Referencia), montoBs: toNumber_(o.Monto_Bs), tasa: toNumber_(o.Tasa),
+    montoUsd: toNumber_(o.Monto_USD), meses: toNumber_(o.Meses) || 1, estado: String(o.Estado), conciliado: String(o.Conciliado_Con || ''),
+    motivo: String(o.Motivo || ''),
+  };
+}
+
+function movimientoJson_(o) {
+  return {
+    clave: String(o.Clave), fecha: ymd_(o.Fecha) || '', referencia: String(o.Referencia), descripcion: String(o.Descripcion),
+    monto: toNumber_(o.Monto), fuente: String(o.Fuente), pagoId: String(o.Pago_ID || ''),
+  };
+}
+
+/** Avisa al negocio en su teléfono (Mi negocio). Nunca lanza. */
+function avisarNegocio_(slug, titulo, cuerpo) {
+  llamarWorker_('/push/evento', { tipo: 'aviso', slug: slug, titulo: titulo, cuerpo: cuerpo });
+}
+
+// ---------- Lo que ve el negocio ----------
+
+function planNegocio_(tenant, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })[0] || {};
+  const n = negocioCentral_(fila, hoy);
+  const tasa = tasaUsd_();
+  const pagos = objetos_(hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS), PAGOS_NEGOCIO_HEADERS)
+    .filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })
+    .map(pagoNegocioJson_).reverse().slice(0, 12);
+  return {
+    estado: n.estado, vence: n.vence, dias: n.dias, gracia: DIAS_GRACIA,
+    corteDia: n.creado ? Number(n.creado.slice(8, 10)) : (n.vence ? Number(n.vence.slice(8, 10)) : null),
+    limite: n.vence ? sumarDias_(n.vence, DIAS_GRACIA) : '',
+    precio: PRECIO_MENSUAL, tasa: tasa, montoBs: tasa ? round2_(PRECIO_MENSUAL * tasa) : 0,
+    pagoMovil: datosPagoMovil_(), pagos: pagos,
+    porVerificar: pagos.some(function (p) { return p.estado === 'Por verificar'; }),
+  };
+}
+
+function reportarPago_(tenant, email, data, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const fecha = String(data.fecha || '');
+  const referencia = soloDigitos_(data.referencia);
+  const telefono = soloDigitos_(data.telefono);
+  const montoBs = round2_(montoVe_(data.montoBs));
+  const meses = Math.max(1, Math.min(12, Math.floor(Number(data.meses) || 1)));
+  const errores = [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha > hoy || diasEntre_(fecha, hoy) > 15) errores.push('Revisa la fecha del pago (de los últimos 15 días).');
+  if (referencia.length < 4 || referencia.length > 20) errores.push('Escribe el número de referencia completo (solo números).');
+  if (telefono.length < 10) errores.push('Escribe el teléfono desde el que pagaste.');
+  if (!(montoBs > 0)) errores.push('Escribe el monto que pagaste en bolívares.');
+  if (!String(data.banco || '').trim()) errores.push('Elige el banco desde el que pagaste.');
+  if (errores.length) return { error: 'datos_invalidos', mensaje: errores.join(' ') };
+
+  const hoja = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+  const repetido = objetos_(hoja, PAGOS_NEGOCIO_HEADERS).some(function (o) {
+    return String(o.Estado) !== 'Rechazado' && refCoincide_(o.Referencia, referencia) && montoCoincide_(o.Monto_Bs, montoBs);
+  });
+  if (repetido) return { error: 'datos_invalidos', mensaje: 'Ese pago ya está reportado.' };
+
+  const tasa = tasaUsd_();
+  const id = 'P' + Utilities.getUuid().replace(/-/g, '').slice(0, 10).toUpperCase();
+  hoja.appendRow([id, new Date(ahoraMs), tenant.slug, tenant.nombre, fecha, limpiarTexto_(data.banco, 60), "'" + telefono, "'" + referencia,
+    montoBs, tasa || '', tasa ? round2_(montoBs / tasa) : '', meses, 'Por verificar', '', '', email, '']);
+  const r = conciliar_(ahoraMs);
+  const aprobado = r.aprobados.indexOf(id) !== -1;
+  if (!aprobado) {
+    botAvisar_('Pago Móvil por verificar: ' + tenant.nombre, [
+      tenant.nombre + ' reportó un pago de Bs. ' + montoBs + ' (' + meses + (meses === 1 ? ' mes' : ' meses') + ').',
+      'Referencia: ' + referencia + ' · ' + String(data.banco) + ' · ' + fecha,
+      'Apruébalo o recházalo en bookeaa.com/central → Cobros.',
+    ]);
+  }
+  return { ok: true, id: id, estado: aprobado ? 'Aprobado' : 'Por verificar' };
+}
+
+// ---------- Aprobar, rechazar, conciliar ----------
+
+function aprobarPago_(fila, fuente, revisor, ahoraMs) {
+  const hoja = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+  const pago = objetos_(hoja, PAGOS_NEGOCIO_HEADERS).filter(function (o) { return o.fila === fila; })[0];
+  if (!pago || String(pago.Estado) !== 'Por verificar') return null;
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const t = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(pago.Slug); })[0];
+  if (!t) return null;
+  const meses = Math.max(1, toNumber_(pago.Meses) || 1);
+  const antes = ymd_(t.Vence) || '';
+  const nuevo = extenderVence_(antes, meses, hoy);
+  escribirFila_(hoja, PAGOS_NEGOCIO_HEADERS, fila, { Estado: 'Aprobado', Conciliado_Con: fuente, Revisado_Por: revisor, Fecha_Revision: new Date(ahoraMs) });
+  hojaPagos_().appendRow([new Date(ahoraMs), String(t.Slug), String(t.Nombre), toNumber_(pago.Monto_USD) || PRECIO_MENSUAL * meses, meses,
+    'Pago Móvil', "'" + soloDigitos_(pago.Referencia), antes, nuevo, revisor]);
+  const campos = { Vence: nuevo, Ultimo_Pago: hoy, Suspendido_Auto: '' };
+  // Solo se reactiva sola si la suspendió el cobro (no si la suspendiste tú a mano).
+  if (String(t.Suspendido_Auto || '') === 'si') campos.Activo = 'si';
+  escribirTenant_(t.Slug, campos);
+  avisarNegocio_(String(t.Slug), '✅ Pago aprobado', 'Tu plan de bookeaa queda al día hasta el ' + nuevo.split('-').reverse().join('/') + '. ¡Gracias!');
+  return nuevo;
+}
+
+/** Cruza los pagos por verificar con los movimientos del banco. Devuelve los aprobados. */
+function conciliar_(ahoraMs) {
+  const hojaP = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
+  const hojaM = hojaCon_('MovimientosBanco', MOVIMIENTOS_HEADERS);
+  const libres = objetos_(hojaM, MOVIMIENTOS_HEADERS).filter(function (m) { return !String(m.Pago_ID || ''); });
+  const aprobados = [];
+  objetos_(hojaP, PAGOS_NEGOCIO_HEADERS).forEach(function (p) {
+    if (String(p.Estado) !== 'Por verificar') return;
+    const fechaPago = ymd_(p.Fecha_Pago);
+    const m = libres.filter(function (x) {
+      if (String(x.Pago_ID || '')) return false;
+      const f = ymd_(x.Fecha);
+      return refCoincide_(x.Referencia, p.Referencia) && montoCoincide_(x.Monto, p.Monto_Bs) && (!f || !fechaPago || Math.abs(diasEntre_(f, fechaPago)) <= 3);
+    })[0];
+    if (!m) return;
+    if (aprobarPago_(p.fila, String(m.Fuente) === 'correo' ? 'Correo del banco' : 'Estado de cuenta', 'conciliación automática', ahoraMs)) {
+      escribirFila_(hojaM, MOVIMIENTOS_HEADERS, m.fila, { Pago_ID: String(p.ID) });
+      m.Pago_ID = String(p.ID);
+      aprobados.push(String(p.ID));
+    }
+  });
+  return { aprobados: aprobados };
+}
+
+/** Guarda movimientos (créditos) sin repetir. `filas`: [{fecha, referencia, descripcion, monto, clave?}] */
+function guardarMovimientos_(filas, fuente, ahoraMs) {
+  const hoja = hojaCon_('MovimientosBanco', MOVIMIENTOS_HEADERS);
+  const existentes = {};
+  objetos_(hoja, MOVIMIENTOS_HEADERS).forEach(function (m) { existentes[String(m.Clave)] = true; });
+  const nuevas = [];
+  (filas || []).slice(0, 3000).forEach(function (f) {
+    const monto = round2_(montoVe_(f.monto));
+    const ref = soloDigitos_(f.referencia);
+    const fecha = ymd_(f.fecha) || '';
+    if (!(monto > 0) || ref.length < 4) return;
+    const clave = String(f.clave || (fecha + '|' + ref + '|' + monto));
+    if (existentes[clave]) return;
+    existentes[clave] = true;
+    nuevas.push([clave, fecha, "'" + ref, paraCelda_(limpiarTexto_(f.descripcion || '', 120)), monto, fuente, new Date(ahoraMs), '']);
+  });
+  if (nuevas.length) hoja.getRange(hoja.getLastRow() + 1, 1, nuevas.length, MOVIMIENTOS_HEADERS.length).setValues(nuevas);
+  return nuevas.length;
+}
+
+// ---------- Correos del banco ----------
+
+/** Saca monto, referencia y fecha de un aviso de Pago Móvil recibido. null si no es un abono. */
+function parsearCorreoBanco_(texto) {
+  const t = String(texto || '').replace(/\s+/g, ' ');
+  if (!/(recib|abon|acredit|ingres|te (?:han )?(?:enviado|pagado)|le (?:han )?(?:enviado|transferido))/i.test(t)) return null;
+  if (/(has enviado|enviaste|realizaste un pago|d[eé]bito a tu cuenta|cargo a su cuenta)/i.test(t)) return null;
+  const monto = /(?:Bs\.?\s*S?\.?|VES|monto(?: de)?:?)\s*([\d.]+,\d{2}|\d+(?:\.\d{2})?)/i.exec(t);
+  const ref = /(?:referencia|ref\.?|n[uú]mero de (?:operaci[oó]n|referencia)|operaci[oó]n|comprobante)\s*(?:n[°º.o]*)?\s*:?\s*#?\s*(\d{4,20})/i.exec(t);
+  if (!monto || !ref) return null;
+  const f = /(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/.exec(t);
+  let fecha = '';
+  if (f) {
+    const anio = f[3].length === 2 ? '20' + f[3] : f[3];
+    fecha = anio + '-' + ('0' + f[2]).slice(-2) + '-' + ('0' + f[1]).slice(-2);
+  }
+  return { monto: montoVe_(monto[1]), referencia: ref[1], fecha: fecha };
+}
+
+/** Lee los avisos del banco en el Gmail de bookeaa y concilia. La llama un disparador cada 10 min. */
+function leerCorreosBanco() {
+  const ahoraMs = Date.now();
+  const props = PropertiesService.getScriptProperties();
+  const query = props.getProperty('correo_banco_query') || CORREO_BANCO_QUERY;
+  const filas = [];
+  let leidos = 0, sinDatos = 0;
+  GmailApp.search(query, 0, 30).forEach(function (hilo) {
+    hilo.getMessages().forEach(function (msg) {
+      leidos++;
+      const datos = parsearCorreoBanco_(msg.getSubject() + ' ' + msg.getPlainBody());
+      if (!datos) { sinDatos++; return; }
+      filas.push({
+        clave: 'correo:' + msg.getId(), fecha: datos.fecha || Utilities.formatDate(msg.getDate(), ZONA, 'yyyy-MM-dd'),
+        referencia: datos.referencia, monto: datos.monto, descripcion: msg.getSubject(),
+      });
+    });
+  });
+  const nuevos = guardarMovimientos_(filas, 'correo', ahoraMs);
+  const r = conciliar_(ahoraMs);
+  const resumen = { fecha: new Date(ahoraMs).toISOString(), leidos: leidos, abonos: filas.length, nuevos: nuevos, sinDatos: sinDatos, aprobados: r.aprobados.length };
+  props.setProperty('correo_banco_ultima', JSON.stringify(resumen));
+  return resumen;
+}
+
+// ---------- Cortes diarios ----------
+
+/** Recordatorios de pago y suspensión al pasar la gracia. La llama un disparador diario (7:00). */
+function revisarCortes() {
+  const ahoraMs = Date.now();
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const suspendidos = [];
+  filasTenants_().forEach(function (o) {
+    const vence = ymd_(o.Vence);
+    const t = { activo: String(o.Activo || 'si') };
+    if (!vence || !tenantActivo_(t)) return;
+    const slug = String(o.Slug), dias = diasEntre_(hoy, vence);
+    const fechaTxt = vence.split('-').reverse().join('/');
+    const monto = '$' + PRECIO_MENSUAL;
+    if (dias === 3 || dias === 1) avisarNegocio_(slug, '🗓️ Tu pago de bookeaa vence el ' + fechaTxt, 'Son ' + monto + ' por Pago Móvil. Repórtalo en Configurar → Mi plan y pagos.');
+    else if (dias === 0) avisarNegocio_(slug, '🗓️ Hoy es tu fecha de corte', 'Tienes ' + DIAS_GRACIA + ' días para pagar ' + monto + ' y seguir recibiendo reservas.');
+    else if (dias < 0 && -dias <= DIAS_GRACIA) {
+      const quedan = DIAS_GRACIA + dias;
+      avisarNegocio_(slug, '⚠️ Tu pago de bookeaa está pendiente', quedan ? 'Te quedan ' + quedan + (quedan === 1 ? ' día' : ' días') + ' para pagar antes de que tu página se pause.' : 'Hoy es el último día para pagar antes de que tu página se pause.');
+    } else if (dias < 0) {
+      escribirTenant_(slug, { Activo: 'no', Suspendido_Auto: 'si' });
+      avisarNegocio_(slug, '⏸️ Tu página de reservas está en pausa', 'Pasaron ' + DIAS_GRACIA + ' días del corte sin pago. Reporta tu Pago Móvil y se reactiva al aprobarse.');
+      suspendidos.push(String(o.Nombre || slug));
+    }
+  });
+  if (suspendidos.length) botAvisar_('Negocios suspendidos por falta de pago', suspendidos);
+  return { suspendidos: suspendidos };
+}
+
+/** Crea los disparadores de cobros (correos cada 10 min y cortes a las 7:00). Sin duplicar. */
+function instalarCobros() {
+  const existentes = ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); });
+  if (existentes.indexOf('leerCorreosBanco') === -1) ScriptApp.newTrigger('leerCorreosBanco').timeBased().everyMinutes(10).create();
+  if (existentes.indexOf('revisarCortes') === -1) ScriptApp.newTrigger('revisarCortes').timeBased().atHour(7).everyDays(1).inTimezone(ZONA).create();
+  return { ok: true };
+}
+
+function cobrosActivos_() {
+  const h = ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); });
+  return { correos: h.indexOf('leerCorreosBanco') !== -1, cortes: h.indexOf('revisarCortes') !== -1 };
+}
+
+// ---------- Lo que ve la central ----------
+
+function cobrosCentral_(ahoraMs) {
+  const props = PropertiesService.getScriptProperties();
+  const pagos = objetos_(hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS), PAGOS_NEGOCIO_HEADERS);
+  const movs = objetos_(hojaCon_('MovimientosBanco', MOVIMIENTOS_HEADERS), MOVIMIENTOS_HEADERS);
+  const libres = movs.filter(function (m) { return !String(m.Pago_ID || ''); });
+  const porVerificar = pagos.filter(function (p) { return String(p.Estado) === 'Por verificar'; }).map(function (p) {
+    const j = pagoNegocioJson_(p);
+    // Pista para revisar a mano: un movimiento con el mismo monto o la misma referencia.
+    const pista = libres.filter(function (m) { return montoCoincide_(m.Monto, p.Monto_Bs) || refCoincide_(m.Referencia, p.Referencia); })[0];
+    j.pista = pista ? movimientoJson_(pista) : null;
+    return j;
+  }).reverse();
+  let ultima = null;
+  try { ultima = JSON.parse(props.getProperty('correo_banco_ultima') || 'null'); } catch (_) { /* nada */ }
+  let activos = { correos: false, cortes: false };
+  try { activos = cobrosActivos_(); } catch (_) { /* sin permiso de ScriptApp */ }
+  return {
+    porVerificar: porVerificar,
+    revisados: pagos.filter(function (p) { return String(p.Estado) !== 'Por verificar'; }).map(pagoNegocioJson_).reverse().slice(0, 40),
+    movimientos: libres.map(movimientoJson_).reverse().slice(0, 60),
+    tasa: tasaUsd_(),
+    ajustes: {
+      pagoMovil: datosPagoMovil_(), correoQuery: props.getProperty('correo_banco_query') || CORREO_BANCO_QUERY,
+      ultimaLectura: ultima, automaticos: activos,
+    },
+  };
+}
+
+function guardarAjustesCobro_(data) {
+  const p = PropertiesService.getScriptProperties();
+  const pm = data.pagoMovil || {};
+  ['banco', 'telefono', 'cedula', 'titular'].forEach(function (k) {
+    if (k in pm) p.setProperty('pm_' + k, limpiarTexto_(pm[k], 80));
+  });
+  if ('correoQuery' in data) p.setProperty('correo_banco_query', limpiarTexto_(data.correoQuery, 300) || CORREO_BANCO_QUERY);
+  return { ok: true };
+}
+
+// ---------- Central: métricas (vista de computadora) ----------
+
+const METRICAS_MESES = 12;
+const DIAS_SEMANA_CORTO = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+/** Los últimos `n` meses hasta el de `hoy`, como 'yyyy-MM' (el más viejo primero). */
+function ultimosMeses_(hoy, n) {
+  const p = hoy.split('-').map(Number);
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(p[0], p[1] - 1 - i, 1, 12));
+    out.push(d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2));
+  }
+  return out;
+}
+
+/** Día de la semana de 'yyyy-MM-dd' (0 = domingo). */
+function diaSemana_(ymd) {
+  const p = ymd.split('-').map(Number);
+  return new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)).getUTCDay();
+}
+
+function sumarConteo_(obj, clave, n) {
+  const k = String(clave || '').trim() || '—';
+  obj[k] = (obj[k] || 0) + (n == null ? 1 : n);
+}
+
+/** { clave: n } → [{ nombre, n }] de mayor a menor, máximo `max`. */
+function rankingConteo_(obj, max) {
+  return Object.keys(obj).map(function (k) { return { nombre: k, n: round2_(obj[k]) }; })
+    .sort(function (a, b) { return b.n - a.n || a.nombre.localeCompare(b.nombre); })
+    .slice(0, max);
+}
+
+/**
+ * Estadísticas de las reservas de un negocio (filas de Reservaciones). Las canceladas
+ * se cuentan aparte y no suman en lo demás. `completo` agrega servicios, horas,
+ * métodos, modalidades y estados (para el detalle de un negocio).
+ */
+function estadisticasReservas_(filas, hoy, completo) {
+  const meses = ultimosMeses_(hoy, METRICAS_MESES);
+  const idx = {};
+  meses.forEach(function (m, i) { idx[m] = i; });
+  const cero = function () { return meses.map(function () { return 0; }); };
+  const porMes = cero(), ingresosMes = cero(), canceladasMes = cero(), clientesNuevosMes = cero();
+  const hace30 = sumarDias_(hoy, -30), hace60 = sumarDias_(hoy, -60), en30 = sumarDias_(hoy, 30);
+  const r = { total: 0, canceladas: 0, ultimos30: 0, previos30: 0, ingresos30: 0, ingresosPrevios30: 0, proximas: 0, ultimaSolicitud: '', conCupon: 0 };
+  const clientes = {}, primeraVez = {};
+  const servicios = {}, ingresosServicio = {}, metodos = {}, modalidades = {}, estados = {};
+  const mapa = [0, 1, 2, 3, 4, 5, 6].map(function () { return []; });
+
+  filas.forEach(function (f) {
+    const fecha = ymd_(f.Fecha_Cita);
+    if (!fecha) return;
+    const solicitud = ymd_(f.Fecha_Solicitud) || fecha;
+    if (solicitud > r.ultimaSolicitud) r.ultimaSolicitud = solicitud;
+    const estado = String(f.Estado || '');
+    if (completo) sumarConteo_(estados, estado || 'Sin estado');
+    const mes = fecha.slice(0, 7);
+    if (/cancel/i.test(estado)) {
+      r.canceladas++;
+      if (mes in idx) canceladasMes[idx[mes]]++;
+      return;
+    }
+    r.total++;
+    const monto = toNumber_(f.Total) || 0;
+    if (mes in idx) { porMes[idx[mes]]++; ingresosMes[idx[mes]] += monto; }
+    if (fecha > hace30 && fecha <= hoy) { r.ultimos30++; r.ingresos30 += monto; }
+    else if (fecha > hace60 && fecha <= hace30) { r.previos30++; r.ingresosPrevios30 += monto; }
+    if (fecha > hoy && fecha <= en30) r.proximas++;
+    const cliente = String(f.Telefono || '').replace(/\D/g, '').slice(-10) || String(f.Cliente || '').trim().toLowerCase();
+    if (cliente) {
+      clientes[cliente] = (clientes[cliente] || 0) + 1;
+      if (!primeraVez[cliente] || fecha < primeraVez[cliente]) primeraVez[cliente] = fecha;
+    }
+    if (!completo) return;
+    const cupon = String(f.Cupon || '').trim();
+    if (cupon && cupon !== 'N/A') r.conCupon++;
+    const lineas = String(f.Servicios || '').split(/\s*,\s*/).filter(String);
+    lineas.forEach(function (s) {
+      sumarConteo_(servicios, s);
+      sumarConteo_(ingresosServicio, s, lineas.length ? monto / lineas.length : 0);
+    });
+    sumarConteo_(metodos, f.Metodo_Pago);
+    sumarConteo_(modalidades, f.Modalidad);
+    const hora = horaTexto_(f.Hora_Cita);
+    if (hora) {
+      const h = Number(hora.slice(0, 2));
+      const d = diaSemana_(fecha);
+      mapa[d][h] = (mapa[d][h] || 0) + 1;
+    }
+  });
+
+  const ids = Object.keys(clientes);
+  ids.forEach(function (c) { const m = primeraVez[c].slice(0, 7); if (m in idx) clientesNuevosMes[idx[m]]++; });
+  const out = {
+    meses: meses, porMes: porMes, ingresosMes: ingresosMes.map(round2_), canceladasMes: canceladasMes,
+    total: r.total, canceladas: r.canceladas, ultimos30: r.ultimos30, previos30: r.previos30,
+    ingresos30: round2_(r.ingresos30), ingresosPrevios30: round2_(r.ingresosPrevios30),
+    proximas: r.proximas, ultimaSolicitud: r.ultimaSolicitud,
+    clientes: ids.length, recurrentes: ids.filter(function (c) { return clientes[c] > 1; }).length,
+  };
+  if (!completo) return out;
+  // Horas con alguna cita (para no dibujar la madrugada vacía).
+  let hMin = 24, hMax = -1;
+  mapa.forEach(function (fila) { fila.forEach(function (n, h) { if (n) { hMin = Math.min(hMin, h); hMax = Math.max(hMax, h); } }); });
+  if (hMax < 0) { hMin = 8; hMax = 18; }
+  out.clientesNuevosMes = clientesNuevosMes;
+  out.conCupon = r.conCupon;
+  out.ticket = r.total ? round2_(ingresosMes.reduce(function (a, b) { return a + b; }, 0) / Math.max(1, porMes.reduce(function (a, b) { return a + b; }, 0))) : 0;
+  out.servicios = rankingConteo_(servicios, 10).map(function (s) { return { nombre: s.nombre, n: s.n, ingresos: round2_(ingresosServicio[s.nombre] || 0) }; });
+  out.metodos = rankingConteo_(metodos, 8);
+  out.modalidades = rankingConteo_(modalidades, 6);
+  out.estados = rankingConteo_(estados, 8);
+  out.horas = { desde: hMin, hasta: hMax, dias: DIAS_SEMANA_CORTO, mapa: mapa.map(function (fila) { const v = []; for (let h = hMin; h <= hMax; h++) v.push(fila[h] || 0); return v; }) };
+  return out;
+}
+
+/** Lo cobrado por bookeaa por mes (pestaña Pagos, en USD). */
+function ingresosBookeaa_(meses) {
+  const idx = {};
+  meses.forEach(function (m, i) { idx[m] = i; });
+  const total = meses.map(function () { return 0; });
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Pagos');
+  if (!sheet || sheet.getLastRow() < 2) return total;
+  sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues().forEach(function (f) {
+    const m = (ymd_(f[0]) || '').slice(0, 7);
+    if (m in idx) total[idx[m]] = round2_(total[idx[m]] + toNumber_(f[3]));
+  });
+  return total;
+}
+
+/**
+ * Panel de la central en computadora: ingresos de bookeaa, altas, reservas de toda la
+ * plataforma y la actividad de cada negocio. Abre la hoja de cada negocio, así que se
+ * guarda 10 minutos en caché (`fresco` la recalcula).
+ */
+function metricasCentral_(ahoraMs, fresco) {
+  const cache = CacheService.getScriptCache();
+  if (!fresco) {
+    const hit = cache.get('central_metricas');
+    if (hit) { try { return JSON.parse(hit); } catch (_) { /* recalcula */ } }
+  }
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const meses = ultimosMeses_(hoy, METRICAS_MESES);
+  const idx = {};
+  meses.forEach(function (m, i) { idx[m] = i; });
+  const filas = filasTenants_();
+  const tenants = {};
+  getTenants_().forEach(function (t) { tenants[t.slug] = t; });
+  const altas = meses.map(function () { return 0; });
+  const reservas = meses.map(function () { return 0; });
+  const negocios = filas.map(function (o) {
+    const n = negocioCentral_(o, hoy);
+    const m = (n.creado || '').slice(0, 7);
+    if (m in idx) altas[idx[m]]++;
+    const t = tenants[n.slug];
+    let e = null, error = '';
+    try {
+      if (t) e = estadisticasReservas_(getSheetData_(openTenant_(t), 'Reservaciones'), hoy, false);
+    } catch (err) {
+      error = String(err && err.message || err).slice(0, 120);
+    }
+    if (e) e.porMes.forEach(function (v, i) { reservas[i] += v; });
+    return {
+      slug: n.slug, nombre: n.nombre, estado: n.estado, creado: n.creado, vence: n.vence, dias: n.dias,
+      reservas30: e ? e.ultimos30 : null, previas30: e ? e.previos30 : null, proximas: e ? e.proximas : null,
+      clientes: e ? e.clientes : null, ultimaReserva: e ? e.ultimaSolicitud : '', porMes: e ? e.porMes.slice(-6) : [],
+      error: error,
+    };
+  });
+  const out = {
+    hoy: hoy, generado: new Date(ahoraMs).toISOString(), precio: PRECIO_MENSUAL, meses: meses,
+    ingresos: ingresosBookeaa_(meses), altas: altas, reservas: reservas, negocios: negocios,
+  };
+  try { cache.put('central_metricas', JSON.stringify(out), 600); } catch (_) { /* muy grande para la caché */ }
+  return out;
+}
+
+/** Un negocio a fondo: su cobro, su configuración, sus reservas y sus pagos a bookeaa. */
+function negocioDetalleCentral_(slug, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(slug || ''); })[0];
+  const t = getTenants_().filter(function (x) { return normKey_(x.slug) === normKey_(slug || ''); })[0];
+  if (!fila || !t) return { error: 'no_existe', mensaje: 'Ese negocio no existe.' };
+  const negocio = negocioCentral_(fila, hoy);
+  const libro = openTenant_(t);
+  const config = getConfig_(libro);
+  const filasReservas = getSheetData_(libro, 'Reservaciones');
+  const est = estadisticasReservas_(filasReservas, hoy, true);
+  const recientes = filasReservas.slice(-12).reverse().map(function (f) {
+    return {
+      cliente: String(f.Cliente || ''), servicios: String(f.Servicios || ''), total: toNumber_(f.Total) || 0,
+      fecha: ymd_(f.Fecha_Cita) || '', hora: horaTexto_(f.Hora_Cita), estado: String(f.Estado || ''), metodo: String(f.Metodo_Pago || ''),
+    };
+  });
+  const pagos = pagosRecientes_(500).filter(function (p) { return normKey_(p.slug) === normKey_(negocio.slug); });
+  const reportes = objetos_(hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS), PAGOS_NEGOCIO_HEADERS)
+    .filter(function (o) { return normKey_(o.Slug) === normKey_(negocio.slug); }).map(pagoNegocioJson_).reverse().slice(0, 20);
+  return {
+    negocio: negocio,
+    config: {
+      marca: config.marca || config.nombre_negocio || negocio.nombre, moneda: normalizarMoneda_(config.moneda),
+      whatsapp: String(config.whatsapp || ''), lugar: String(config.lugar_tipo || ''), metodos: String(config.metodos_pago || ''),
+      servicios: getSheetData_(libro, 'Servicios').length, ticket: String(config.ticket_reserva || '') === 'si',
+    },
+    estadisticas: est,
+    recientes: recientes,
+    pagos: pagos,
+    reportes: reportes,
+  };
 }

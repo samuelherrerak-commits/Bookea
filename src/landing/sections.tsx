@@ -39,7 +39,7 @@ const AFTER = [
 
 export function Problem() {
   return (
-    <section className="relative bg-coal text-paper" aria-labelledby="problema-titulo">
+    <section id="problema" className="relative scroll-mt-16 bg-coal text-paper" aria-labelledby="problema-titulo">
       <Crosses tone="light" className="top-10 right-6" />
       <div className={`${WRAP} py-20 md:py-28`}>
         <Reveal>
@@ -475,7 +475,7 @@ export function Pricing({ trial }: { trial: string }) {
               </span>
             </div>
             <p className="mt-6 flex items-baseline gap-2">
-              <span className="font-condensed text-[88px] leading-[0.8] font-extrabold">$15</span>
+              <span className="font-condensed text-[88px] leading-[0.8] font-extrabold">$10</span>
               <span className="font-condensed text-[20px] font-semibold uppercase text-paper/60">al mes</span>
             </p>
             <span aria-hidden className="mt-6 block h-px w-full bg-paper/15" />
@@ -521,7 +521,7 @@ const FAQS = [
   },
   {
     q: '¿Qué pasa cuando termina el mes gratis?',
-    a: 'Te avisamos antes. Si quieres seguir, pasas al plan Pro por $15 al mes. Si no, tu página se pausa y no te cobramos nada.',
+    a: 'Te avisamos antes. Si quieres seguir, pasas al plan Pro por $10 al mes. Si no, tu página se pausa y no te cobramos nada.',
   },
   {
     q: '¿Necesito saber de tecnología?',

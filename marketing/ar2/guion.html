@@ -1,0 +1,111 @@
+<!doctype html><meta charset="utf-8">
+<!-- Guion gráfico de ar2: la agenda malvada rompe la tarjeta 2 y bookee la vence. Los personajes
+     salen de marketing/bookee/{bookee,villana}.js; la tarjeta es su frente real (objetivo.png). -->
+<style>
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 800; src: url('/public/ar-comun/fuentes/barlow-condensed-latin-800-normal.woff2'); }
+  @font-face { font-family: 'Barlow'; font-weight: 600; src: url('/public/ar-comun/fuentes/barlow-latin-600-normal.woff2'); }
+  body { margin: 0; width: 1600px; font-family: 'Barlow', sans-serif; color: #0f0f0e; background: #fff; }
+  header { padding: 40px 48px 8px; } h1 { font: 800 64px/0.9 'Barlow Condensed'; margin: 0; text-transform: uppercase; }
+  header p { margin: 10px 0 0; font-size: 20px; color: #5b5b57; max-width: 82ch; }
+  .rejilla { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding: 16px 48px 48px; }
+  .vineta { background: #f4f4f2; border-radius: 16px; overflow: hidden; }
+  svg { display: block; width: 100%; height: auto; background: #d9d6cf; }
+  .texto { padding: 12px 14px 14px; }
+  .t { font: 800 15px/1 'Barlow Condensed'; letter-spacing: .06em; color: #5b5b57; }
+  h2 { font: 800 24px/1.05 'Barlow Condensed'; text-transform: uppercase; margin: 4px 0 6px; }
+  .texto p { margin: 0; font-size: 15px; line-height: 1.4; } .son { margin-top: 6px !important; color: #5b5b57; }
+</style>
+<header><h1>ar2 · la agenda malvada · guion</h1>
+<p>15 s en bucle sobre el frente de la tarjeta 2, que debe estar apoyada en una superficie plana (mesa o escritorio). La villana sale rompiendo el centro de la tarjeta, bookee le hace frente, se asusta y, cuando está a punto de comérselo, la vence con su teléfono: las hojas de papel se vuelven citas digitales.</p></header>
+<div class="rejilla" id="rejilla"></div>
+<script type="module">
+import { bookee } from '../bookee/bookee.js'
+import { villana } from '../bookee/villana.js'
+await document.fonts.ready
+const C = '#0f0f0e', P = '#ffffff', N = '#f4f4f2', G = '#5b5b57', R = '#e3261c'
+
+// Tarjeta vista desde arriba en diagonal: (u, v) en mm desde la esquina superior izquierda.
+const M = { a: 1.45, c: 0.32, d: 0.62 }
+const pt = (u, v) => [(u - 45) * M.a + (v - 25) * M.c, (v - 25) * M.d]
+const K = 0.68 // (exagerado para que se lea en la viñeta) unidades de personaje (grilla del logo) → pantalla
+const tarjeta = () => {
+  const [x0, y0] = pt(0, 50), [x1, y1] = pt(90, 50)
+  return `<path d="M${x0} ${y0} L${x1} ${y1} L${x1} ${y1 + 1.6} L${x0} ${y0 + 1.6} Z" fill="#b9b5ad"/>
+    <image href="objetivo.png" width="90" height="50" preserveAspectRatio="none"
+      transform="matrix(${M.a} 0 ${M.c} ${M.d} ${-45 * M.a - 25 * M.c} ${-25 * M.d})"/>`
+}
+// hueco rasgado en el centro: radio relativo 0..1
+const borde = (r, ru = 15, rv = 10) => Array.from({ length: 28 }, (_, i) => {
+  const a = (i / 28) * Math.PI * 2, j = i % 2 ? 0.78 : 1.06 + 0.08 * Math.sin(i * 2.3)
+  return pt(45 + Math.cos(a) * ru * r * j, 25 + Math.sin(a) * rv * r * j)
+})
+function hueco(r) {
+  if (r <= 0) return ''
+  const b = borde(r)
+  let s = `<path d="M${b.map((p) => p.join(' ')).join(' L')} Z" fill="${C}"/>`
+  s += `<path d="M${borde(r * 0.8).map((p) => p.join(' ')).join(' L')} Z" fill="#000" opacity=".55"/>`
+  // solapas de papel dobladas hacia arriba en el borde
+  for (let i = 0; i < 28; i += 4) {
+    const [x1, y1] = b[i], [x2, y2] = b[(i + 2) % 28], cx = (x1 + x2) / 2, cy = (y1 + y2) / 2
+    const [ox, oy] = [cx * 0.25, Math.min(0, cy) * 0.2 - 4 * r]
+    s += `<path d="M${x1} ${y1} L${x2} ${y2} L${cx + ox} ${cy + oy} Z" fill="${P}" stroke="${G}" stroke-width=".4"/>`
+  }
+  return s
+}
+const grieta = (largo) => {
+  const pts = [[45 - largo, 26], [45 - largo * 0.6, 23.5], [45 - largo * 0.2, 27], [45 + largo * 0.15, 23], [45 + largo * 0.55, 26.5], [45 + largo, 24]]
+  return `<path d="M${pts.map((p) => pt(...p).join(' ')).join(' L')}" fill="none" stroke="${C}" stroke-width="1.3" stroke-linejoin="round"/>`
+}
+const logoHueco = () => {
+  const [x, y] = pt(23.4, 16.4)
+  return `<path d="M${x} ${y} L${pt(33, 16.4).join(' ')} L${pt(33, 26).join(' ')} L${pt(23.4, 26).join(' ')} Z" fill="${C}"/>`
+}
+const pj = (dibujo, u, v, k = 1, extra = '') => { const [x, y] = pt(u, v); return `<g transform="translate(${x} ${y}) scale(${K * k})">${dibujo}${extra}</g>` }
+const sombra = (u, v, rx) => { const [x, y] = pt(u, v); return `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${rx * 0.35}" fill="${C}" opacity=".18"/>` }
+const globo = (x, y, texto, { rojo = false, tam = 7 } = {}) => {
+  const w = texto.length * tam * 0.48 + 8
+  return `<g transform="translate(${x} ${y})"><rect x="${-w / 2}" y="-7" width="${w}" height="12" rx="6" fill="${rojo ? R : P}" stroke="${C}" stroke-width=".9"/>
+    <text x="0" y="1.6" text-anchor="middle" font-family="Barlow Condensed" font-weight="800" font-size="${tam}" fill="${rojo ? P : C}">${texto}</text></g>`
+}
+const trozos = (n, r) => Array.from({ length: n }, (_, i) => {
+  const a = -Math.PI * (0.15 + 0.7 * (i / (n - 1))), d = r * (0.8 + 0.4 * ((i * 7) % 3) / 2)
+  const [x, y] = pt(45, 25)
+  return `<rect x="${x + Math.cos(a) * d}" y="${y + Math.sin(a) * d * 1.3}" width="4" height="3" fill="${P}" stroke="${G}" stroke-width=".4" transform="rotate(${i * 37} ${x + Math.cos(a) * d} ${y + Math.sin(a) * d * 1.3})"/>`
+}).join('')
+const lineas = (pares) => pares.map(([x1, y1, x2, y2]) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${C}" stroke-width="1.1" stroke-linecap="round"/>`).join('')
+const cita = (x, y, r = 0) => `<g transform="translate(${x} ${y}) rotate(${r})"><rect x="-8" y="-5" width="16" height="10" rx="2.2" fill="${P}" stroke="${C}" stroke-width=".7"/>
+  <circle cx="-4.4" cy="0" r="2.3" fill="${C}"/><path d="M-5.5 0 l.9 .9 l1.7 -1.8" fill="none" stroke="${P}" stroke-width=".7" stroke-linecap="round"/>
+  <line x1="-.8" y1="-1.4" x2="5.6" y2="-1.4" stroke="${G}" stroke-width=".9"/><line x1="-.8" y1="1.4" x2="3.6" y2="1.4" stroke="${G}" stroke-width=".9"/></g>`
+const telefono = `<g transform="translate(21 -43) rotate(10)"><rect x="-4" y="-7" width="8" height="13" rx="1.6" fill="${C}" stroke="${P}" stroke-width=".6"/><rect x="-3" y="-5.6" width="6" height="9.6" rx=".6" fill="${P}"/></g>`
+const destello = (x, y) => Array.from({ length: 10 }, (_, i) => { const a = (i / 10) * Math.PI * 2; return `<line x1="${x + Math.cos(a) * 6}" y1="${y + Math.sin(a) * 6}" x2="${x + Math.cos(a) * 12}" y2="${y + Math.sin(a) * 12}" stroke="${P}" stroke-width="1.6" stroke-linecap="round"/>` }).join('') + `<circle cx="${x}" cy="${y}" r="5" fill="${P}" opacity=".9"/>`
+// la villana saliendo del hueco: se recorta todo lo que queda bajo el borde
+const saliendo = (dibujo, u, v, k, corte) => { const [, y] = pt(45, 25); return `<clipPath id="sale${corte}"><rect x="-200" y="-300" width="400" height="${300 + y + corte}"/></clipPath><g clip-path="url(#sale${corte})">${pj(dibujo, u, v, k)}</g>` }
+const cta = `<g transform="translate(0 12)"><rect x="-30" y="-6" width="60" height="12" rx="6" fill="${C}"/><text x="0" y="2" text-anchor="middle" font-family="Barlow Condensed" font-weight="800" font-size="6.4" fill="${P}" letter-spacing=".3">PRUEBA 1 MES GRATIS</text></g>`
+
+const vinetas = [
+  ['0 – 1,5 s', 'Algo se mueve', 'La tarjeta tiembla y se abre una grieta en el centro, sobre «bookeaa».', 'Golpes sordos desde abajo, crujido de papel.',
+    tarjeta() + grieta(14) + lineas([[-14, -20, -10, -14], [0, -24, 0, -17], [14, -20, 10, -14]])],
+  ['1,5 – 3,5 s', 'La villana rompe la tarjeta', 'Unas garras rasgan el papel y la agenda malvada sale del hueco rugiendo. Saltan trozos de tarjeta.', 'Papel rasgado + rugido grave.',
+    tarjeta() + hueco(1) + saliendo(villana({ brazos: 'rugido', boca: 'rugido' }), 45, 25, 1, -2) + trozos(9, 34)],
+  ['3,5 – 5 s', 'Bookee le hace frente', 'Bookee salta desde el logo con los puños apretados y las cejas decididas.', '«¡Oye, tú!» en su voz de balbuceo.',
+    tarjeta() + hueco(1) + logoHueco() + sombra(45, 22, 16) + pj(villana({}), 45, 22) + sombra(24, 33, 8) + pj(bookee({ ojos: 'decidido', boca: 'decidida', brazos: 'punos', mira: [1, 0] }), 24, 33, 1.3) + globo(-46, -44, '¡OYE, TÚ!')],
+  ['5 – 7 s', 'Ruge y bookee se asusta', 'La villana ruge y crece un poco. A bookee le tiemblan las piernas y se tapa la boca.', 'Rugido fuerte, la tarjeta vibra; «¡ay!» de bookee.',
+    tarjeta() + hueco(1) + logoHueco() + sombra(45, 22, 18) + pj(villana({ brazos: 'rugido', boca: 'rugido' }), 45, 22, 1.12) + sombra(24, 33, 8) + pj(bookee({ ojos: 'susto', boca: 'nervioso', brazos: 'cara', cejas: -1, piernas: 'tiembla', mira: [1, -0.3] }), 24, 33, 1.3) + globo(26, -66, '¡GRRR!', { rojo: true }) + lineas([[-32, -40, -28, -38], [-34, -32, -30, -32]])],
+  ['7 – 9,5 s', 'Está a punto de comérselo', 'La villana se le viene encima con la boca abierta. Bookee queda acorralado en la esquina.', 'Pasos pesados; música de suspenso que sube.',
+    tarjeta() + hueco(1) + logoHueco() + sombra(22, 34, 8) + pj(bookee({ ojos: 'susto', boca: 'o', brazos: 'arriba', cejas: -1, piernas: 'tiembla', mira: [1, -1] }), 20, 36, 1.2) + sombra(36, 30, 18) + pj(villana({ brazos: 'rugido', boca: 'rugido', piernas: 'corre', inclina: -14 }), 38, 30, 1.2)],
+  ['9,5 – 11,5 s', '¡Agendado!', 'Bookee saca su teléfono: un destello y las hojas de la villana salen volando y se vuelven citas digitales.', '«¡Agendado!» + ding + whoosh de hojas.',
+    tarjeta() + hueco(1) + logoHueco() + sombra(22, 34, 8) + pj(bookee({ ojos: 'decidido', boca: 'decidida', brazos: 'saluda', mira: [1, -0.5] }), 22, 36, 1.3, telefono) + destello(-29, -30) + sombra(42, 26, 16) + pj(villana({ ojos: 'x', boca: 'vencida', brazos: 'vencida', piernas: 'vencida', inclina: 8 }), 44, 26, 1) +
+      [[8, -60, -12], [26, -52, 10], [40, -64, -6], [12, -76, 4], [32, -80, 14]].map(([x, y, r]) => cita(x, y, r)).join('') + globo(-34, -58, '¡AGENDADO!')],
+  ['11,5 – 13 s', 'Se encoge y cae', 'Sin hojas, la villana se encoge a una libretita y cae por el hueco, que se cierra. La tarjeta queda con la cicatriz.', '«¡Nooo…!» cada vez más agudo, «plop».',
+    tarjeta() + hueco(0.45) + grieta(14) + logoHueco() + sombra(22, 34, 8) + pj(bookee({ ojos: 'normal', boca: 'o', brazos: 'abajo', mira: [1, 0.6] }), 22, 36, 1.3) + pj(villana({ ojos: 'x', boca: 'vencida', brazos: 'vencida', piernas: 'vencida', inclina: 25 }), 45, 22, 0.3) + lineas([[2, -24, 2, -18], [8, -26, 8, -19]]) + globo(18, -34, '¡NOOO…!', { tam: 5.5 })],
+  ['13 – 15 s', 'Su firma', 'Bookee al centro: guiño, pulgar arriba y lluvia de citas. Señala el botón «Prueba 1 mes gratis». Vuelve a empezar.', 'Fanfarria corta + «¡Agendado!».',
+    tarjeta() + grieta(14) + sombra(45, 27, 9) + pj(bookee({ ojos: 'guiño', boca: 'ladeada', brazos: 'pulgar', cejas: 0.8, inclina: -4 }), 45, 27, 1.5) +
+      [[-50, -52, -10], [-34, -64, 8], [36, -58, -8], [52, -48, 12]].map(([x, y, r]) => cita(x, y, r)).join('') + cta],
+]
+for (const [n, [t, titulo, texto, sonido, dibujo]] of vinetas.entries()) {
+  const d = document.createElement('div'); d.className = 'vineta'
+  d.innerHTML = `<svg viewBox="-76 -92 152 112">${dibujo}</svg><div class="texto"><div class="t">${n + 1} · ${t}</div><h2>${titulo}</h2><p>${texto}</p><p class="son">Sonido: ${sonido}</p></div>`
+  document.getElementById('rejilla').append(d)
+}
+window.listo = true
+</script>

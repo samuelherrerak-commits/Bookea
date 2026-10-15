@@ -1,0 +1,39 @@
+<!doctype html><meta charset="utf-8">
+<!-- Bookee feliz, grande, en una hoja A4. Mismo personaje y pose que la hoja (hoja.html). -->
+<style>
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 800; src: url('/public/ar-comun/fuentes/barlow-condensed-latin-800-normal.woff2'); }
+  @font-face { font-family: 'Barlow'; font-weight: 600; src: url('/public/ar-comun/fuentes/barlow-latin-600-normal.woff2'); }
+  @page { size: A4; margin: 0; }
+  html, body { margin: 0; background: #fff; }
+  .hoja { width: 210mm; height: 297mm; box-sizing: border-box; padding: 18mm 15mm; display: flex; flex-direction: column; align-items: center; color: #0f0f0e; font-family: 'Barlow', sans-serif; }
+  h1 { font: 800 30pt/1 'Barlow Condensed'; text-transform: uppercase; margin: 0; letter-spacing: .02em; }
+  p { margin: 3mm 0 0; font-size: 11pt; color: #5b5b57; }
+  canvas { width: 180mm; height: 152mm; margin: auto 0; }
+</style>
+<div class="hoja">
+  <h1>bookee · feliz</h1>
+  <p>Ojos ^^, sonrisa y brazos abiertos. Colores: carbón #0f0f0e y papel #ffffff.</p>
+  <canvas id="c" width="2160" height="1825"></canvas>
+</div>
+<script type="module">
+import * as THREE from '/public/ar-comun/vendor/three-0.186.1/three.module.js'
+import { crearPersonaje } from '/public/ar1/js/personaje.js'
+import { crearEstado, POSE } from '/public/ar1/js/guion.js'
+await document.fonts.ready
+// ?oscuro: cuerpo papel con la «b» carbón, como en /ar1; ?solo: sin textos ni fondo (PNG transparente)
+const q = new URLSearchParams(location.search)
+const colores = q.has('oscuro') ? { cuerpo: '#ffffff', calado: '#0f0f0e' } : { cuerpo: '#0f0f0e', calado: '#ffffff' }
+if (q.has('solo')) { document.querySelector('h1').remove(); document.querySelector('p').remove(); document.body.style.background = document.documentElement.style.background = 'transparent' }
+const p = crearEstado().pj
+Object.assign(p, { x: 0, y: 0, z: 0, lu: 1, rot: 0, squash: 1, estiro: 1, ojos: 1, extremidades: 1, grosor: 1, feliz: 1 })
+Object.assign(p.manos[0], { x: -21, y: 5, pose: POSE.abierta, curva: 1 })
+Object.assign(p.manos[1], { x: 21, y: 5, pose: POSE.abierta, curva: 1 })
+Object.assign(p.pies[0], { x: -6.5, y: -22.8, rot: 0 }); Object.assign(p.pies[1], { x: 6.5, y: -22.8, rot: 0 })
+const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, alpha: true })
+const escena = new THREE.Scene()
+const cam = new THREE.OrthographicCamera(-29, 29, 21, -28, -50, 50)
+const pj = crearPersonaje(colores); escena.add(pj.raiz)
+pj.aplicar(p, 0, null)
+r.render(escena, cam)
+window.listo = true
+</script>

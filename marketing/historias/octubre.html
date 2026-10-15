@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>bookeaa · historias de octubre</title>
+<link rel="stylesheet" href="../video/estilos.css" />
+<style>
+  body { background: #222; }
+  body.preview { padding: 30px; display: flex; flex-wrap: wrap; gap: 20px; }
+  body.preview .historia { zoom: 0.25; flex: none; }
+
+  /* Zonas seguras: arriba ~250 px (barra y perfil) y abajo ~300 px (responder). */
+  .historia { position: relative; width: 1080px; height: 1920px; overflow: hidden; padding: 250px 90px 0; }
+  .historia.negra { background: var(--coal); color: var(--paper); }
+  .historia.blanca { background: var(--paper); color: var(--coal); }
+
+  .historia .kicker { margin-bottom: 36px; }
+  .historia .grande { font-size: 124px; line-height: 0.9; }
+  .historia .texto { font-size: 46px; margin-top: 40px; max-width: 880px; }
+  .historia .regla { margin-top: 44px; }
+
+  .zona { position: absolute; left: 90px; right: 90px; top: 1180px; height: 360px; display: flex; flex-direction: column; align-items: center; }
+  .zona .flecha { font: 800 40px/1 'Barlow Condensed', sans-serif; letter-spacing: 0.14em; text-transform: uppercase; display: flex; align-items: center; gap: 18px; }
+  .zona .flecha::before, .zona .flecha::after { content: ''; width: 90px; height: 4px; background: currentColor; }
+  .guia .zona { outline: 4px dashed rgb(127 127 127 / 0.6); outline-offset: 10px; border-radius: 40px; }
+  .guia .zona::after { content: attr(data-sticker); margin-top: auto; margin-bottom: 30px; font: 600 32px/1.2 system-ui; opacity: 0.6; text-align: center; }
+
+  /* Solución: el teléfono con la app real, saliendo por abajo. */
+  .historia .tel { left: 50%; top: 1060px; transform: translateX(-50%) rotate(-4deg); }
+  .marca { position: absolute; left: 90px; bottom: 310px; display: flex; align-items: center; gap: 14px; font: 800 50px/1 'Barlow Condensed', sans-serif; }
+  .marca svg { width: 52px; height: 52px; }
+  .solucion .marca { display: none; }
+
+  /* Recompensa: la oferta en una caja blanca sobre negro. */
+  .oferta { position: absolute; left: 90px; right: 90px; top: 1180px; border-radius: 40px; background: var(--paper); color: var(--coal); padding: 44px 50px; display: grid; gap: 14px; }
+  .oferta b { font: 800 84px/0.9 'Barlow Condensed', sans-serif; text-transform: uppercase; }
+  .oferta span { font: 500 40px/1.3 'Barlow', sans-serif; }
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<script src="../video/motor.js"></script>
+<script src="octubre.js"></script>
+<script>
+  const { h } = Motor
+  const logoSvg = (claro) => {
+    const fg = claro ? '#ffffff' : '#0f0f0e', bg = claro ? '#0f0f0e' : '#ffffff'
+    return `<svg viewBox="0 0 32 32"><rect x="2" y="4" width="28" height="26" rx="7" fill="${fg}"/><path d="M10 2.5v5M22 2.5v5" stroke="${fg}" stroke-width="2.6" stroke-linecap="round"/><path d="M12 11v12M12 17.5a4 4 0 1 1 0 .01" stroke="${bg}" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>`
+  }
+  const INDICA = { Encuesta: 'Vota aquí', Pregunta: 'Responde aquí', Enlace: 'Escríbenos', Quiz: 'Adivina', Slider: 'Desliza', 'Cuenta regresiva': 'Activa el recordatorio' }
+
+  function historia(s) {
+    // Sin etiquetas de "problema / solución / recompensa": eso es solo para nosotros.
+    const negra = s.fase === 'sencilla' ? s.fondo === 'negro' : s.fase !== 'solucion'
+    const el = h('div', { class: `historia ${negra ? 'negra' : 'blanca'} ${s.fase}`, 'data-id': s.id })
+    if (s.kicker) el.append(h('div', { class: 'kicker', text: s.kicker }))
+    const t = h('div', { class: 'grande', html: s.titulo.join('<br>') })
+    el.append(s.fase === 'problema' || s.tipo === 'tip' ? Motor.esquinas(t, negra) : t)
+    el.append(h('i', { class: 'regla' }))
+    if (s.texto) el.append(h('p', { class: 'texto', text: s.texto }))
+    if (s.fase === 'solucion') el.append(Motor.telefono(s.img, 520))
+    if (s.fase === 'recompensa' && s.oferta) {
+      el.append(h('div', { class: 'oferta' }, h('b', { text: 'Escríbenos hoy' }), h('span', { text: 'WhatsApp +58 422 029 8203 · link en la bio' })))
+    } else if (s.sticker) {
+      el.append(h('div', { class: 'zona', 'data-sticker': `Sticker: ${s.sticker.tipo}` }, h('span', { class: 'flecha', text: INDICA[s.sticker.tipo] || 'Toca aquí' })))
+    }
+    el.append(h('div', { class: 'marca', html: logoSvg(negra) + 'bookeaa' }))
+    return el
+  }
+
+  // ?s=3 dibuja una sola (para el render); &guia=1 marca la zona del sticker.
+  const q = new URLSearchParams(location.search)
+  const raiz = document.getElementById('raiz')
+  if (q.has('guia')) document.body.classList.add('guia')
+  if (q.has('s')) raiz.appendChild(historia(HISTORIAS_OCTUBRE.find((s) => s.id === Number(q.get('s')))))
+  else {
+    document.body.classList.add('preview', 'guia')
+    HISTORIAS_OCTUBRE.forEach((s) => raiz.appendChild(historia(s)))
+  }
+  window.listo = Promise.all([document.fonts.ready, ...[...document.images].map((img) => img.decode().catch(() => {}))])
+</script>
+</body>
+</html>

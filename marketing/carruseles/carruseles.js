@@ -13,7 +13,7 @@
     tipo: 'cta',
     fondo: 'negro',
     titulo,
-    texto: 'Después, <b>$15 al mes</b>. Todo incluido. Sin tarjeta.',
+    texto: 'Después, <b>$10 al mes</b>. Todo incluido. Sin tarjeta.',
     boton: 'Escríbenos · link en la bio',
   })
 
@@ -132,7 +132,7 @@
       laminas: [
         { tipo: 'portada', fondo: 'negro', kicker: 'Precio', titulo: ['¿CUÁNTO', 'CUESTA?'], texto: 'Spoiler: el primer mes, nada.' },
         { tipo: 'precio', fondo: 'blanco', monto: '$0', detalle: 'POR 30 DÍAS', items: ['Todo lo de Pro desde el primer día', 'Te ayudamos a configurarlo', 'Sin tarjeta, sin permanencia'] },
-        { tipo: 'precio', fondo: 'negro', monto: '$15', detalle: 'AL MES · TODO INCLUIDO', items: ['Reservas ilimitadas', 'Google Calendar', 'Tu link y tu página con tu marca', 'Los 8 estilos y tus colores', 'Sedes, domicilio y mensaje propio', 'Soporte por WhatsApp'] },
+        { tipo: 'precio', fondo: 'negro', monto: '$10', detalle: 'AL MES · TODO INCLUIDO', items: ['Reservas ilimitadas', 'Google Calendar', 'Tu link y tu página con tu marca', 'Los 8 estilos y tus colores', 'Sedes, domicilio y mensaje propio', 'Soporte por WhatsApp'] },
         {
           tipo: 'faq', fondo: 'blanco', titulo: ['PREGUNTAS', 'RÁPIDAS'],
           items: [
@@ -286,7 +286,7 @@
           items: ['Menos tiempo respondiendo chats', 'Menos citas cruzadas', 'Clientes que sí llegan', 'Reservas mientras duermes', 'Un negocio que se ve pro'],
         },
         { tipo: 'precio', fondo: 'blanco', monto: '$0', detalle: 'EL PRIMER MES', items: ['Todo incluido desde el día uno', 'Te ayudamos a configurarlo', 'Sin tarjeta, sin permanencia'] },
-        { tipo: 'precio', fondo: 'negro', monto: '$15', detalle: 'AL MES · DESPUÉS', items: ['Reservas ilimitadas', 'Google Calendar', 'Tu página con tu marca', 'Soporte por WhatsApp'] },
+        { tipo: 'precio', fondo: 'negro', monto: '$10', detalle: 'AL MES · DESPUÉS', items: ['Reservas ilimitadas', 'Google Calendar', 'Tu página con tu marca', 'Soporte por WhatsApp'] },
         cta(['ESCRÍBENOS', 'HOY.']),
       ],
     },

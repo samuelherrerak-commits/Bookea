@@ -174,6 +174,8 @@ export const DEFAULT_CONFIG: BusinessConfig = {
   metodosPago: [],
   heroTitulo: 'Reserva tu cita en minutos',
   heroSubtitulo: 'Elige tus servicios, escoge el horario que prefieras y confirma por WhatsApp.',
+  facturacionModo: 'interno',
+  ticketReserva: true,
 }
 
 /** Pestaña Sedes: Nombre, Direccion, Maps_URL, Activa. Las inactivas y sin nombre se ignoran. */
@@ -202,10 +204,37 @@ export function normalizeMensajes(raw: unknown): PlantillaMensaje[] {
     .filter((m) => m.nombre && m.texto)
 }
 
+/** Logo subido desde la ventana de configuración: data URL de imagen, chico. */
+const LOGO_DATA = /^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/
+export const LOGO_MAX = 45000
+
+export function logoSubido(valor: unknown): string {
+  const v = typeof valor === 'string' ? valor.trim() : ''
+  return v.length <= LOGO_MAX && LOGO_DATA.test(v) ? v : ''
+}
+
+/**
+ * Un enlace de logo que una página pueda mostrar. El enlace de "Compartir" de Drive
+ * abre una página, no la imagen: se pasa al enlace directo. Los de Instagram/Facebook
+ * vencen y su CDN bloquea a otros sitios, así que se descartan (queda el nombre).
+ */
+export function logoDirecto(url: unknown): string {
+  let u = typeof url === 'string' ? url.trim() : ''
+  if (!u) return ''
+  u = u.replace(/^http:\/\//i, 'https://')
+  if (!/^https:\/\//i.test(u)) return ''
+  const drive =
+    /drive\.google\.com\/file\/d\/([\w-]{10,})/.exec(u) ||
+    /drive\.google\.com\/(?:open|uc|thumbnail)\?(?:[^#]*&)?id=([\w-]{10,})/.exec(u)
+  if (drive) return `https://lh3.googleusercontent.com/d/${drive[1]}=w400`
+  if (/cdninstagram\.com|fbcdn\.net|instagram\.com\/|facebook\.com\//i.test(u)) return ''
+  return u
+}
+
 export function normalizeConfig(
   raw: unknown,
   horariosRaw?: unknown,
-  extra: { sedes?: unknown; mensajes?: unknown } = {},
+  extra: { sedes?: unknown; mensajes?: unknown; logo?: unknown } = {},
 ): BusinessConfig {
   const map: Record<string, string> = {}
   if (Array.isArray(raw)) {
@@ -284,7 +313,8 @@ export function normalizeConfig(
   return {
     nombreNegocio: map.nombre_negocio || d.nombreNegocio,
     marca: map.marca || d.marca,
-    logoUrl: /^https?:\/\//i.test((map.logo_url ?? '').trim()) ? map.logo_url.trim() : d.logoUrl,
+    // El logo subido gana; si no hay, el enlace (corregido si es de Drive).
+    logoUrl: logoSubido(extra.logo) || logoDirecto(map.logo_url) || d.logoUrl,
     whatsapp: whatsapp || d.whatsapp,
     horario,
     intervaloMin: int('intervalo_min', d.intervaloMin) || d.intervaloMin,
@@ -317,6 +347,9 @@ export function normalizeConfig(
       .filter(Boolean),
     heroTitulo: map.hero_titulo || d.heroTitulo,
     heroSubtitulo: map.hero_subtitulo || d.heroSubtitulo,
+    facturacionModo: (map.facturacion_modo ?? '').trim().toLowerCase() === 'fiscal' ? 'fiscal' : 'interno',
+    // Por defecto sí: solo "no" (o falso/0) lo apaga.
+    ticketReserva: !/^(no|false|0|off)$/i.test((map.ticket_reserva ?? '').trim()),
   }
 }
 
@@ -340,7 +373,7 @@ export function normalizeCatalog(data: Row): Catalog {
   return {
     servicios,
     promociones: normalizePromos(data.promociones, servicios),
-    config: normalizeConfig(data.config, data.horarios, { sedes: data.sedes, mensajes: data.mensajes }),
+    config: normalizeConfig(data.config, data.horarios, { sedes: data.sedes, mensajes: data.mensajes, logo: data.logo }),
     tasa: normalizeTasa(data.tasa),
     citas: normalizeCitas(data.citasAgendadas),
   }

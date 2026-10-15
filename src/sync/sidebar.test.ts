@@ -6,7 +6,7 @@ import { derivarAcento, derivarNeutros } from '../lib/color'
 import { LUGAR_TIPOS } from '../lib/lugar'
 import { PLANTILLAS_MENSAJE, renderMensaje, VARIABLES_MENSAJE } from '../lib/mensajes'
 import { ESTILO_DEF, ESTILOS, PALETAS, themeVars } from '../lib/theme'
-import { constanteGs } from './appsScript'
+import { constanteGs, funcionesGs } from './appsScript'
 
 const raw = (glob: Record<string, unknown>) => (Object.values(glob)[0] as string | undefined) ?? ''
 const html = raw(import.meta.glob('../../apps-script/cliente/Sidebar.html', { query: '?raw', import: 'default', eager: true }))
@@ -177,3 +177,45 @@ describe('Ventana de configuración y código QR', () => {
   })
 })
 
+
+describe('alerta de cada cita en el calendario', () => {
+  type Recordatorios = (c: { recordatorio_minutos?: string }) => number[] | null
+  const { recordatoriosDe_, ponerAlertas_ } = funcionesGs<{
+    recordatoriosDe_: Recordatorios
+    ponerAlertas_: (ev: unknown, m: number[] | null) => void
+  }>(codeGs, ['recordatoriosDe_', 'ponerAlertas_'])
+  const { alertasValidas_ } = funcionesGs<{ alertasValidas_: (v: unknown) => boolean }>(configurador, ['alertasValidas_'])
+
+  it('lee los minutos: sin repetir, de mayor a menor, máximo 5', () => {
+    expect(recordatoriosDe_({ recordatorio_minutos: '60' })).toEqual([60])
+    expect(recordatoriosDe_({ recordatorio_minutos: '60, 1440, 60' })).toEqual([1440, 60])
+    expect(recordatoriosDe_({ recordatorio_minutos: '0;15 30' })).toEqual([30, 15, 0])
+    expect(recordatoriosDe_({ recordatorio_minutos: '5,15,30,60,120,1440' })).toEqual([1440, 120, 60, 30, 15])
+  })
+
+  it('"no" quita la alerta; vacío o ilegible deja la del calendario', () => {
+    expect(recordatoriosDe_({ recordatorio_minutos: 'no' })).toEqual([])
+    expect(recordatoriosDe_({ recordatorio_minutos: 'No ' })).toEqual([])
+    expect(recordatoriosDe_({ recordatorio_minutos: '' })).toBeNull()
+    expect(recordatoriosDe_({})).toBeNull()
+    expect(recordatoriosDe_({ recordatorio_minutos: 'abc,-5,99999' })).toBeNull()
+  })
+
+  it('pone las alertas en el evento, o lo deja como está', () => {
+    const llamadas: string[] = []
+    const ev = { removeAllReminders: () => llamadas.push('quitar'), addPopupReminder: (m: number) => llamadas.push('+' + m) }
+    ponerAlertas_(ev, [1440, 60])
+    expect(llamadas).toEqual(['quitar', '+1440', '+60'])
+    llamadas.length = 0
+    ponerAlertas_(ev, [])
+    expect(llamadas).toEqual(['quitar'])
+    llamadas.length = 0
+    ponerAlertas_(ev, null)
+    expect(llamadas).toEqual([])
+  })
+
+  it('la ventana solo deja guardar lo que el maestro entiende', () => {
+    for (const ok of ['', 'no', '60', '1440, 60', '0', '40320', undefined]) expect(alertasValidas_(ok), String(ok)).toBe(true)
+    for (const mal of ['abc', '-5', '99999', '1,2,3,4,5,6', '1h']) expect(alertasValidas_(mal), mal).toBe(false)
+  })
+})
