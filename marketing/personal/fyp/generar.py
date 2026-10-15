@@ -4,6 +4,7 @@ import csv, json, os, sys
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
 from octubre import V, TIPO, CTA, CTA_MG
+from escenas import ESCENAS
 
 RAIZ = os.path.dirname(AQUI)
 DIAS = {'Lun': 'lunes', 'Mar': 'martes', 'Mié': 'miércoles', 'Jue': 'jueves', 'Vie': 'viernes'}
@@ -27,6 +28,19 @@ with open(os.path.join(RAIZ, 'CALENDARIO-OCTUBRE.csv'), 'w', newline='', encodin
 
 # ── JSON para el Word ─────────────────────────────
 json.dump([x for x in V if x['tipo'] != 'MG'], open(os.path.join(AQUI, 'guiones.json'), 'w'), ensure_ascii=False, indent=1)
+
+# ── videos.json: lo que lee scripts/fyp.mjs para armar los MG y los VOZ con voz de IA ──
+CTA_VOZ = {'link': 'Pruébalo gratis: el link está en mi perfil.', 'comenta': 'Comenta AGENDA y te mando el link.', 'comparte': 'Mándaselo a alguien que todavía agenda por WhatsApp.', 'sigue': 'Sígueme para más tips de agenda.'}
+vid = []
+for x in V:
+    if x['tipo'] == 'CAM':
+        continue
+    d = {k: x[k] for k in ('id', 'tipo', 'fecha', 'dia', 'hora', 'titulo', 'gancho', 'cta', 'caption', 'hashtags')}
+    if x['tipo'] == 'VOZ':
+        d['vozTexto'] = x['cuerpo'] + ' ' + CTA_VOZ[x['cta']]
+    d['escenas'] = ESCENAS.get(x['id'])
+    vid.append(d)
+json.dump(vid, open(os.path.join(AQUI, 'videos.json'), 'w'), ensure_ascii=False, indent=1)
 
 # ── Markdown ──────────────────────────────────────
 L = []

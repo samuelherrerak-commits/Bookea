@@ -11,6 +11,21 @@ node scripts/editar.mjs ediciones/2026-10-05-lanzamiento.json --cuadros 1,8  # P
 npm run studio                                                              # vista previa interactiva
 ```
 
+## Videos FYP con voz de IA (sin grabar nada)
+
+```bash
+pip install piper-tts faster-whisper imageio-ffmpeg
+python3 -I fyp/generar.py                      # guiones → videos.json, FYP-15S.md, CALENDARIO-OCTUBRE.csv
+node scripts/fyp.mjs FYP-S01-JUE-MG FYP-S01-JUE-VOZ     # renderiza → salida/fyp/<id>.mp4
+node scripts/fyp.mjs FYP-S01-VIE-VOZ --cuadros 1,5,9    # PNG sueltos para revisar
+node scripts/fyp.mjs FYP-S01-VIE-VOZ --voz es_ES-davefx-medium --vel 0.85
+```
+
+- **MG:** 15 s de escenas de marca con música y efectos, sin voz. **VOZ:** lo mismo con voz de IA (Piper, local, sin API ni costo), subtítulos grandes y las escenas sincronizadas con las palabras.
+- Las escenas de cada video están en `fyp/escenas.py` (módulos: titulares, burbujas de chat, teléfonos con capturas reales, tarjeta de Google Calendar, agenda del día, contador, link que se escribe y pastilla).
+- Voces (licencias libres, se bajan solas la primera vez): `es_MX-claude-high` (por defecto, Apache 2.0), `es_MX-ald-medium` (dominio público) y `es_ES-davefx-medium` (CC0). La pronunciación de la marca está en `fyp/voz.py` (`bookeaa` → "bukea").
+- Una voz de IA realista debe etiquetarse como contenido generado por IA al publicar en TikTok e Instagram.
+
 ## Mejorar el video crudo (luz y ruido)
 
 ```bash

@@ -1,5 +1,5 @@
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion'
-import { TEXTO } from './fuentes'
+import { LETRA, TEXTO } from './fuentes'
 import { Lineas } from './Lineas'
 import { COLOR, MARGEN, OLA, TIPO, clamp, ease, lerp, p, tw } from './marca'
 import { Telefono } from './Telefono'
@@ -127,6 +127,52 @@ export const Escena: React.FC<{ e: TEscena; rel: (t: number) => number }> = ({ e
             </div>
           ) : null}
         </div>
+        {e.agenda ? (
+          <div style={{ position: 'absolute', left: MARGEN, right: MARGEN, top: e.agendaY ?? 820, borderTop: '4px solid currentColor' }}>
+            {e.agenda.map((r, i) => {
+              const a = r.en != null ? Math.max(base, rel(r.en)) : base + 0.35 + i * 0.3
+              const k = clamp(tw(t, a, 0.4, 0, 1))
+              const tacha = r.estado === 'tachado' ? clamp(tw(t, a + 0.7, 0.35, 0, 1)) : 0
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    gap: 40,
+                    alignItems: 'baseline',
+                    padding: '28px 0',
+                    borderBottom: `3px solid ${negro ? 'rgba(255,255,255,0.28)' : 'rgba(15,15,14,0.22)'}`,
+                    opacity: k * (r.estado === 'vacio' ? 0.5 : 1),
+                    transform: `translateX(${(1 - k) * -70}px)`,
+                  }}
+                >
+                  <b style={{ fontFamily: LETRA, fontWeight: 800, fontSize: 64, lineHeight: 1, width: 190, flex: 'none' }}>{r.hora}</b>
+                  <span style={{ position: 'relative', fontFamily: TEXTO, fontSize: 46, lineHeight: 1.1, borderBottom: r.estado === 'vacio' ? '4px dashed currentColor' : 'none' }}>
+                    {r.texto}
+                    <i style={{ position: 'absolute', left: -8, right: -8, top: '52%', height: 7, background: 'currentColor', transform: `scaleX(${tacha})`, transformOrigin: 'left' }} />
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        ) : null}
+        {e.contador
+          ? (() => {
+              const c = e.contador
+              const a = c.en != null ? Math.max(base, rel(c.en)) : base + 0.3
+              const valor = Math.round(lerp(c.de, c.a, ease.inOut(p(t, a, c.dur ?? 1.6))))
+              const k = clamp(tw(t, a - 0.1, 0.4, 0, 1))
+              return (
+                <div style={{ position: 'absolute', left: MARGEN, top: c.y ?? 820, opacity: k, transform: `translateY(${(1 - k) * 40}px)` }}>
+                  <div style={{ ...(TIPO.reloj as React.CSSProperties), fontSize: 440, fontVariantNumeric: 'tabular-nums' }}>
+                    {valor}
+                    {c.sufijo ?? ''}
+                  </div>
+                  {c.etiqueta ? <div style={{ ...(TIPO.kicker as React.CSSProperties), fontSize: 48, marginTop: 24 }}>{c.etiqueta}</div> : null}
+                </div>
+              )
+            })()
+          : null}
         {e.evento
           ? (() => {
               const ev = e.evento

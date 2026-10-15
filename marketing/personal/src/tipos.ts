@@ -30,7 +30,7 @@ export type Escena = {
   titulo: string[]
   /** Segundo (original) en que entra cada línea del título; si no, escalonadas. */
   tiempos?: number[]
-  estilo?: 'mega' | 'grande' | 'medio'
+  estilo?: 'mega' | 'grande' | 'medio' | 'reloj'
   tamano?: number
   texto?: string
   textoEn?: number
@@ -42,6 +42,11 @@ export type Escena = {
   burbujas?: { texto: string; en: number; propia?: boolean }[]
   /** Tarjeta de Google Calendar (como en los reels) que aparece en su segundo `en` (original). */
   evento?: { titulo: string; cuando: string; quien: string; en: number; x?: number; y?: number }
+  /** Agenda del día (como .dia-v de los reels): filas hora + texto; `tachado` dibuja una raya, `vacio` queda gris. */
+  agenda?: { hora: string; texto: string; estado?: 'ok' | 'tachado' | 'vacio'; en?: number }[]
+  agendaY?: number
+  /** Número grande que cuenta de `de` a `a` (p. ej. 10 → 0 mensajes). */
+  contador?: { de: number; a: number; etiqueta?: string; sufijo?: string; en?: number; dur?: number; y?: number }
   /** Etiqueta pequeña tipo "Visto 9:15 a. m." bajo las burbujas, en su segundo `en`. */
   visto?: { texto: string; en: number }
 }

@@ -1,4 +1,5 @@
 import { Composition } from 'remotion'
+import { Fyp } from './Fyp'
 import { Vlog } from './Vlog'
 import { duracionTotal } from './tiempo'
 import { FPS, type Edicion } from './tipos'
@@ -13,6 +14,17 @@ const ejemplo: Edicion = {
 }
 
 export const Raiz: React.FC = () => (
+  <>
+  <Composition
+    id="Fyp"
+    component={Fyp}
+    fps={FPS}
+    width={1080}
+    height={1920}
+    durationInFrames={FPS * 15}
+    defaultProps={{ duracion: 15, escenas: [], captions: [], sfx: [] }}
+    calculateMetadata={({ props }) => ({ durationInFrames: Math.max(1, Math.round(props.duracion * FPS)) })}
+  />
   <Composition
     id="Vlog"
     component={Vlog}
@@ -25,4 +37,5 @@ export const Raiz: React.FC = () => (
       durationInFrames: Math.max(1, Math.round(duracionTotal(props) * FPS)),
     })}
   />
+  </>
 )

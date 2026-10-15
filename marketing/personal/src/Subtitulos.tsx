@@ -13,11 +13,13 @@ type Pagina = ReturnType<typeof createTikTokStyleCaptions>['pages'][number]
  * Subtítulo minimalista de la marca: Barlow Condensed 800 en mayúsculas, blanco, a la
  * izquierda; la palabra que se está diciendo al 100% y el resto atenuado. Sin cajas.
  */
-const PaginaSub: React.FC<{ p: Pagina; tamano: number; arriba: number }> = ({ p, tamano, arriba }) => {
+const PaginaSub: React.FC<{ p: Pagina; tamano: number; arriba: number; tinta: (ms: number) => string }> = ({ p, tamano, arriba, tinta }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   const t = frame / fps
   const ahora = p.startMs + t * 1000
+  // El color sigue al fondo de la escena que se está viendo AHORA (una frase puede cruzar de negro a blanco).
+  const color = tinta(ahora)
   const y = tw(t, 0, 0.35, 60, 0)
   return (
     // Zona segura: arriba de la descripción (último ~20%) y lejos de los botones de la derecha.
@@ -31,12 +33,12 @@ const PaginaSub: React.FC<{ p: Pagina; tamano: number; arriba: number }> = ({ p,
             lineHeight: 0.94,
             letterSpacing: '-0.012em',
             textTransform: 'uppercase',
-            color: '#fff',
+            color,
             display: 'flex',
             flexWrap: 'wrap',
             gap: '0 0.22em',
             transform: `translateY(${y}%)`,
-            textShadow: '0 2px 24px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.35)',
+            textShadow: color === '#fff' ? '0 2px 24px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.35)' : 'none',
           }}
         >
           {p.tokens.map((tk, i) => {
@@ -54,7 +56,7 @@ const PaginaSub: React.FC<{ p: Pagina; tamano: number; arriba: number }> = ({ p,
   )
 }
 
-export const Subtitulos: React.FC<{ captions: Caption[]; tamano?: number; arriba?: number }> = ({ captions, tamano = 88, arriba = 1190 }) => {
+export const Subtitulos: React.FC<{ captions: Caption[]; tamano?: number; arriba?: number; tinta?: (ms: number) => string }> = ({ captions, tamano = 88, arriba = 1190, tinta = () => '#fff' }) => {
   const { fps } = useVideoConfig()
   const { pages } = useMemo(() => createTikTokStyleCaptions({ captions, combineTokensWithinMilliseconds: AGRUPAR_MS }), [captions])
   return (
@@ -66,7 +68,7 @@ export const Subtitulos: React.FC<{ captions: Caption[]; tamano?: number; arriba
         const dur = Math.max(1, Math.round((finMs / 1000) * fps) - desde)
         return (
           <Sequence key={i} from={desde} durationInFrames={dur} layout="none">
-            <PaginaSub p={p} tamano={tamano} arriba={arriba} />
+            <PaginaSub p={p} tamano={tamano} arriba={arriba} tinta={tinta} />
           </Sequence>
         )
       })}

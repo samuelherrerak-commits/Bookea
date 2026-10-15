@@ -30,6 +30,7 @@ El proyecto está en `marketing/personal/` (Remotion). Lee su `README.md` y, par
 
 - **Fuente única:** `fyp/octubre.py`. `python3 -I fyp/generar.py` genera `FYP-15S.md`, `CALENDARIO-OCTUBRE.csv` y `fyp/guiones.json`; `node fyp/word.cjs` genera el Word.
 - **Cada video es independiente:** nunca "parte 1/2/3", ni "mira el siguiente". Estructura: gancho → conexión con el problema del negocio → bookeaa como lo que usan los negocios que saben organizar su tiempo → llamado a la acción.
+- **MG y VOZ los hace Claude** con `node scripts/fyp.mjs <id>` (voz de IA con Piper). Falta autorizar las escenas de cada video en `fyp/escenas.py`; ya están las de FYP-S01-JUE y FYP-S01-VIE. Los CAM siguen siendo de Samuel.
 - **Archivos:** `FYP-Sxx-DIA-MG` (lo armo yo), `-VOZ.m4a` (audio de Samuel) y `-CAM.mp4` (Samuel a cámara).
 
 ## Regla: en cámara solo hablando
