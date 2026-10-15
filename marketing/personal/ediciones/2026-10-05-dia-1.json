@@ -1,0 +1,100 @@
+{
+  "fuente": "public/entrada/2026-10-05-dia-1-original",
+  "motorWhisper": "faster",
+  "modeloWhisper": "turbo",
+  "conMusica": true,
+  "volumenMusica": 0.1,
+  "cierre": true,
+  "segmentos": [
+    {
+      "desde": 0,
+      "hasta": 27.4
+    },
+    {
+      "desde": 31.35,
+      "hasta": 57.6
+    }
+  ],
+  "video": "entrada/2026-10-05-dia-1.mp4",
+  "efectos": "tmp/2026-10-05-dia-1-efectos.wav",
+  "musica": "tmp/2026-10-05-dia-1-musica.wav",
+  "usuario": "@bookeaa.app",
+  "subtitulos": {
+    "arriba": 1440,
+    "tamano": 76
+  },
+  "enfasis": [
+    {
+      "ts": 0.15,
+      "texto": "Día 1.",
+      "kicker": "Como emprendedor",
+      "dur": 2.7
+    },
+    {
+      "ts": 3.9,
+      "texto": "5:30",
+      "kicker": "Salgo del trabajo",
+      "dur": 2.4
+    },
+    {
+      "ts": 7.6,
+      "texto": "Al otro trabajo.",
+      "dur": 1.9
+    },
+    {
+      "ts": 22.6,
+      "texto": "Cara de loca.",
+      "dur": 1.9
+    },
+    {
+      "ts": 52.5,
+      "texto": "0",
+      "kicker": "Clientes",
+      "dur": 1.9
+    },
+    {
+      "ts": 54.5,
+      "texto": "Ya arrancó.",
+      "dur": 2.4
+    }
+  ],
+  "capitulos": [
+    {
+      "ts": 9.6,
+      "texto": "Rumbo a casa",
+      "numero": "01",
+      "dur": 3.6
+    },
+    {
+      "ts": 15,
+      "texto": "Ella primero",
+      "numero": "02",
+      "dur": 3.6
+    },
+    {
+      "ts": 24.5,
+      "texto": "El otro trabajo",
+      "numero": "03",
+      "dur": 2.8
+    }
+  ],
+  "checklist": {
+    "desde": 31.5,
+    "hasta": 51.1,
+    "titulo": "Hoy hice",
+    "items": [
+      {
+        "ts": 31.8,
+        "texto": "Página de Instagram"
+      },
+      {
+        "ts": 35.6,
+        "texto": "Bot de WhatsApp"
+      },
+      {
+        "ts": 44.5,
+        "texto": "Primera publicación"
+      }
+    ]
+  }
+}

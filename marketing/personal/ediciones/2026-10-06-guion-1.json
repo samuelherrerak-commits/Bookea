@@ -1,0 +1,324 @@
+{
+  "fuente": "public/entrada/2026-10-06-guion-1-original",
+  "motorWhisper": "faster",
+  "modeloWhisper": "turbo",
+  "conMusica": true,
+  "volumenMusica": 0.1,
+  "cierre": true,
+  "usuario": "@bookeaa.app",
+  "video": "entrada/2026-10-06-guion-1.mp4",
+  "segmentos": [
+    {
+      "desde": 13.25,
+      "hasta": 18.05
+    },
+    {
+      "desde": 8.3,
+      "hasta": 12.9
+    },
+    {
+      "desde": 29.1,
+      "hasta": 32.3
+    },
+    {
+      "desde": 39.3,
+      "hasta": 44.9
+    },
+    {
+      "desde": 45.85,
+      "hasta": 47.7
+    },
+    {
+      "desde": 51.35,
+      "hasta": 55
+    }
+  ],
+  "musica": "tmp/2026-10-06-guion-1-musica.wav",
+  "kitSfx": "mixkit",
+  "sinCamaraDesde": 9999,
+  "subtitulos": {
+    "arriba": 1440,
+    "tamano": 76
+  },
+  "enfasis": [
+    {
+      "ts": 16.5,
+      "texto": "No contestaste.",
+      "dur": 1.6
+    },
+    {
+      "ts": 52.4,
+      "texto": "1 mes gratis.",
+      "kicker": "Link en mi perfil",
+      "dur": 2.6
+    }
+  ],
+  "escenas": [
+    {
+      "desde": 8.3,
+      "hasta": 10.6,
+      "fondo": "negro",
+      "kicker": "Te escribió a las",
+      "titulo": [
+        "11:42 P.M."
+      ],
+      "tamano": 200,
+      "burbujas": [
+        {
+          "texto": "¿Tienes hora mañana?",
+          "en": 8.85
+        },
+        {
+          "texto": "¿Hola?",
+          "en": 9.45
+        },
+        {
+          "texto": "¿Sigues ahí?",
+          "en": 10
+        }
+      ]
+    },
+    {
+      "desde": 10.6,
+      "hasta": 12.9,
+      "fondo": "blanco",
+      "entrada": "lado",
+      "kicker": "Le respondiste a las",
+      "titulo": [
+        "9:15 A.M."
+      ],
+      "tamano": 200,
+      "burbujas": [
+        {
+          "texto": "¡Buenas! Sí tengo hora",
+          "en": 11,
+          "propia": true
+        },
+        {
+          "texto": "Ya reservé en otro lado.",
+          "en": 11.75
+        }
+      ]
+    },
+    {
+      "desde": 40.75,
+      "hasta": 42.25,
+      "fondo": "blanco",
+      "kicker": "01 · Tu link",
+      "titulo": [
+        "ENTRA A",
+        "TU LINK."
+      ],
+      "estilo": "grande",
+      "telefonos": [
+        {
+          "img": "flujo/1-inicio.jpg",
+          "ancho": 600,
+          "x": 240,
+          "y": 700,
+          "en": 40.95
+        }
+      ]
+    },
+    {
+      "desde": 42.25,
+      "hasta": 43.65,
+      "fondo": "negro",
+      "entrada": "lado",
+      "kicker": "02 · Horas libres",
+      "titulo": [
+        "ELIGE",
+        "SU HORA."
+      ],
+      "estilo": "grande",
+      "telefonos": [
+        {
+          "img": "flujo/4-agenda.jpg",
+          "ancho": 600,
+          "x": 240,
+          "y": 700,
+          "en": 42.35
+        }
+      ]
+    },
+    {
+      "desde": 43.65,
+      "hasta": 44.9,
+      "fondo": "blanco",
+      "kicker": "03 · Listo",
+      "titulo": [
+        "Y RESERVA",
+        "SOLO."
+      ],
+      "estilo": "grande",
+      "telefonos": [
+        {
+          "img": "flujo/6-listo.jpg",
+          "ancho": 600,
+          "x": 240,
+          "y": 700,
+          "en": 43.75
+        }
+      ]
+    },
+    {
+      "desde": 45.85,
+      "hasta": 47.7,
+      "fondo": "negro",
+      "titulo": [
+        "MÁS CITAS.",
+        "MENOS CHATS."
+      ],
+      "tiempos": [
+        45.95,
+        47
+      ],
+      "estilo": "grande",
+      "tamano": 150
+    }
+  ],
+  "sfx": [
+    {
+      "ts": 13.3,
+      "nombre": "impacto",
+      "vol": 0.35
+    },
+    {
+      "ts": 8.85,
+      "nombre": "burbuja",
+      "vol": 0.7
+    },
+    {
+      "ts": 9.45,
+      "nombre": "burbuja",
+      "vol": 0.7
+    },
+    {
+      "ts": 10,
+      "nombre": "burbuja",
+      "vol": 0.7
+    },
+    {
+      "ts": 11,
+      "nombre": "mensaje",
+      "vol": 0.5
+    },
+    {
+      "ts": 11.75,
+      "nombre": "burbuja",
+      "vol": 0.7
+    },
+    {
+      "ts": 12.05,
+      "nombre": "trombon",
+      "vol": 0.45
+    },
+    {
+      "ts": 44,
+      "nombre": "exito",
+      "vol": 0.4
+    },
+    {
+      "ts": 46.1,
+      "nombre": "monedas",
+      "vol": 0.4
+    }
+  ],
+  "sfxAuto": [
+    {
+      "t": 3.29,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 21.14,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 4.8,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 5.15,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 7.1,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 7.45,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 14.05,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 14.4,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 14.35,
+      "nombre": "barrido",
+      "vol": 0.5
+    },
+    {
+      "t": 15.55,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 15.9,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 15.85,
+      "nombre": "barrido",
+      "vol": 0.5
+    },
+    {
+      "t": 16.95,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 17.3,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 17.25,
+      "nombre": "barrido",
+      "vol": 0.5
+    },
+    {
+      "t": 18.2,
+      "nombre": "whoosh",
+      "vol": 0.45
+    },
+    {
+      "t": 18.55,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 19.4,
+      "nombre": "pop",
+      "vol": 0.55
+    },
+    {
+      "t": 23.8,
+      "nombre": "exito",
+      "vol": 0.45
+    }
+  ]
+}

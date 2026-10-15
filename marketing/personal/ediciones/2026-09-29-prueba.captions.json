@@ -1,0 +1,457 @@
+[
+ {
+  "text": " ¿Qué",
+  "startMs": 1300,
+  "endMs": 1645,
+  "timestampMs": 1473,
+  "confidence": null
+ },
+ {
+  "text": " tal?",
+  "startMs": 1645,
+  "endMs": 1991,
+  "timestampMs": 1818,
+  "confidence": null
+ },
+ {
+  "text": " Mi",
+  "startMs": 1991,
+  "endMs": 2267,
+  "timestampMs": 2129,
+  "confidence": null
+ },
+ {
+  "text": " nombre",
+  "startMs": 2267,
+  "endMs": 2820,
+  "timestampMs": 2544,
+  "confidence": null
+ },
+ {
+  "text": " es",
+  "startMs": 2820,
+  "endMs": 3096,
+  "timestampMs": 2958,
+  "confidence": null
+ },
+ {
+  "text": " Samuel",
+  "startMs": 3096,
+  "endMs": 3649,
+  "timestampMs": 3373,
+  "confidence": null
+ },
+ {
+  "text": " Herrera",
+  "startMs": 3649,
+  "endMs": 4271,
+  "timestampMs": 3960,
+  "confidence": null
+ },
+ {
+  "text": " y",
+  "startMs": 4271,
+  "endMs": 4478,
+  "timestampMs": 4374,
+  "confidence": null
+ },
+ {
+  "text": " este",
+  "startMs": 4478,
+  "endMs": 4892,
+  "timestampMs": 4685,
+  "confidence": null
+ },
+ {
+  "text": " es",
+  "startMs": 4892,
+  "endMs": 5169,
+  "timestampMs": 5031,
+  "confidence": null
+ },
+ {
+  "text": " el",
+  "startMs": 5169,
+  "endMs": 5445,
+  "timestampMs": 5307,
+  "confidence": null
+ },
+ {
+  "text": " video",
+  "startMs": 5445,
+  "endMs": 5929,
+  "timestampMs": 5687,
+  "confidence": null
+ },
+ {
+  "text": " de",
+  "startMs": 5929,
+  "endMs": 6205,
+  "timestampMs": 6067,
+  "confidence": null
+ },
+ {
+  "text": " prueba",
+  "startMs": 6205,
+  "endMs": 6758,
+  "timestampMs": 6481,
+  "confidence": null
+ },
+ {
+  "text": " para",
+  "startMs": 6758,
+  "endMs": 7172,
+  "timestampMs": 6965,
+  "confidence": null
+ },
+ {
+  "text": " mi",
+  "startMs": 7172,
+  "endMs": 7448,
+  "timestampMs": 7310,
+  "confidence": null
+ },
+ {
+  "text": " nuevo",
+  "startMs": 7448,
+  "endMs": 7932,
+  "timestampMs": 7690,
+  "confidence": null
+ },
+ {
+  "text": " proyecto",
+  "startMs": 7932,
+  "endMs": 8623,
+  "timestampMs": 8277,
+  "confidence": null
+ },
+ {
+  "text": " que",
+  "startMs": 8623,
+  "endMs": 8968,
+  "timestampMs": 8796,
+  "confidence": null
+ },
+ {
+  "text": " se",
+  "startMs": 8968,
+  "endMs": 9245,
+  "timestampMs": 9106,
+  "confidence": null
+ },
+ {
+  "text": " llama",
+  "startMs": 9245,
+  "endMs": 9728,
+  "timestampMs": 9486,
+  "confidence": null
+ },
+ {
+  "text": " bookeaa.",
+  "startMs": 9728,
+  "endMs": 10350,
+  "timestampMs": 10039,
+  "confidence": null
+ },
+ {
+  "text": " Un",
+  "startMs": 25920,
+  "endMs": 26122,
+  "timestampMs": 26021,
+  "confidence": null
+ },
+ {
+  "text": " portal",
+  "startMs": 26122,
+  "endMs": 26526,
+  "timestampMs": 26324,
+  "confidence": null
+ },
+ {
+  "text": " web",
+  "startMs": 26526,
+  "endMs": 26779,
+  "timestampMs": 26653,
+  "confidence": null
+ },
+ {
+  "text": " donde",
+  "startMs": 26779,
+  "endMs": 27133,
+  "timestampMs": 26956,
+  "confidence": null
+ },
+ {
+  "text": " tus",
+  "startMs": 27133,
+  "endMs": 27385,
+  "timestampMs": 27259,
+  "confidence": null
+ },
+ {
+  "text": " clientes",
+  "startMs": 27385,
+  "endMs": 27891,
+  "timestampMs": 27638,
+  "confidence": null
+ },
+ {
+  "text": " pueden",
+  "startMs": 27891,
+  "endMs": 28415,
+  "timestampMs": 28153,
+  "confidence": null
+ },
+ {
+  "text": " agendar",
+  "startMs": 28415,
+  "endMs": 28990,
+  "timestampMs": 28702,
+  "confidence": null
+ },
+ {
+  "text": " si",
+  "startMs": 28990,
+  "endMs": 29192,
+  "timestampMs": 29091,
+  "confidence": null
+ },
+ {
+  "text": " eres",
+  "startMs": 29192,
+  "endMs": 29495,
+  "timestampMs": 29344,
+  "confidence": null
+ },
+ {
+  "text": " barbero,",
+  "startMs": 29495,
+  "endMs": 29950,
+  "timestampMs": 29723,
+  "confidence": null
+ },
+ {
+  "text": " si",
+  "startMs": 30280,
+  "endMs": 30455,
+  "timestampMs": 30368,
+  "confidence": null
+ },
+ {
+  "text": " eres",
+  "startMs": 30455,
+  "endMs": 30718,
+  "timestampMs": 30586,
+  "confidence": null
+ },
+ {
+  "text": " manicurista,",
+  "startMs": 30718,
+  "endMs": 31407,
+  "timestampMs": 31062,
+  "confidence": null
+ },
+ {
+  "text": " si",
+  "startMs": 31407,
+  "endMs": 31582,
+  "timestampMs": 31494,
+  "confidence": null
+ },
+ {
+  "text": " eres",
+  "startMs": 31582,
+  "endMs": 32005,
+  "timestampMs": 31793,
+  "confidence": null
+ },
+ {
+  "text": " odontólogo",
+  "startMs": 32005,
+  "endMs": 32530,
+  "timestampMs": 32267,
+  "confidence": null
+ },
+ {
+  "text": " y",
+  "startMs": 32530,
+  "endMs": 32661,
+  "timestampMs": 32595,
+  "confidence": null
+ },
+ {
+  "text": " trabajas",
+  "startMs": 32661,
+  "endMs": 33099,
+  "timestampMs": 32880,
+  "confidence": null
+ },
+ {
+  "text": " en",
+  "startMs": 33099,
+  "endMs": 33274,
+  "timestampMs": 33186,
+  "confidence": null
+ },
+ {
+  "text": " un",
+  "startMs": 33274,
+  "endMs": 33449,
+  "timestampMs": 33362,
+  "confidence": null
+ },
+ {
+  "text": " consultorio,",
+  "startMs": 33449,
+  "endMs": 34018,
+  "timestampMs": 33734,
+  "confidence": null
+ },
+ {
+  "text": " si",
+  "startMs": 34018,
+  "endMs": 34193,
+  "timestampMs": 34106,
+  "confidence": null
+ },
+ {
+  "text": " trabajas",
+  "startMs": 34193,
+  "endMs": 34631,
+  "timestampMs": 34412,
+  "confidence": null
+ },
+ {
+  "text": " en",
+  "startMs": 34631,
+  "endMs": 34806,
+  "timestampMs": 34718,
+  "confidence": null
+ },
+ {
+  "text": " un",
+  "startMs": 34806,
+  "endMs": 34981,
+  "timestampMs": 34894,
+  "confidence": null
+ },
+ {
+  "text": " spa.",
+  "startMs": 34981,
+  "endMs": 35200,
+  "timestampMs": 35091,
+  "confidence": null
+ },
+ {
+  "text": " Profesionaliza",
+  "startMs": 35330,
+  "endMs": 36501,
+  "timestampMs": 35915,
+  "confidence": null
+ },
+ {
+  "text": " tu",
+  "startMs": 36501,
+  "endMs": 36754,
+  "timestampMs": 36627,
+  "confidence": null
+ },
+ {
+  "text": " emprendimiento,",
+  "startMs": 36754,
+  "endMs": 37764,
+  "timestampMs": 37259,
+  "confidence": null
+ },
+ {
+  "text": " tu",
+  "startMs": 37764,
+  "endMs": 38017,
+  "timestampMs": 37891,
+  "confidence": null
+ },
+ {
+  "text": " negocio,",
+  "startMs": 38017,
+  "endMs": 38586,
+  "timestampMs": 38301,
+  "confidence": null
+ },
+ {
+  "text": " envíale",
+  "startMs": 38586,
+  "endMs": 39154,
+  "timestampMs": 38870,
+  "confidence": null
+ },
+ {
+  "text": " tu",
+  "startMs": 39154,
+  "endMs": 39407,
+  "timestampMs": 39281,
+  "confidence": null
+ },
+ {
+  "text": " link",
+  "startMs": 39407,
+  "endMs": 39786,
+  "timestampMs": 39597,
+  "confidence": null
+ },
+ {
+  "text": " personalizado",
+  "startMs": 39786,
+  "endMs": 40734,
+  "timestampMs": 40260,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 40734,
+  "endMs": 40923,
+  "timestampMs": 40829,
+  "confidence": null
+ },
+ {
+  "text": " tus",
+  "startMs": 40923,
+  "endMs": 41239,
+  "timestampMs": 41081,
+  "confidence": null
+ },
+ {
+  "text": " clientes",
+  "startMs": 41239,
+  "endMs": 41871,
+  "timestampMs": 41555,
+  "confidence": null
+ },
+ {
+  "text": " y",
+  "startMs": 41871,
+  "endMs": 42061,
+  "timestampMs": 41966,
+  "confidence": null
+ },
+ {
+  "text": " ellos",
+  "startMs": 42061,
+  "endMs": 42503,
+  "timestampMs": 42282,
+  "confidence": null
+ },
+ {
+  "text": " pueden",
+  "startMs": 42503,
+  "endMs": 43128,
+  "timestampMs": 42816,
+  "confidence": null
+ },
+ {
+  "text": " reservar.",
+  "startMs": 43128,
+  "endMs": 44060,
+  "timestampMs": 43594,
+  "confidence": null
+ }
+]
