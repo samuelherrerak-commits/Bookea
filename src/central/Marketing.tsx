@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { capitalize, formatLongDate, formatWeekdayShort } from '../lib/format'
 import * as api from './api'
+import { crearIcs, paraAlarmas } from './ics'
 import semilla from './marketing-semilla.json'
 import { ESTADO_PUB, atrasada, contar, mesAnterior, mesSiguiente, ordenar, porDia, semanasDelMes, textoParaPublicar, tipoPub } from './marketing'
 import { fechaCorta } from './estados'
@@ -65,6 +66,15 @@ export function Marketing({ sesion, hoy, alSalir }: { sesion: string; hoy: strin
   }
 
   const ahora = horaCaracas()
+  const alarmas = paraAlarmas(lista ?? [], 'TikTok', hoy)
+  const bajarAlarmas = () => {
+    const url = URL.createObjectURL(new Blob([crearIcs(alarmas)], { type: 'text/calendar;charset=utf-8' }))
+    const a = Object.assign(document.createElement('a'), { href: url, download: 'bookeaa-alarmas-tiktok.ics' })
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 2000)
+  }
   const visibles = useMemo(
     () => (lista ?? []).filter((p) => (filtro === 'todas' ? true : filtro === 'pendientes' ? p.estado === 'borrador' || p.estado === 'aprobado' : p.estado === filtro)),
     [lista, filtro],
@@ -106,9 +116,16 @@ export function Marketing({ sesion, hoy, alSalir }: { sesion: string; hoy: strin
                 </button>
               ))}
             </div>
-            <button type="button" onClick={() => void importar()} disabled={importando} className="text-[13px] text-muted underline underline-offset-4 disabled:opacity-50">
-              {importando ? 'Importando…' : 'Importar calendario'}
-            </button>
+            <div className="flex flex-wrap justify-end gap-x-4 gap-y-1">
+              {alarmas.length > 0 && (
+                <button type="button" onClick={bajarAlarmas} className="text-[13px] font-semibold underline underline-offset-4">
+                  Alarmas de TikTok ({alarmas.length})
+                </button>
+              )}
+              <button type="button" onClick={() => void importar()} disabled={importando} className="text-[13px] text-muted underline underline-offset-4 disabled:opacity-50">
+                {importando ? 'Importando…' : 'Importar calendario'}
+              </button>
+            </div>
           </div>
 
           {vista === 'cola' && (
@@ -309,6 +326,9 @@ function Detalle({ pub, sesion, onCerrar, onCambio, falla }: { pub: api.Publicac
           ))}
           {cambios.length > 0 && <button type="button" disabled={guardando} onClick={() => void guardar()} className="rounded-full bg-ink px-5 py-3 text-[15px] font-semibold text-bg disabled:opacity-50">Guardar cambios</button>}
           <button type="button" onClick={() => void copiar()} className="rounded-full px-5 py-3 text-[15px] ring-1 ring-line">{copiado ? '¡Copiado!' : 'Copiar texto'}</button>
+          {f.media.trim() && (
+            <a href={f.media.trim().split(/\s+/)[0]} target="_blank" rel="noreferrer" className="rounded-full px-5 py-3 text-[15px] ring-1 ring-line">Abrir {pub.tipo === 'carrusel' ? 'primera imagen' : 'video'}</a>
+          )}
           {pub.estado !== 'omitido' && pub.estado !== 'publicado' && (
             <button type="button" disabled={guardando} onClick={() => void guardar({ estado: 'omitido' })} className="rounded-full px-5 py-3 text-[15px] text-muted underline underline-offset-4 disabled:opacity-50">Omitir</button>
           )}
