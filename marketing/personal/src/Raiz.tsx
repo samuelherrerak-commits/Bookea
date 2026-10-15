@@ -1,5 +1,6 @@
 import { Composition } from 'remotion'
 import { Fyp } from './Fyp'
+import { Perfil, Portada } from './Marca'
 import { Vlog } from './Vlog'
 import { duracionTotal } from './tiempo'
 import { FPS, type Edicion } from './tipos'
@@ -15,6 +16,8 @@ const ejemplo: Edicion = {
 
 export const Raiz: React.FC = () => (
   <>
+  <Composition id="Perfil" component={Perfil} fps={FPS} width={1080} height={1080} durationInFrames={1} />
+  <Composition id="Portada" component={Portada} fps={FPS} width={1640} height={624} durationInFrames={1} />
   <Composition
     id="Fyp"
     component={Fyp}
