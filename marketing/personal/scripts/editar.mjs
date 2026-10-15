@@ -242,7 +242,7 @@ function renderizar(captions) {
     '-y', '-hide_banner', '-loglevel', 'error', '-i', crudo,
     '-af', 'highpass=f=70,acompressor=threshold=-20dB:ratio=3:attack=5:release=120,loudnorm=I=-14:TP=-1.5:LRA=9',
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '22', '-maxrate', '3.8M', '-bufsize', '7.6M', '-pix_fmt', 'yuv420p', '-color_range', 'tv',
-    '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', final,
+    '-c:a', 'aac', '-b:a', '128k', '-ar', '48000', '-movflags', '+faststart', '-use_editlist', '0', final,
   ])
   console.log('✔', final)
 }

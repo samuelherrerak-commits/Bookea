@@ -148,7 +148,7 @@ for (const id of ids) {
     '-y', '-hide_banner', '-loglevel', 'error', '-i', crudo,
     '-af', 'loudnorm=I=-14:TP=-1.5:LRA=9',
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '21', '-maxrate', '3.8M', '-bufsize', '7.6M', '-pix_fmt', 'yuv420p',
-    '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', final,
+    '-c:a', 'aac', '-b:a', '128k', '-ar', '48000', '-movflags', '+faststart', '-use_editlist', '0', final,
   ])
   console.log(`✔ ${final} · ${total.toFixed(1)} s`)
 }
