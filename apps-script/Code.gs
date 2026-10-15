@@ -401,6 +401,7 @@ function onOpen() {
     .addItem('Generar token de la API', 'promptGenerarToken')
     .addItem('Actualizar la tasa cada 2 horas', 'instalarDisparadorTasa')
     .addSeparator()
+    .addItem('Make: generar token de marketing', 'promptGenerarTokenMake')
     .addItem('Bot de WhatsApp: generar token', 'promptGenerarTokenBot')
     .addItem('Bot de WhatsApp: avisos y calendario', 'promptAjustesBot')
     .addItem('Bot de WhatsApp: probar agenda', 'probarAgendaBot')
@@ -975,6 +976,13 @@ function doPost(e) {
     } catch (err) {
       console.error('central: ' + err);
       return json_({ error: 'servidor', mensaje: 'Error del servidor. Intenta de nuevo.' });
+    }
+  }
+  if (data && data.accion === 'make') {
+    try {
+      return json_(atenderMake_(data, Date.now()));
+    } catch (err) {
+      return json_({ error: 'excepcion', mensaje: String(err && err.message || err).slice(0, 300) });
     }
   }
   if (data && data.accion === 'dueno') {
@@ -3593,7 +3601,7 @@ function marketingImportar_(data) {
     nuevas.push([
       id, ymd_(f.fecha), limpiarTexto_(f.hora, 5), limpiarTexto_(f.tipo, 20), paraCelda_(limpiarTexto_(f.titulo, 120)),
       paraCelda_(limpiarTexto_(f.plataforma, 60)), paraCelda_(String(f.caption || '').slice(0, 2200)),
-      paraCelda_(limpiarTexto_(f.hashtags, 400)), paraCelda_(limpiarTexto_(f.media, 500)),
+      paraCelda_(limpiarTexto_(f.hashtags, 400)), paraCelda_(limpiarTexto_(f.media, 1500)),
       MARKETING_ESTADOS.indexOf(f.estado) !== -1 ? f.estado : 'borrador', '', paraCelda_(limpiarTexto_(f.notas, 300)),
     ]);
   });
@@ -3622,10 +3630,68 @@ function marketingGuardar_(data, email, ahoraMs) {
   if ('titulo' in data) c.Titulo = paraCelda_(limpiarTexto_(data.titulo, 120));
   if ('caption' in data) c.Caption = paraCelda_(String(data.caption || '').slice(0, 2200));
   if ('hashtags' in data) c.Hashtags = paraCelda_(limpiarTexto_(data.hashtags, 400));
-  if ('media' in data) c.Media = paraCelda_(limpiarTexto_(data.media, 500));
+  if ('media' in data) c.Media = paraCelda_(limpiarTexto_(data.media, 1500));
   if ('notas' in data) c.Notas = paraCelda_(limpiarTexto_(data.notas, 300));
   escribirFila_(sheet, MARKETING_HEADERS, o.fila, c);
   return { ok: true };
+}
+
+// ---------- Make: publica lo aprobado ----------
+// Make (escenario "bookeaa - publicar aprobados") llama a doPost con { accion: 'make', token, op }.
+// Tiene SU PROPIO token (propiedad make_token, menú "Make: generar token de marketing"); no usa el
+// token público de la web porque ese viaja en el navegador.
+//   pendientes → las publicaciones aprobadas cuya fecha y hora (Caracas) ya llegaron y tienen link.
+//   publicado  → Make avisa el resultado: ok → publicado; error → vuelve a borrador con el motivo.
+
+function promptGenerarTokenMake() {
+  const ui = SpreadsheetApp.getUi();
+  const token = 'make_' + Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').slice(0, 12);
+  PropertiesService.getScriptProperties().setProperty('make_token', token);
+  ui.alert('Token de Make', token + '\n\nPégalo en el escenario de Make (módulo HTTP, campo token). El anterior deja de servir ahora. No lo compartas por chat.', ui.ButtonSet.OK);
+}
+
+/** Los links de Media (separados por espacio o coma); solo https. */
+function enlacesMedia_(media) {
+  return String(media || '').split(/[\s,]+/).filter(function (u) { return /^https:\/\/\S+$/.test(u); });
+}
+
+function atenderMake_(data, ahoraMs) {
+  const esperado = String(PropertiesService.getScriptProperties().getProperty('make_token') || '');
+  if (esperado.length < 24 || String(data.token || '') !== esperado) return { error: 'no_autorizado' };
+  const op = String(data.op || '');
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const hora = Utilities.formatDate(new Date(ahoraMs), ZONA, 'HH:mm');
+  if (op === 'pendientes') {
+    const lista = marketingCentral_().publicaciones.filter(function (p) {
+      return p.estado === 'aprobado' && enlacesMedia_(p.media).length && (p.fecha < hoy || (p.fecha === hoy && p.hora <= hora));
+    }).sort(function (a, b) { return (a.fecha + a.hora).localeCompare(b.fecha + b.hora); }).slice(0, 3);
+    return {
+      publicaciones: lista.map(function (p) {
+        const enlaces = enlacesMedia_(p.media);
+        return {
+          id: p.id, tipo: p.tipo, titulo: p.titulo, esCarrusel: p.tipo === 'carrusel',
+          caption: [p.caption, p.hashtags].filter(Boolean).join('\n\n'),
+          video_url: p.tipo === 'carrusel' ? '' : enlaces[0],
+          archivos: p.tipo === 'carrusel' ? enlaces.slice(0, 10).map(function (u) { return { media_type: 'IMAGE', image_url: u }; }) : [],
+        };
+      }),
+    };
+  }
+  if (op === 'publicado') {
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(30000)) return { error: 'servidor', mensaje: 'Hay otra operación en curso.' };
+    try {
+      const ok = data.ok === true || data.ok === 'true';
+      const campos = ok
+        ? { id: data.id, estado: 'publicado' }
+        : { id: data.id, estado: 'borrador', notas: 'Error al publicar (' + hoy + ' ' + hora + '): ' + limpiarTexto_(data.error || 'sin detalle', 200) };
+      const r = marketingGuardar_(campos, 'Make' + (data.post ? ' · ' + limpiarTexto_(data.post, 40) : ''), ahoraMs);
+      return r;
+    } finally {
+      lock.releaseLock();
+    }
+  }
+  return { error: 'op_desconocida' };
 }
 
 // ============================================================================

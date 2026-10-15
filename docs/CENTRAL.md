@@ -77,6 +77,9 @@ La pestaña **Marketing** (barra lateral o barra de abajo) es el calendario y la
   - **Estados:** borrador → **Aprobar** → **Marcar publicado** (guarda quién y cuándo). También **Volver a borrador** y **Omitir**.
   - **Copiar texto** deja el caption con sus hashtags listo para pegar.
   - El link del video debe ser público (no de Drive): Instagram no lo puede descargar de Drive.
+- **Publicar con Make:** el escenario *bookeaa - publicar aprobados de Central* corre cada 15 minutos. Le pide a Central las publicaciones **aprobadas** cuya fecha y hora de Caracas ya llegaron y que tienen link (`accion: 'make'`, op `pendientes`), las publica en Instagram (Reel o carrusel) y avisa el resultado (op `publicado`): si salió bien queda **Publicado**; si falló vuelve a **Borrador** con el motivo en Notas.
+  - Make usa su propio token (`make_token`): menú del Apps Script → *Make: generar token de marketing*. Se pega una sola vez en el primer módulo del escenario ("Set variable"). No uses el token público de la web ni lo compartas por chat.
+  - En un carrusel, el campo "Link" lleva un link por lámina, en orden (hasta 10).
 - **Importar calendario:** la primera vez trae las publicaciones de octubre (`src/central/marketing-semilla.json`). Importar de nuevo solo agrega las que faltan; no pisa lo que ya editaste.
 - **Dónde se guarda:** pestaña **Marketing** del archivo maestro (`ID, Fecha, Hora, Tipo, Titulo, Plataforma, Caption, Hashtags, Media, Estado, Publicado_En, Notas`). Se crea sola. Make puede leer esa misma pestaña para publicar lo que esté en `aprobado`.
 - **Regenerar los datos iniciales:** `python3 marketing/personal/fyp/generar_cola.py` (lee `CALENDARIO-OCTUBRE.csv`).

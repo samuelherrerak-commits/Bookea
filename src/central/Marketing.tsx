@@ -296,8 +296,8 @@ function Detalle({ pub, sesion, onCerrar, onCambio, falla }: { pub: api.Publicac
             <textarea value={f.caption} rows={5} maxLength={2200} onChange={(e) => setF({ ...f, caption: e.target.value })} className={claseInput} />
           </Campo>
           <Campo etiqueta="Hashtags"><input value={f.hashtags} onChange={(e) => setF({ ...f, hashtags: e.target.value })} className={claseInput} /></Campo>
-          <Campo etiqueta="Link del video o las imágenes" ayuda="Debe ser un link público (no de Drive) para que Instagram lo pueda descargar.">
-            <input value={f.media} inputMode="url" placeholder="https://…" onChange={(e) => setF({ ...f, media: e.target.value })} className={claseInput} />
+          <Campo etiqueta="Link del video o de las imágenes" ayuda="Links públicos (no de Drive): Instagram no los puede descargar de Drive. En un carrusel, un link por lámina y en orden. Make solo publica si hay link.">
+            <textarea value={f.media} rows={pub.tipo === 'carrusel' ? 4 : 2} inputMode="url" placeholder="https://…" onChange={(e) => setF({ ...f, media: e.target.value })} className={claseInput + ' text-[14px]'} />
           </Campo>
           <Campo etiqueta="Notas"><input value={f.notas} onChange={(e) => setF({ ...f, notas: e.target.value })} className={claseInput} /></Campo>
         </div>

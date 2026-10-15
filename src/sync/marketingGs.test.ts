@@ -29,11 +29,13 @@ function maestro() {
   const ss = { getSheetByName: (n: string) => hojas[n] ?? null, insertSheet: (n: string) => (hojas[n] = hoja()) }
   const f = funcionesGs<Record<string, Fn>>(gs, [
     'hojaCon_', 'objetos_', 'escribirFila_', 'hojaMarketing_', 'publicacionDe_', 'marketingCentral_', 'marketingImportar_', 'marketingGuardar_',
-    'ymd_', 'limpiarTexto_', 'paraCelda_',
+    'ymd_', 'limpiarTexto_', 'paraCelda_', 'enlacesMedia_', 'atenderMake_',
   ], {
     MARKETING_HEADERS: constanteGs(gs, 'MARKETING_HEADERS'), MARKETING_ESTADOS: constanteGs(gs, 'MARKETING_ESTADOS'), ZONA: 'America/Caracas',
     SpreadsheetApp: { getActiveSpreadsheet: () => ss },
-    Utilities: { formatDate: (d: Date) => d.toISOString().slice(0, 16).replace('T', ' ') },
+    Utilities: { formatDate: (d: Date, _z: string, fmt: string) => (fmt === 'yyyy-MM-dd' ? d.toISOString().slice(0, 10) : fmt === 'HH:mm' ? d.toISOString().slice(11, 16) : d.toISOString().slice(0, 16).replace('T', ' ')) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (k: string) => (k === 'make_token' ? 'make_' + 'x'.repeat(30) : null) }) },
+    LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => undefined }) },
   })
   return { f, hojas }
 }
@@ -79,5 +81,40 @@ describe('Code.gs · Marketing de central', () => {
     expect(f.marketingGuardar_({ id: 'A', fecha: 'x' }, 'y', 0).error).toBe('datos_invalidos')
     expect(f.marketingGuardar_({ id: 'A', hora: '25' }, 'y', 0).error).toBe('datos_invalidos')
     expect(f.marketingGuardar_({ id: 'Z', estado: 'aprobado' }, 'y', 0).error).toBe('no_existe')
+  })
+
+  it('Make: solo recibe lo aprobado, ya vencido y con link; el token es obligatorio', () => {
+    const { f } = maestro()
+    const T = 'make_' + 'x'.repeat(30)
+    const ahora = Date.UTC(2026, 9, 15, 17) // 17:00 UTC
+    const urls = 'https://res.cloudinary.com/x/1.jpg https://res.cloudinary.com/x/2.jpg'
+    f.marketingImportar_({ filas: [
+      fila('listo-carrusel', { tipo: 'carrusel', hora: '10:00', media: urls, estado: 'aprobado' }),
+      fila('listo-video', { hora: '12:00', media: 'https://res.cloudinary.com/x/v.mp4', estado: 'aprobado' }),
+      fila('futuro', { hora: '23:00', media: urls, estado: 'aprobado' }),
+      fila('sin-link', { estado: 'aprobado' }),
+      fila('borrador', { media: urls }),
+      fila('drive', { media: 'http://drive.google.com/x', estado: 'aprobado' }),
+    ] })
+    expect(f.atenderMake_({ op: 'pendientes', token: 'malo' }, ahora)).toEqual({ error: 'no_autorizado' })
+    const r = f.atenderMake_({ op: 'pendientes', token: T }, ahora).publicaciones
+    expect(r.map((p: any) => p.id)).toEqual(['listo-carrusel', 'listo-video'])
+    expect(r[0]).toMatchObject({ esCarrusel: true, video_url: '', caption: 'Hola\n\n#bookeaa' })
+    expect(r[0].archivos).toEqual([{ media_type: 'IMAGE', image_url: 'https://res.cloudinary.com/x/1.jpg' }, { media_type: 'IMAGE', image_url: 'https://res.cloudinary.com/x/2.jpg' }])
+    expect(r[1]).toMatchObject({ esCarrusel: false, video_url: 'https://res.cloudinary.com/x/v.mp4', archivos: [] })
+  })
+
+  it('Make: confirma publicado, o devuelve a borrador con el error', () => {
+    const { f } = maestro()
+    const T = 'make_' + 'x'.repeat(30)
+    const ahora = Date.UTC(2026, 9, 15, 17)
+    f.marketingImportar_({ filas: [fila('A', { estado: 'aprobado' }), fila('B', { estado: 'aprobado' })] })
+    expect(f.atenderMake_({ op: 'publicado', token: T, id: 'A', ok: true, post: '1789' }, ahora)).toEqual({ ok: true })
+    f.atenderMake_({ op: 'publicado', token: T, id: 'B', ok: false, error: 'Media URL no accesible' }, ahora)
+    const l = f.marketingCentral_().publicaciones
+    expect(l[0]).toMatchObject({ estado: 'publicado' })
+    expect(l[0].publicadoEn).toContain('Make')
+    expect(l[1]).toMatchObject({ estado: 'borrador' })
+    expect(l[1].notas).toContain('Media URL no accesible')
   })
 })
