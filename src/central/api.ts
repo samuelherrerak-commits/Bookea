@@ -335,6 +335,43 @@ const demoMarketing = (() => {
   }
 })()
 
+// ---------- TikTok: conectar la cuenta y mandar videos como borrador ----------
+
+export interface EstadoTikTok {
+  configurado: boolean
+  conectado: boolean
+  usuario: string
+  /** Redirect URI que debe estar registrada en la app de TikTok. */
+  redirect: string
+}
+
+export const tiktokEstado = (sesion: string) =>
+  DEMO_MODE ? demoTikTok.estado() : llamar<EstadoTikTok>({ op: 'tiktok_estado', sesion })
+
+export const tiktokUrl = (sesion: string) =>
+  DEMO_MODE ? demoTikTok.url() : llamar<{ url: string }>({ op: 'tiktok_url', sesion })
+
+export const tiktokConectar = (sesion: string, code: string, state: string) =>
+  DEMO_MODE ? demoTikTok.conectar() : llamar<{ ok: boolean; usuario: string }>({ op: 'tiktok_conectar', sesion, code, state })
+
+export const tiktokDesconectar = (sesion: string) =>
+  DEMO_MODE ? demoTikTok.desconectar() : llamar<{ ok: boolean }>({ op: 'tiktok_desconectar', sesion })
+
+export const tiktokEnviar = (sesion: string, id: string) =>
+  DEMO_MODE ? demoTikTok.enviar() : llamar<{ ok: boolean; publishId: string; usuario: string }>({ op: 'tiktok_enviar', sesion, id })
+
+const demoTikTok = (() => {
+  let conectado = false
+  const espera = <T,>(v: T) => new Promise<T>((ok) => setTimeout(() => ok(v), 250))
+  return {
+    estado: () => espera<EstadoTikTok>({ configurado: true, conectado, usuario: conectado ? 'bookeaa (demo)' : '', redirect: 'https://bookeaa.com/central' }),
+    url: () => espera({ url: '#tiktok-demo' }),
+    conectar: () => { conectado = true; return espera({ ok: true, usuario: 'bookeaa (demo)' }) },
+    desconectar: () => { conectado = false; return espera({ ok: true }) },
+    enviar: () => espera({ ok: true, publishId: 'demo', usuario: 'bookeaa (demo)' }),
+  }
+})()
+
 const demo = (() => {
   const negocios: Negocio[] = [
     { slug: 'barberia-norte', nombre: 'Barbería Norte', email: 'norte@gmail.com', telefono: '584121112233', creado: dias(-70), vence: dias(-3), ultimoPago: dias(-33), notas: '', activo: true, estado: 'pendiente', dias: -3, hoja: '' },

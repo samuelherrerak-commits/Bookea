@@ -402,6 +402,7 @@ function onOpen() {
     .addItem('Actualizar la tasa cada 2 horas', 'instalarDisparadorTasa')
     .addSeparator()
     .addItem('Make: generar token de marketing', 'promptGenerarTokenMake')
+    .addItem('TikTok: guardar claves de la app', 'promptClavesTikTok')
     .addItem('Bot de WhatsApp: generar token', 'promptGenerarTokenBot')
     .addItem('Bot de WhatsApp: avisos y calendario', 'promptAjustesBot')
     .addItem('Bot de WhatsApp: probar agenda', 'probarAgendaBot')
@@ -3493,6 +3494,8 @@ function atenderCentral_(data, ahoraMs) {
   if (op === 'metricas') return metricasCentral_(ahoraMs, !!data.fresco);
   if (op === 'negocio') return negocioDetalleCentral_(String(data.slug || ''), ahoraMs);
   if (op === 'marketing') return marketingCentral_();
+  if (op === 'tiktok_estado') return tiktokEstado_();
+  if (op === 'tiktok_url') return tiktokUrl_(email);
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return { error: 'servidor', mensaje: 'Hay otra operación en curso. Intenta de nuevo.' };
@@ -3501,6 +3504,9 @@ function atenderCentral_(data, ahoraMs) {
     if (op === 'crear') return crearNegocioCentral_(data, ahoraMs);
     if (op === 'marketing_guardar') return marketingGuardar_(data, email, ahoraMs);
     if (op === 'marketing_importar') return marketingImportar_(data);
+    if (op === 'tiktok_conectar') return tiktokConectar_(data, email, ahoraMs);
+    if (op === 'tiktok_desconectar') return tiktokDesconectar_();
+    if (op === 'tiktok_enviar') return tiktokEnviar_(data, ahoraMs);
     if (op === 'aprobar' || op === 'rechazar') {
       const hojaPN = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
       const pago = objetos_(hojaPN, PAGOS_NEGOCIO_HEADERS).filter(function (o) { return String(o.ID) === String(data.id || ''); })[0];
@@ -3692,6 +3698,149 @@ function atenderMake_(data, ahoraMs) {
     }
   }
   return { error: 'op_desconocida' };
+}
+
+// ============================================================================
+// TikTok: borradores desde Central (Login Kit + Content Posting API, modo Upload)
+// ============================================================================
+// Central conecta TU cuenta de TikTok (OAuth) y manda cada video como BORRADOR a tu bandeja de
+// TikTok; tú lo terminas y publicas desde la app. Solo publica en la cuenta del dueño de la app.
+// Las claves de la app NO viven en el código ni se pegan en ningún chat: se guardan con el menú
+// "TikTok: guardar claves de la app" (propiedades tiktok_client_key y tiktok_client_secret).
+// El video se SUBE por partes (FILE_UPLOAD) en vez de pasar un link: con link TikTok exige
+// verificar el dominio donde está el archivo (Cloudinary no es nuestro).
+// Redirect URI registrada en la app de TikTok: TIKTOK_REDIRECT (sin parámetros, https).
+
+const TIKTOK_REDIRECT = 'https://bookeaa.com/central';
+const TIKTOK_SCOPES = 'user.info.basic,video.upload';
+const TIKTOK_API = 'https://open.tiktokapis.com/v2/';
+const TIKTOK_MAX_BYTES = 64 * 1024 * 1024; // un solo bloque: TikTok acepta de 5 a 64 MB (o menos, si el video entero es menor)
+
+function promptClavesTikTok() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getScriptProperties();
+  const k = ui.prompt('TikTok: Client key', 'Pega el Client key de tu app (developers.tiktok.com → tu app).', ui.ButtonSet.OK_CANCEL);
+  if (k.getSelectedButton() !== ui.Button.OK || !k.getResponseText().trim()) return;
+  const sc = ui.prompt('TikTok: Client secret', 'Pega el Client secret. Se guarda solo en las propiedades de este script. No lo compartas por chat.', ui.ButtonSet.OK_CANCEL);
+  if (sc.getSelectedButton() !== ui.Button.OK || !sc.getResponseText().trim()) return;
+  props.setProperty('tiktok_client_key', k.getResponseText().trim());
+  props.setProperty('tiktok_client_secret', sc.getResponseText().trim());
+  ['tiktok_access', 'tiktok_access_exp', 'tiktok_refresh', 'tiktok_refresh_exp', 'tiktok_usuario', 'tiktok_open_id'].forEach(function (c) { props.deleteProperty(c); });
+  ui.alert('Claves de TikTok guardadas', 'Ahora entra a Central → Marketing → Conectar TikTok.', ui.ButtonSet.OK);
+}
+
+function tiktokProp_(k) { return String(PropertiesService.getScriptProperties().getProperty(k) || ''); }
+
+function tiktokEstado_() {
+  const configurado = tiktokProp_('tiktok_client_key').length > 5 && tiktokProp_('tiktok_client_secret').length > 5;
+  const conectado = configurado && !!tiktokProp_('tiktok_refresh');
+  return { configurado: configurado, conectado: conectado, usuario: conectado ? tiktokProp_('tiktok_usuario') : '', redirect: TIKTOK_REDIRECT };
+}
+
+/** Dirección de autorización de TikTok; el state queda 10 min en caché atado al correo que la pidió. */
+function tiktokUrl_(email) {
+  const e = tiktokEstado_();
+  if (!e.configurado) return { error: 'sin_claves', mensaje: 'Faltan las claves de TikTok: en el Apps Script, menú SaaS Reservas → "TikTok: guardar claves de la app".' };
+  const state = Utilities.getUuid().replace(/-/g, '');
+  CacheService.getScriptCache().put('tt_' + state, email, 600);
+  const q = 'client_key=' + encodeURIComponent(tiktokProp_('tiktok_client_key')) + '&scope=' + encodeURIComponent(TIKTOK_SCOPES) +
+    '&response_type=code&redirect_uri=' + encodeURIComponent(TIKTOK_REDIRECT) + '&state=' + state;
+  return { url: 'https://www.tiktok.com/v2/auth/authorize/?' + q };
+}
+
+function tiktokPost_(url, opciones) {
+  const r = UrlFetchApp.fetch(url, Object.assign({ muteHttpExceptions: true }, opciones));
+  let cuerpo = {};
+  try { cuerpo = JSON.parse(r.getContentText() || '{}'); } catch (_) { cuerpo = {}; }
+  return { codigo: r.getResponseCode(), cuerpo: cuerpo, crudo: r };
+}
+
+function tiktokGuardarTokens_(t, ahoraMs) {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('tiktok_access', String(t.access_token));
+  props.setProperty('tiktok_access_exp', String(ahoraMs + (Number(t.expires_in) || 86400) * 1000));
+  props.setProperty('tiktok_refresh', String(t.refresh_token));
+  props.setProperty('tiktok_refresh_exp', String(ahoraMs + (Number(t.refresh_expires_in) || 31536000) * 1000));
+  if (t.open_id) props.setProperty('tiktok_open_id', String(t.open_id));
+}
+
+function tiktokFormToken_(campos) {
+  return tiktokPost_(TIKTOK_API + 'oauth/token/', {
+    method: 'post', contentType: 'application/x-www-form-urlencoded',
+    payload: Object.assign({ client_key: tiktokProp_('tiktok_client_key'), client_secret: tiktokProp_('tiktok_client_secret') }, campos),
+  });
+}
+
+function tiktokConectar_(data, email, ahoraMs) {
+  const state = String(data.state || '');
+  const cache = CacheService.getScriptCache();
+  const dueno = state ? cache.get('tt_' + state) : null;
+  if (!dueno || dueno !== email) return { error: 'estado_invalido', mensaje: 'La conexión venció o no es la misma sesión. Pulsa "Conectar TikTok" otra vez.' };
+  cache.remove('tt_' + state);
+  const r = tiktokFormToken_({ code: String(data.code || ''), grant_type: 'authorization_code', redirect_uri: TIKTOK_REDIRECT });
+  if (!r.cuerpo.access_token) return { error: 'tiktok', mensaje: 'TikTok no aceptó la conexión: ' + limpiarTexto_(r.cuerpo.error_description || r.cuerpo.error || ('HTTP ' + r.codigo), 160) };
+  if (String(r.cuerpo.scope || '').indexOf('video.upload') === -1) return { error: 'tiktok', mensaje: 'Falta el permiso video.upload: acepta todos los permisos al conectar.' };
+  tiktokGuardarTokens_(r.cuerpo, ahoraMs);
+  // El nombre de la cuenta (TikTok pide mostrarlo donde se envía el video).
+  let usuario = '';
+  try {
+    const u = tiktokPost_(TIKTOK_API + 'user/info/?fields=open_id,display_name', { method: 'get', headers: { Authorization: 'Bearer ' + r.cuerpo.access_token } });
+    usuario = limpiarTexto_(u.cuerpo && u.cuerpo.data && u.cuerpo.data.user && u.cuerpo.data.user.display_name || '', 60);
+  } catch (_) { /* sin nombre: se conecta igual */ }
+  PropertiesService.getScriptProperties().setProperty('tiktok_usuario', usuario || 'tu cuenta');
+  return { ok: true, usuario: usuario || 'tu cuenta' };
+}
+
+function tiktokDesconectar_() {
+  const props = PropertiesService.getScriptProperties();
+  ['tiktok_access', 'tiktok_access_exp', 'tiktok_refresh', 'tiktok_refresh_exp', 'tiktok_usuario', 'tiktok_open_id'].forEach(function (c) { props.deleteProperty(c); });
+  return { ok: true };
+}
+
+/** Access token vigente (lo renueva con el refresh token 5 min antes de que venza); null si hay que reconectar. */
+function tiktokToken_(ahoraMs) {
+  const exp = Number(tiktokProp_('tiktok_access_exp')) || 0;
+  if (tiktokProp_('tiktok_access') && exp - ahoraMs > 5 * 60 * 1000) return tiktokProp_('tiktok_access');
+  const refresh = tiktokProp_('tiktok_refresh');
+  if (!refresh || (Number(tiktokProp_('tiktok_refresh_exp')) || 0) < ahoraMs) return null;
+  const r = tiktokFormToken_({ grant_type: 'refresh_token', refresh_token: refresh });
+  if (!r.cuerpo.access_token) return null;
+  tiktokGuardarTokens_(r.cuerpo, ahoraMs);
+  return String(r.cuerpo.access_token);
+}
+
+/** Manda un video de la cola a los borradores de TikTok (subida en un solo bloque). */
+function tiktokEnviar_(data, ahoraMs) {
+  const pub = marketingCentral_().publicaciones.filter(function (p) { return p.id === String(data.id || ''); })[0];
+  if (!pub) return { error: 'no_existe', mensaje: 'Esa publicación ya no está en la cola.' };
+  if (String(pub.tipo).indexOf('video') !== 0) return { error: 'datos_invalidos', mensaje: 'Solo se envían videos a TikTok (los carruseles no).' };
+  const enlaces = enlacesMedia_(pub.media);
+  if (!enlaces.length) return { error: 'datos_invalidos', mensaje: 'Esta publicación no tiene link de video.' };
+  const token = tiktokToken_(ahoraMs);
+  if (!token) return { error: 'sin_conexion', mensaje: 'TikTok no está conectado (o la conexión venció). Pulsa "Conectar TikTok".' };
+
+  const archivo = UrlFetchApp.fetch(enlaces[0], { muteHttpExceptions: true });
+  if (archivo.getResponseCode() !== 200) return { error: 'media', mensaje: 'No pude descargar el video (HTTP ' + archivo.getResponseCode() + ').' };
+  const bytes = archivo.getBlob().getBytes();
+  if (!bytes.length || bytes.length > TIKTOK_MAX_BYTES) return { error: 'media', mensaje: 'El video debe pesar menos de 64 MB.' };
+
+  const ini = tiktokPost_(TIKTOK_API + 'post/publish/inbox/video/init/', {
+    method: 'post', contentType: 'application/json; charset=UTF-8', headers: { Authorization: 'Bearer ' + token },
+    payload: JSON.stringify({ source_info: { source: 'FILE_UPLOAD', video_size: bytes.length, chunk_size: bytes.length, total_chunk_count: 1 } }),
+  });
+  const d = ini.cuerpo && ini.cuerpo.data;
+  if (!d || !d.upload_url || (ini.cuerpo.error && ini.cuerpo.error.code && ini.cuerpo.error.code !== 'ok')) {
+    const e = ini.cuerpo && ini.cuerpo.error || {};
+    return { error: 'tiktok', mensaje: 'TikTok no aceptó el envío: ' + limpiarTexto_(e.message || e.code || ('HTTP ' + ini.codigo), 200) };
+  }
+  const sube = UrlFetchApp.fetch(d.upload_url, {
+    method: 'put', contentType: 'video/mp4', payload: bytes, muteHttpExceptions: true,
+    headers: { 'Content-Range': 'bytes 0-' + (bytes.length - 1) + '/' + bytes.length },
+  });
+  if (sube.getResponseCode() >= 300) return { error: 'tiktok', mensaje: 'TikTok no recibió el archivo (HTTP ' + sube.getResponseCode() + ').' };
+
+  marketingGuardar_({ id: pub.id, notas: 'En borradores de TikTok (' + Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd HH:mm') + ')' }, 'TikTok', ahoraMs);
+  return { ok: true, publishId: String(d.publish_id || ''), usuario: tiktokProp_('tiktok_usuario') };
 }
 
 // ============================================================================
