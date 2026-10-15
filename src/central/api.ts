@@ -288,6 +288,53 @@ export function telefonoWa(tel: string): string {
 const hoy = () => new Date(Date.now() - 4 * 3600_000).toISOString().slice(0, 10)
 const dias = (n: number) => new Date(Date.now() - 4 * 3600_000 + n * 86400_000).toISOString().slice(0, 10)
 
+// ---------- Marketing: calendario y cola de publicaciones ----------
+
+export type EstadoPublicacion = 'borrador' | 'aprobado' | 'publicado' | 'omitido'
+export interface Publicacion {
+  id: string
+  /** yyyy-MM-dd */
+  fecha: string
+  /** HH:mm, hora de Caracas */
+  hora: string
+  tipo: string
+  titulo: string
+  plataforma: string
+  caption: string
+  hashtags: string
+  media: string
+  estado: EstadoPublicacion
+  publicadoEn: string
+  notas: string
+}
+export type CamposPublicacion = Partial<Pick<Publicacion, 'estado' | 'fecha' | 'hora' | 'titulo' | 'caption' | 'hashtags' | 'media' | 'notas'>>
+
+export const marketing = (sesion: string) =>
+  DEMO_MODE ? demoMarketing.leer() : llamar<{ publicaciones: Publicacion[] }>({ op: 'marketing', sesion })
+
+export const marketingGuardar = (sesion: string, id: string, campos: CamposPublicacion) =>
+  DEMO_MODE ? demoMarketing.guardar(id, campos) : llamar<{ ok: boolean }>({ op: 'marketing_guardar', sesion, id, ...campos })
+
+export const marketingImportar = (sesion: string, filas: Omit<Publicacion, 'publicadoEn'>[]) =>
+  DEMO_MODE ? demoMarketing.importar(filas) : llamar<{ ok: boolean; agregadas: number }>({ op: 'marketing_importar', sesion, filas })
+
+const demoMarketing = (() => {
+  let lista: Publicacion[] = []
+  const espera = <T,>(v: T) => new Promise<T>((ok) => setTimeout(() => ok(v), 250))
+  return {
+    leer: () => espera({ publicaciones: structuredClone(lista) }),
+    guardar: (id: string, campos: CamposPublicacion) => {
+      Object.assign(lista.find((x) => x.id === id) ?? {}, campos)
+      return espera({ ok: true })
+    },
+    importar: (filas: Omit<Publicacion, 'publicadoEn'>[]) => {
+      const nuevas = filas.filter((f) => !lista.some((x) => x.id === f.id)).map((f) => ({ ...f, publicadoEn: '' }))
+      lista = [...lista, ...nuevas]
+      return espera({ ok: true, agregadas: nuevas.length })
+    },
+  }
+})()
+
 const demo = (() => {
   const negocios: Negocio[] = [
     { slug: 'barberia-norte', nombre: 'Barbería Norte', email: 'norte@gmail.com', telefono: '584121112233', creado: dias(-70), vence: dias(-3), ultimoPago: dias(-33), notas: '', activo: true, estado: 'pendiente', dias: -3, hoja: '' },

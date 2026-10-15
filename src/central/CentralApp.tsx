@@ -5,6 +5,7 @@ import { Entrar, Logo } from '../negocio/NegocioApp'
 import type { Sesion } from '../negocio/api'
 import * as api from './api'
 import { Cobros } from './Cobros'
+import { Marketing } from './Marketing'
 import { Metricas } from './Metricas'
 import { NegocioAFondo } from './NegocioAFondo'
 import { Minibarras } from './graficos'
@@ -65,15 +66,16 @@ export default function CentralApp() {
 
 // ---------- Panel ----------
 
-type Pestana = 'panel' | 'negocios' | 'cobros' | 'prospectos' | 'pagos'
+type Pestana = 'panel' | 'negocios' | 'cobros' | 'prospectos' | 'pagos' | 'marketing'
 
-const TITULO: Record<Pestana, string> = { panel: 'Panel', negocios: 'Negocios', cobros: 'Cobros', prospectos: 'Prospectos', pagos: 'Pagos' }
+const TITULO: Record<Pestana, string> = { panel: 'Panel', negocios: 'Negocios', cobros: 'Cobros', prospectos: 'Prospectos', pagos: 'Pagos', marketing: 'Marketing' }
 const ICONO: Record<Pestana, string> = {
   panel: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
   negocios: 'M4 21V8l8-5 8 5v13M9 21v-6h6v6',
   cobros: 'M12 3v18M17 7.5C17 5.6 14.8 4.5 12 4.5S7 5.6 7 7.5s2 2.7 5 3.4 5 1.6 5 3.6-2.2 3-5 3-5-1.1-5-3',
   prospectos: 'M16 21v-2a4 4 0 0 0-8 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M22 11h-6',
   pagos: 'M3 7h18v10H3zM3 11h18M7 15h3',
+  marketing: 'M4 5h16v15H4zM4 10h16M9 3v4M15 3v4',
 }
 
 const ES_ESCRITORIO = '(min-width: 1024px)'
@@ -179,7 +181,7 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
       .sort((a, b) => orden(a) - orden(b) || (a.dias ?? 9999) - (b.dias ?? 9999))
   }, [datos, filtro, busqueda])
 
-  const pestanas: Pestana[] = ['panel', 'negocios', 'cobros', 'prospectos', 'pagos']
+  const pestanas: Pestana[] = ['panel', 'negocios', 'cobros', 'prospectos', 'pagos', 'marketing']
   const contador = (p: Pestana) => (p === 'cobros' ? porVerificar : p === 'prospectos' ? datos?.prospectos.length : undefined)
 
   return (
@@ -235,7 +237,7 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
             alGestionar={() => { const n = datos?.negocios.find((x) => x.slug === aFondo); if (n) setAbierto(n) }} />
         )}
         {!aFondo && <>
-        {!datos && !error && pestana !== 'panel' && pestana !== 'cobros' && <div className="mt-2 h-[420px] animate-pulse rounded-3xl bg-sand" aria-busy="true" />}
+        {!datos && !error && pestana !== 'panel' && pestana !== 'cobros' && pestana !== 'marketing' && <div className="mt-2 h-[420px] animate-pulse rounded-3xl bg-sand" aria-busy="true" />}
 
         {pestana === 'panel' && <Metricas datos={metricas} cargando={cargandoM} onRecalcular={() => void cargarMetricas(true)} onAbrir={verAFondo} />}
 
@@ -294,6 +296,7 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
           <Prospectos lista={datos.prospectos} onCrear={(p) => setNuevo({ nombre: p.negocio, email: p.correo, telefono: p.telefono })} />
         )}
         {datos && pestana === 'pagos' && <Pagos lista={datos.pagos} hoy={datos.hoy} />}
+        {pestana === 'marketing' && <Marketing sesion={sesion.sesion} hoy={datos?.hoy ?? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas' }).format(new Date())} alSalir={alSalir} />}
         {pestana === 'cobros' && <Cobros sesion={sesion.sesion} alSalir={alSalir} alCambiar={() => void cargar()} />}
         </>}
 
@@ -304,7 +307,7 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden" aria-label="Secciones">
-        <div className="mx-auto grid max-w-xl grid-cols-5">
+        <div className="mx-auto grid max-w-xl grid-cols-6">
           {pestanas.map((p) => (
             <Tab key={p} activa={pestana === p} onClick={() => ir(p)} d={ICONO[p]} contador={contador(p)}>{TITULO[p]}</Tab>
           ))}

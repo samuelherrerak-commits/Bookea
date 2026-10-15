@@ -3484,12 +3484,15 @@ function atenderCentral_(data, ahoraMs) {
   if (op === 'cobros') return cobrosCentral_(ahoraMs);
   if (op === 'metricas') return metricasCentral_(ahoraMs, !!data.fresco);
   if (op === 'negocio') return negocioDetalleCentral_(String(data.slug || ''), ahoraMs);
+  if (op === 'marketing') return marketingCentral_();
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return { error: 'servidor', mensaje: 'Hay otra operación en curso. Intenta de nuevo.' };
   try {
     if (op === 'pago') return registrarPagoCentral_(data, email, ahoraMs);
     if (op === 'crear') return crearNegocioCentral_(data, ahoraMs);
+    if (op === 'marketing_guardar') return marketingGuardar_(data, email, ahoraMs);
+    if (op === 'marketing_importar') return marketingImportar_(data);
     if (op === 'aprobar' || op === 'rechazar') {
       const hojaPN = hojaCon_('PagosNegocio', PAGOS_NEGOCIO_HEADERS);
       const pago = objetos_(hojaPN, PAGOS_NEGOCIO_HEADERS).filter(function (o) { return String(o.ID) === String(data.id || ''); })[0];
@@ -3538,6 +3541,91 @@ function atenderCentral_(data, ahoraMs) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// ============================================================================
+// Marketing en Central: calendario y cola de publicaciones
+// ============================================================================
+// Pestaña Marketing del archivo maestro. Cada fila es una publicación (video, carrusel o
+// pieza de campaña) con su fecha, su texto y su estado: borrador → aprobado → publicado
+// (u omitido). Central la lee y la edita; Make puede leer la misma pestaña para publicar
+// lo que esté "aprobado". Fecha y Hora se guardan como texto plano (yyyy-MM-dd y HH:mm).
+
+const MARKETING_HEADERS = ['ID', 'Fecha', 'Hora', 'Tipo', 'Titulo', 'Plataforma', 'Caption', 'Hashtags', 'Media', 'Estado', 'Publicado_En', 'Notas'];
+const MARKETING_ESTADOS = ['borrador', 'aprobado', 'publicado', 'omitido'];
+
+function hojaMarketing_() {
+  const nueva = !SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Marketing');
+  const sheet = hojaCon_('Marketing', MARKETING_HEADERS);
+  if (nueva) {
+    sheet.getRange(1, 1, sheet.getMaxRows(), 3).setNumberFormat('@'); // ID, Fecha, Hora: texto plano
+    sheet.getRange(1, 12, sheet.getMaxRows(), 1).setNumberFormat('@');
+  }
+  return sheet;
+}
+
+function publicacionDe_(o) {
+  const hora = String(o.Hora || '');
+  return {
+    id: String(o.ID), fecha: ymd_(o.Fecha) || '', hora: /^\d{1,2}:\d{2}/.test(hora) ? hora.slice(0, 5) : '',
+    tipo: String(o.Tipo || ''), titulo: String(o.Titulo || ''), plataforma: String(o.Plataforma || ''),
+    caption: String(o.Caption || ''), hashtags: String(o.Hashtags || ''), media: String(o.Media || ''),
+    estado: MARKETING_ESTADOS.indexOf(String(o.Estado)) !== -1 ? String(o.Estado) : 'borrador',
+    publicadoEn: o.Publicado_En ? String(o.Publicado_En) : '', notas: String(o.Notas || ''),
+  };
+}
+
+function marketingCentral_() {
+  const filas = objetos_(hojaMarketing_(), MARKETING_HEADERS).filter(function (o) { return String(o.ID).trim(); });
+  return { publicaciones: filas.map(publicacionDe_) };
+}
+
+/** Agrega las publicaciones que todavía no existen (por ID); las que ya están no se tocan. */
+function marketingImportar_(data) {
+  const sheet = hojaMarketing_();
+  const existentes = {};
+  objetos_(sheet, MARKETING_HEADERS).forEach(function (o) { existentes[String(o.ID)] = true; });
+  const nuevas = [];
+  (Array.isArray(data.filas) ? data.filas : []).slice(0, 300).forEach(function (f) {
+    const id = limpiarTexto_(f.id, 60);
+    if (!id || existentes[id] || !ymd_(f.fecha || '')) return;
+    existentes[id] = true;
+    nuevas.push([
+      id, ymd_(f.fecha), limpiarTexto_(f.hora, 5), limpiarTexto_(f.tipo, 20), paraCelda_(limpiarTexto_(f.titulo, 120)),
+      paraCelda_(limpiarTexto_(f.plataforma, 60)), paraCelda_(String(f.caption || '').slice(0, 2200)),
+      paraCelda_(limpiarTexto_(f.hashtags, 400)), paraCelda_(limpiarTexto_(f.media, 500)),
+      MARKETING_ESTADOS.indexOf(f.estado) !== -1 ? f.estado : 'borrador', '', paraCelda_(limpiarTexto_(f.notas, 300)),
+    ]);
+  });
+  if (nuevas.length) sheet.getRange(sheet.getLastRow() + 1, 1, nuevas.length, MARKETING_HEADERS.length).setValues(nuevas);
+  return { ok: true, agregadas: nuevas.length };
+}
+
+function marketingGuardar_(data, email, ahoraMs) {
+  const sheet = hojaMarketing_();
+  const o = objetos_(sheet, MARKETING_HEADERS).filter(function (x) { return String(x.ID) === String(data.id || ''); })[0];
+  if (!o) return { error: 'no_existe', mensaje: 'Esa publicación ya no está en la cola.' };
+  const c = {};
+  if ('estado' in data) {
+    if (MARKETING_ESTADOS.indexOf(data.estado) === -1) return { error: 'datos_invalidos', mensaje: 'Estado no válido.' };
+    c.Estado = data.estado;
+    c.Publicado_En = data.estado === 'publicado' ? Utilities.formatDate(new Date(ahoraMs), ZONA, "yyyy-MM-dd HH:mm") + ' · ' + email : '';
+  }
+  if ('fecha' in data) {
+    if (!ymd_(data.fecha || '')) return { error: 'datos_invalidos', mensaje: 'Revisa la fecha.' };
+    c.Fecha = ymd_(data.fecha);
+  }
+  if ('hora' in data) {
+    if (!/^\d{1,2}:\d{2}$/.test(String(data.hora || ''))) return { error: 'datos_invalidos', mensaje: 'Revisa la hora (HH:mm).' };
+    c.Hora = ('0' + String(data.hora)).slice(-5);
+  }
+  if ('titulo' in data) c.Titulo = paraCelda_(limpiarTexto_(data.titulo, 120));
+  if ('caption' in data) c.Caption = paraCelda_(String(data.caption || '').slice(0, 2200));
+  if ('hashtags' in data) c.Hashtags = paraCelda_(limpiarTexto_(data.hashtags, 400));
+  if ('media' in data) c.Media = paraCelda_(limpiarTexto_(data.media, 500));
+  if ('notas' in data) c.Notas = paraCelda_(limpiarTexto_(data.notas, 300));
+  escribirFila_(sheet, MARKETING_HEADERS, o.fila, c);
+  return { ok: true };
 }
 
 // ============================================================================

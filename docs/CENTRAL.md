@@ -24,6 +24,7 @@ Solo los correos de la propiedad **`dueno_admins`** del Apps Script maestro, sep
 - **Prospectos:** los que agendaron su afiliación con el bot de WhatsApp y todavía no son negocio. "Crear negocio" llena el alta con sus datos.
 - **Cobros:** los Pago Móvil que reportan los negocios desde "Mi plan y pagos" (ver abajo).
 - **Pagos:** lo cobrado en el mes y el historial.
+- **Marketing:** el calendario y la cola de publicaciones (ver abajo).
 
 ## En computadora: panel y negocios a fondo
 En una pantalla de 1024 px o más, la central cambia de forma:
@@ -66,6 +67,19 @@ En el teléfono el Panel también está, en la barra de abajo.
 - **Las últimas reservas** y **su plan en bookeaa:** pagos, reportes, configuración y notas.
 
 **De dónde salen los números:** el Apps Script lee la pestaña Reservaciones de la hoja de cada negocio (operaciones `metricas` y `negocio`). Las canceladas se cuentan aparte. La facturación es la suma del total de cada reserva, no lo que el negocio cobró de verdad. El panel se guarda 10 minutos en caché; **Recalcular ahora** lo vuelve a leer.
+
+## Marketing: calendario y cola
+La pestaña **Marketing** (barra lateral o barra de abajo) es el calendario y la cola de publicaciones de bookeaa. Solo organiza y aprueba; la producción (videos, voz, carruseles) sigue en la carpeta `marketing/` del repositorio.
+- **Cifras:** publicaciones de hoy, por aprobar (con las atrasadas en rojo), aprobadas y publicadas.
+- **Cola:** las publicaciones por día, con hora de Caracas, tipo y estado. Filtros: por publicar, borradores, aprobadas, publicadas y todas.
+- **Calendario:** el mes con un punto por publicación (el color es el estado). Tocar un día muestra lo de ese día.
+- **Cada publicación:** se edita la fecha, la hora, el título, el texto, los hashtags, el link del video o las imágenes y las notas.
+  - **Estados:** borrador → **Aprobar** → **Marcar publicado** (guarda quién y cuándo). También **Volver a borrador** y **Omitir**.
+  - **Copiar texto** deja el caption con sus hashtags listo para pegar.
+  - El link del video debe ser público (no de Drive): Instagram no lo puede descargar de Drive.
+- **Importar calendario:** la primera vez trae las publicaciones de octubre (`src/central/marketing-semilla.json`). Importar de nuevo solo agrega las que faltan; no pisa lo que ya editaste.
+- **Dónde se guarda:** pestaña **Marketing** del archivo maestro (`ID, Fecha, Hora, Tipo, Titulo, Plataforma, Caption, Hashtags, Media, Estado, Publicado_En, Notas`). Se crea sola. Make puede leer esa misma pestaña para publicar lo que esté en `aprobado`.
+- **Regenerar los datos iniciales:** `python3 marketing/personal/fyp/generar_cola.py` (lee `CALENDARIO-OCTUBRE.csv`).
 
 ## Dónde se guarda (archivo maestro)
 - **Tenants:** columnas nuevas `Telefono`, `Vence`, `Ultimo_Pago` y `Notas`. Se agregan solas la primera vez.

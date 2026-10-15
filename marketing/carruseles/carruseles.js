@@ -290,5 +290,48 @@
         cta(['ESCRÍBENOS', 'HOY.']),
       ],
     },
+    // ---- Serie FYP · semana del 12 de octubre (un carrusel por día hábil) ----
+    {
+      id: 16,
+      nombre: 'La libreta (jue 15 oct)',
+      laminas: [
+        { tipo: 'portada', fondo: 'negro', kicker: 'Si tu agenda es un papel', titulo: ['TU CLIENTE', 'NO PUEDE', 'VER TU', 'LIBRETA.'], clase: 'grande', texto: 'Y por eso te escribe.' },
+        { tipo: 'senal', fondo: 'blanco', num: '01', titulo: ['SE MOJA.', 'SE PIERDE.'], texto: 'Una agenda en papel depende de que no te pase nada.' },
+        { tipo: 'senal', fondo: 'negro', num: '02', titulo: ['SE OLVIDA', 'ANOTAR.'], texto: 'Entre cliente y cliente, una cita se queda sin escribir.' },
+        { tipo: 'senal', fondo: 'blanco', num: '03', titulo: ['TU CLIENTE', 'TIENE QUE', 'ESCRIBIR.'], texto: '"¿Tienes hora hoy?" Y tú sin poder contestar porque estás atendiendo.' },
+        {
+          tipo: 'comparar', fondo: 'negro', titulo: ['LIBRETA', 'VS LINK'],
+          sin: ['Solo tú ves las horas', 'Dos citas a la misma hora', 'Contestas desde la silla'],
+          con: ['Tu cliente ve tus horas libres', 'Cada hora se reserva una sola vez', 'Reserva solo, a cualquier hora'],
+        },
+        {
+          tipo: 'evento', fondo: 'blanco', kicker: 'Y queda guardado', titulo: ['CADA CITA CAE', 'EN TU CALENDARIO'],
+          evento: { titulo: 'Corte y barba', cuando: 'Jue 15 oct · 2:00 – 2:45 p. m.', quien: 'Carlos M. · 0412 555 1234' },
+          texto: 'Sin cruces. Sin olvidos.',
+        },
+        cta(['SUELTA', 'LA LIBRETA.']),
+      ],
+    },
+    {
+      id: 17,
+      nombre: 'Cero mensajes (vie 16 oct)',
+      laminas: [
+        { tipo: 'portada', fondo: 'blanco', kicker: 'Haz la cuenta', titulo: ['¿CUÁNTOS', 'MENSAJES', 'ESCRIBES POR', 'UNA CITA?'], clase: 'grande', texto: 'Con bookeaa son cero.' },
+        {
+          tipo: 'whatsapp', fondo: 'negro', kicker: 'Así se ve hoy', titulo: ['10 MENSAJES', 'POR UNA HORA'],
+          mensaje: '¿Tienes hora hoy?\n¿A qué hora?\n¿Y a las 4?\n¿Cuánto cuesta?\n¿Dónde queda?\n¿Me confirmas?',
+          texto: 'Y esa cita ni siquiera está confirmada.',
+        },
+        { tipo: 'telefono', fondo: 'blanco', kicker: '01', titulo: ['EL CLIENTE', 'ENTRA A', 'TU LINK'], texto: 'Ve tus servicios, tus precios y tus horas libres.', img: F + '2-servicios.jpg' },
+        { tipo: 'telefono', fondo: 'negro', kicker: '02', titulo: ['ELIGE', 'SERVICIO', 'Y HORA'], texto: 'Solo aparecen las horas que de verdad tienes.', img: F + '4-agenda.jpg' },
+        { tipo: 'telefono', fondo: 'blanco', kicker: '03', titulo: ['LISTO.', 'CITA', 'RESERVADA.'], texto: 'Sin escribirte ni un mensaje.', img: F + '6-listo.jpg' },
+        {
+          tipo: 'evento', fondo: 'negro', kicker: 'Tú no haces nada', titulo: ['CAE SOLA', 'EN TU GOOGLE', 'CALENDAR'], 
+          evento: { titulo: 'Manicure', cuando: 'Vie 16 oct · 10:30 – 11:30 a. m.', quien: 'Ana P. · 0414 555 7788' },
+          texto: 'Así trabajan los negocios que valoran su tiempo.',
+        },
+        { ...cta(['COMENTA', 'AGENDA.']), texto: 'Y te mando el link para probar bookeaa <b>gratis</b>.', boton: 'Comenta AGENDA 👇' },
+      ],
+    },
   ]
 })()
