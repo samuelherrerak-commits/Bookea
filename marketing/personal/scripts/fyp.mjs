@@ -7,7 +7,7 @@
 // Lee fyp/videos.json (lo genera fyp/generar.py desde fyp/octubre.py y fyp/escenas.py).
 // Salida: salida/fyp/<id>.mp4 (1080×1920, 30 fps, -14 LUFS).
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { generarAudio } from '../../scripts/audio.mjs'
@@ -23,14 +23,18 @@ const FFMPEG =
 
 const args = process.argv.slice(2)
 const opcion = (n, def) => (args.includes(n) ? args[args.indexOf(n) + 1] : def)
-const flags = new Set(['--voz', '--vel', '--cuadros'])
+const flags = new Set(['--voz', '--vel', '--cuadros', '--recortes'])
 const VOZ = opcion('--voz', 'samuel') // 'samuel' = tu voz clonada (Qwen3-TTS); o una voz de Piper (es_MX-claude-high…)
 const VEL = opcion('--vel', '0.9')
+const RECORTES = opcion('--recortes', '') // con --voz archivo:/ruta.mp3 → tramos del audio, p. ej. "0-5.3,16.2-22.2"
 const CUADROS = opcion('--cuadros', null)
 const COLA = 1.4 // segundos de pantalla final (CTA) después de la última palabra
 const LEAD = 0.35
 
 const todos = JSON.parse(readFileSync(join(RAIZ, 'fyp', 'videos.json'), 'utf8'))
+// fyp/pruebas.json: videos sueltos (fuera del calendario) con el mismo formato que videos.json.
+const pruebas = join(RAIZ, 'fyp', 'pruebas.json')
+if (existsSync(pruebas)) todos.push(...JSON.parse(readFileSync(pruebas, 'utf8')))
 // --todos: todos los videos que ya tienen escenas (MG y VOZ), en orden. Pensado para dejarlo corriendo de fondo.
 const ids = args.includes('--todos')
   ? todos.filter((v) => v.escenas && v.tipo !== 'CAM').map((v) => v.id)
@@ -89,7 +93,7 @@ for (const id of ids) {
   if (v.tipo === 'VOZ') {
     const wav = join(TMP, `${id}-voz.wav`)
     const json = join(TMP, `${id}-palabras.json`)
-    correr('python3', VOZ === 'samuel' ? [join(RAIZ, 'fyp', 'voz_clon.py'), v.vozTexto, wav, json] : [join(RAIZ, 'fyp', 'voz.py'), v.vozTexto, wav, json, '--voz', VOZ, '--vel', VEL])
+    correr('python3', VOZ.startsWith('archivo:') ? [join(RAIZ, 'fyp', 'voz_archivo.py'), v.vozTexto, wav, json, '--audio', VOZ.slice(8), '--recortes', RECORTES] : VOZ === 'samuel' ? [join(RAIZ, 'fyp', 'voz_clon.py'), v.vozTexto, wav, json] : [join(RAIZ, 'fyp', 'voz.py'), v.vozTexto, wav, json, '--voz', VOZ, '--vel', VEL])
     const { duracionVoz, palabras } = JSON.parse(readFileSync(json, 'utf8'))
     voz = `tmp/fyp/${id}-voz.wav`
     total = Math.round((duracionVoz + COLA) * 10) / 10

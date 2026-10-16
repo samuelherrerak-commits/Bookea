@@ -1,0 +1,17 @@
+[
+  {
+    "id": "FYP-PRUEBA-ELEVEN-VOZ",
+    "tipo": "VOZ",
+    "titulo": "Prueba de voz (ElevenLabs)",
+    "vozTexto": "Tu cliente te escribió y le respondiste tarde, entonces ya lo perdiste. Así de simple. Por eso existe bookeaa. Tú compartes tu link, tus clientes ven las horas libres que tienes y reservan solos. Si trabajas con citas, pruébalo. Te va a ahorrar horas. Link en mi perfil, y nos vemos adentro.",
+    "escenas": [
+      {"ancla": "Tu cliente", "fondo": "negro", "entrada": "corte", "kicker": "¿Te pasó?", "titulo": ["¿TU CLIENTE", "ESCRIBIÓ Y", "RESPONDISTE", "TARDE?"], "estilo": "grande",
+       "burbujas": [{"texto": "¿Tienes hora hoy?", "en": 0.7}, {"texto": "¿Hola?? 👀", "en": 1.6}]},
+      {"ancla": "entonces ya", "fondo": "blanco", "entrada": "lado", "titulo": ["ENTONCES", "YA LO", "PERDISTE."], "estilo": "grande"},
+      {"ancla": "Por eso", "fondo": "negro", "entrada": "ola", "kicker": "La solución", "titulo": ["POR ESO", "EXISTE", "bookeaa."], "estilo": "mega"},
+      {"ancla": "Tú compartes", "fondo": "blanco", "entrada": "ola", "titulo": ["TU LINK.", "SUS HORAS.", "RESERVAN SOLOS."], "estilo": "grande",
+       "telefonos": [{"img": "flujo/4-agenda.jpg", "ancho": 400, "x": 340, "y": 880, "en": 0.9}]},
+      {"ancla": "Si trabajas", "fondo": "negro", "entrada": "ola", "titulo": ["PRUÉBALO", "GRATIS."], "estilo": "mega", "pastilla": "bookeaa · LINK EN EL PERFIL"}
+    ]
+  }
+]
