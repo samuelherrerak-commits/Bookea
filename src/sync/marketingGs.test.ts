@@ -48,12 +48,23 @@ describe('Code.gs · Marketing de central', () => {
   it('crea la pestaña, importa una sola vez y no pisa lo que ya existe', () => {
     const { f, hojas } = maestro()
     expect(f.marketingCentral_()).toEqual({ publicaciones: [] })
-    expect(f.marketingImportar_({ filas: [fila('A'), fila('B', { fecha: '2026-10-16' })] })).toEqual({ ok: true, agregadas: 2 })
-    expect(f.marketingImportar_({ filas: [fila('A', { titulo: 'otro' }), fila('C')] })).toEqual({ ok: true, agregadas: 1 })
+    expect(f.marketingImportar_({ filas: [fila('A'), fila('B', { fecha: '2026-10-16' })] })).toEqual({ ok: true, agregadas: 2, completadas: 0 })
+    expect(f.marketingImportar_({ filas: [fila('A', { titulo: 'otro' }), fila('C')] })).toEqual({ ok: true, agregadas: 1, completadas: 0 })
     expect(hojas.Marketing.datos.length).toBe(4) // encabezado + 3
     const l = f.marketingCentral_().publicaciones
     expect(l.map((p: any) => p.id)).toEqual(['A', 'B', 'C'])
     expect(l[0]).toMatchObject({ titulo: 'La libreta', fecha: '2026-10-15', hora: '08:00', estado: 'borrador' })
+  })
+
+  it('al volver a importar solo rellena el link vacío de lo que no se ha publicado', () => {
+    const { f } = maestro()
+    f.marketingImportar_({ filas: [fila('A'), fila('B'), fila('C', { media: 'https://x/c.mp4' })] })
+    f.marketingGuardar_({ id: 'B', estado: 'publicado' }, 'a@b.c', Date.now())
+    const r = f.marketingImportar_({ filas: [fila('A', { media: 'https://x/a.mp4', titulo: 'otro' }), fila('B', { media: 'https://x/b.mp4' }), fila('C', { media: 'https://x/nuevo.mp4' })] })
+    expect(r).toEqual({ ok: true, agregadas: 0, completadas: 1 })
+    const l = f.marketingCentral_().publicaciones
+    expect(l.map((p: any) => p.media)).toEqual(['https://x/a.mp4', '', 'https://x/c.mp4'])
+    expect(l[0].titulo).toBe('La libreta')
   })
 
   it('descarta filas sin id o con fecha mala, y neutraliza fórmulas', () => {
