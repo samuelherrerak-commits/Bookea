@@ -3598,11 +3598,24 @@ function marketingCentral_() {
 function marketingImportar_(data) {
   const sheet = hojaMarketing_();
   const existentes = {};
-  objetos_(sheet, MARKETING_HEADERS).forEach(function (o) { existentes[String(o.ID)] = true; });
+  objetos_(sheet, MARKETING_HEADERS).forEach(function (o) { existentes[String(o.ID)] = o; });
   const nuevas = [];
+  let completadas = 0;
   (Array.isArray(data.filas) ? data.filas : []).slice(0, 300).forEach(function (f) {
     const id = limpiarTexto_(f.id, 60);
-    if (!id || existentes[id] || !ymd_(f.fecha || '')) return;
+    if (!id || !ymd_(f.fecha || '')) return;
+    const previa = existentes[id];
+    if (previa && previa !== true) {
+      // Ya estaba en la cola: solo se le pone el link si aún no tiene y no se ha publicado (lo demás no se pisa).
+      const media = limpiarTexto_(f.media, 1500);
+      if (media && !String(previa.Media || '').trim() && String(previa.Estado) !== 'publicado') {
+        escribirFila_(sheet, MARKETING_HEADERS, previa.fila, { Media: paraCelda_(media) });
+        completadas++;
+      }
+      existentes[id] = true;
+      return;
+    }
+    if (previa) return;
     existentes[id] = true;
     nuevas.push([
       id, ymd_(f.fecha), limpiarTexto_(f.hora, 5), limpiarTexto_(f.tipo, 20), paraCelda_(limpiarTexto_(f.titulo, 120)),
@@ -3612,7 +3625,7 @@ function marketingImportar_(data) {
     ]);
   });
   if (nuevas.length) sheet.getRange(sheet.getLastRow() + 1, 1, nuevas.length, MARKETING_HEADERS.length).setValues(nuevas);
-  return { ok: true, agregadas: nuevas.length };
+  return { ok: true, agregadas: nuevas.length, completadas: completadas };
 }
 
 function marketingGuardar_(data, email, ahoraMs) {
