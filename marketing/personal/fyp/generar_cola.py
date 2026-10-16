@@ -38,7 +38,7 @@ def medios():
     return json.load(open(ruta, encoding="utf-8")) if os.path.exists(ruta) else {}
 
 
-# Segunda voz del día (guiones/GUION-VOZ-LARGO-2.txt): programada a las 18:00; entra con su audio cuando llegue.
+# Segunda voz del día (guiones/GUION-VOZ-LARGO-2.txt): programada a las 18:00.
 VOZ2 = [
     ("2026-10-19", "LUN", "Reservas mientras duermes", "¿Cuántas citas se pierden mientras duermes?", "link"),
     ("2026-10-20", "MAR", "Nunca más una cita olvidada", "Anotar una cita en una libreta es pedirle a tu memoria que no falle.", "link"),
@@ -87,7 +87,7 @@ def main():
             filas.append({
                 "id": f"FYP-{'S02' if fecha < '2026-10-26' else 'S03'}-{dia}-VOZ2", "fecha": fecha, "hora": "18:00", "tipo": "video-voz",
                 "titulo": titulo + " (2.ª voz)", "plataforma": "TikTok + Reels", "caption": f"{gancho} {CIERRE_VOZ2[cta]}", "hashtags": HASHTAGS,
-                "media": "", "estado": "borrador", "notas": f"Falta el audio: bloque {n} de guiones/GUION-VOZ-LARGO-2.txt",
+                "media": (lambda i: links[i] if isinstance(links.get(i), str) else "")(f"FYP-{'S02' if fecha < '2026-10-26' else 'S03'}-{dia}-VOZ2"), "estado": "borrador", "notas": f"2.ª voz · bloque {n} de guiones/GUION-VOZ-LARGO-2.txt",
             })
     for c in CARRUSELES:
         if c["fecha"] >= DESDE:
