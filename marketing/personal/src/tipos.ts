@@ -25,7 +25,7 @@ export type Escena = {
   desde: number
   hasta: number
   fondo: 'negro' | 'blanco'
-  entrada?: 'ola' | 'lado' | 'corte'
+  entrada?: 'ola' | 'lado' | 'corte' | 'barrido'
   kicker?: string
   titulo: string[]
   /** Segundo (original) en que entra cada línea del título; si no, escalonadas. */
@@ -49,6 +49,16 @@ export type Escena = {
   contador?: { de: number; a: number; etiqueta?: string; sufijo?: string; en?: number; dur?: number; y?: number }
   /** Etiqueta pequeña tipo "Visto 9:15 a. m." bajo las burbujas, en su segundo `en`. */
   visto?: { texto: string; en: number }
+  /** Dos rieles (líneas) que se abren alrededor del titular; el de abajo es el hilo si está activo. */
+  rieles?: boolean
+  /** Golpes de cámara (segundos de la escena): un empujón de zoom que se asienta, en el beat. */
+  golpes?: number[]
+  /** Barras que crecen con su número (como un KPI): cada fila entra en su `en`. */
+  barras?: { filas: { etiqueta: string; valor: number; en?: number }[]; y?: number; max?: number; unidad?: string }
+  /** El hilo (línea única que viaja entre escenas): posición de esta escena; por defecto, bajo el titular. */
+  hilo?: { y?: number; x0?: number; x1?: number; grosor?: number }
+  /** Lo pone fyp.mjs cuando el video usa el hilo: el riel de abajo lo dibuja el hilo. */
+  hiloGlobal?: boolean
 }
 
 export type Edicion = {

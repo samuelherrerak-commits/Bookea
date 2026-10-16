@@ -57,6 +57,8 @@ function absolutas(e, d) {
   if (x.evento) x.evento = { ...x.evento, en: x.evento.en + d.desde }
   if (x.agenda) x.agenda = x.agenda.map((r) => ({ ...r, en: r.en != null ? r.en + d.desde : undefined }))
   if (x.contador) x.contador = { ...x.contador, en: x.contador.en != null ? x.contador.en + d.desde : undefined }
+  if (x.golpes) x.golpes = x.golpes.map((t) => t + d.desde)
+  if (x.barras) x.barras = { ...x.barras, filas: x.barras.filas.map((f) => ({ ...f, en: f.en != null ? f.en + d.desde : undefined })) }
   return x
 }
 
@@ -67,6 +69,7 @@ function sfxAuto(escenas, total) {
     const base = entrada === 'corte' ? 0.05 : 0.3
     if (i > 0 && entrada !== 'corte') s.push({ t: e.desde - 0.05, nombre: 'whoosh', vol: 0.4 })
     if (i > 0) s.push({ t: e.desde + base + 0.1, nombre: 'pop', vol: 0.35 })
+    for (const g of e.golpes ?? []) s.push({ t: g, nombre: 'impacto', vol: 0.3 })
     for (const b of e.burbujas ?? []) s.push({ t: b.en, nombre: 'burbuja', vol: 0.55 })
     for (const t of e.telefonos ?? []) s.push({ t: t.en ?? e.desde + base + 0.5, nombre: 'barrido', vol: 0.4 })
     if (e.evento) s.push({ t: e.evento.en + 0.5, nombre: 'check', vol: 0.4 })
@@ -129,6 +132,7 @@ for (const id of ids) {
     })
   }
 
+  if (v.hilo) escenas.forEach((e) => (e.hiloGlobal = true))
   const musica = `tmp/fyp/${id}-musica.wav`
   await generarAudio({ duracion: total, cues: [], destino: join(PUBLIC, musica), semilla: 11, volumenMusica: 1 })
   const props = {
@@ -140,6 +144,8 @@ for (const id of ids) {
     musica,
     volumenMusica: v.tipo === 'VOZ' ? 0.11 : 0.4,
     sfx: sfxAuto(escenas, total),
+    hilo: !!v.hilo,
+    etiquetas: !!v.etiquetas,
   }
   const ruta = join(TMP, `${id}-props.json`)
   writeFileSync(ruta, JSON.stringify(props))
