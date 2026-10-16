@@ -333,5 +333,118 @@
         { ...cta(['COMENTA', 'AGENDA.']), texto: 'Y te mando el link para probar bookeaa <b>gratis</b>.', boton: 'Comenta AGENDA 👇' },
       ],
     },
+    {
+      id: 18,
+      nombre: 'Tu descanso no es para responder (sáb 17 oct)',
+      laminas: [
+        { tipo: 'portada', fondo: 'negro', kicker: 'Sábado en la noche', titulo: ['TU FIN DE', 'SEMANA NO ES', 'PARA CONTESTAR.'], clase: 'grande', texto: 'Y aun así, te escriben.' },
+        { tipo: 'senal', fondo: 'blanco', num: '01', titulo: ['"¿TIENES HORA', 'EL LUNES?"', '9:42 P. M.'], texto: 'Un mensaje que llega cuando estás descansando.' },
+        { tipo: 'senal', fondo: 'negro', num: '02', titulo: ['SI NO LO', 'CONTESTAS,', 'SE VA.'], texto: 'El cliente reserva con quien le responde primero.' },
+        {
+          tipo: 'comparar', fondo: 'blanco', titulo: ['SÁBADO EN', 'LA NOCHE'],
+          sin: ['Mirando el celular', 'Respondiendo uno por uno', 'Sin descansar'],
+          con: ['Tu link responde por ti', 'El cliente reserva solo', 'Tú, descansando'],
+        },
+        { tipo: 'telefono', fondo: 'negro', kicker: 'Así de simple', titulo: ['ELIGE SU', 'HORA SOLO'], texto: 'Solo ve las horas que de verdad tienes libres.', img: F + '4-agenda.jpg' },
+        cta(['DESCANSA', 'CON UN LINK.']),
+      ],
+    },
+    {
+      id: 19,
+      nombre: 'Tu lunes ya está lleno (dom 18 oct)',
+      laminas: [
+        { tipo: 'portada', fondo: 'blanco', kicker: 'Domingo en la noche', titulo: ['EL LUNES', 'EMPIEZA HOY.'], clase: 'grande', texto: '¿Tu agenda ya está lista?' },
+        {
+          tipo: 'dia', fondo: 'negro', titulo: ['ASÍ SE VE UN', 'LUNES LLENO'],
+          eventos: [['9:00', 'Manicure semipermanente', 'Ana P.'], ['11:30', 'Corte y barba', 'Carlos M.'], ['14:00', 'Spa facial', 'María G.'], ['16:30', 'Consulta', 'José R.']],
+          texto: 'Cada cita con el servicio, el nombre y el teléfono del cliente.',
+        },
+        { tipo: 'texto', fondo: 'blanco', kicker: 'Sin escribir', titulo: ['NI UN', 'MENSAJE.'], texto: 'Cada cliente eligió su hora desde tu link. Tú solo llegas a atender.' },
+        {
+          tipo: 'lista', fondo: 'negro', titulo: ['PARA EMPEZAR', 'LA SEMANA'], marca: '✓',
+          items: ['Tu link en la bio y en tu estado', 'Tus servicios con precio', 'Tus horas libres, a la vista', 'La cita en tu Google Calendar'],
+        },
+        { tipo: 'telefono', fondo: 'blanco', kicker: 'Tu página de reservas', titulo: ['SERVICIOS,', 'PRECIOS', 'Y HORAS'], texto: 'Todo en un solo link con tu nombre.', img: F + '2-servicios.jpg' },
+        { ...cta(['COMENTA', 'AGENDA.']), texto: 'Y te mando el link para probar bookeaa <b>gratis</b>.', boton: 'Comenta AGENDA 👇' },
+      ],
+    },
+    {
+      id: 20,
+      nombre: 'Dos a la misma hora (lun 19 oct)',
+      laminas: [
+        { tipo: 'portada', fondo: 'negro', kicker: '¿Te ha pasado?', titulo: ['DOS CLIENTES.', 'UNA HORA.'], clase: 'grande', texto: 'Y los dos llegaron a tiempo.' },
+        { tipo: 'senal', fondo: 'blanco', num: '01', titulo: ['3:00 P. M.', '3:00 P. M.', '😬'], texto: 'Dos citas anotadas a la misma hora.' },
+        { tipo: 'senal', fondo: 'negro', num: '02', titulo: ['QUEDAS MAL', 'CON LOS DOS.'], texto: 'Y uno de los dos no vuelve.' },
+        {
+          tipo: 'comparar', fondo: 'blanco', titulo: ['LIBRETA VS', 'CALENDARIO'],
+          sin: ['WhatsApp + Instagram + tu cabeza', 'Citas que se cruzan', 'Nadie sabe qué hora es libre'],
+          con: ['Un solo calendario', 'Una hora, una cita', 'El cliente solo ve horas libres'],
+        },
+        {
+          tipo: 'evento', fondo: 'negro', kicker: 'En bookeaa', titulo: ['UNA HORA,', 'UNA CITA'],
+          evento: { titulo: 'Ana · uñas', cuando: 'Lun 19 oct · 3:00 – 4:00 p. m.', quien: 'Hora ocupada: nadie más puede reservarla' },
+          texto: 'Esa hora ya no aparece libre para nadie más.',
+        },
+        cta(['UN SOLO', 'CALENDARIO.']),
+      ],
+    },
+    {
+      id: 21,
+      nombre: 'Precios a la vista (mar 20 oct)',
+      laminas: [
+        { tipo: 'portada', fondo: 'blanco', kicker: 'Estás perdiendo plata', titulo: ['¿SE VEN', 'TUS PRECIOS?'], clase: 'grande', texto: 'Si no, te cuesta clientes.' },
+        { tipo: 'senal', fondo: 'negro', num: '01', titulo: ['"¿PRECIO?"', '20 VECES', 'AL DÍA.'], texto: 'Y cada respuesta es tiempo que no estás atendiendo.' },
+        { tipo: 'senal', fondo: 'blanco', num: '02', titulo: ['EL QUE NO', 'PREGUNTA…', 'SE VA.'], texto: 'Muchos no preguntan por pena y reservan con quien sí muestra.' },
+        { tipo: 'telefono', fondo: 'negro', kicker: 'La solución', titulo: ['SERVICIOS', 'CON PRECIO', 'A LA VISTA'], texto: 'Tu cliente ve todo, elige y reserva. Sin preguntas incómodas.', img: F + '2-servicios.jpg' },
+        {
+          tipo: 'lista', fondo: 'blanco', titulo: ['PRECIOS A LA', 'VISTA = RESERVAS'], marca: '✓',
+          items: ['Menos chats de "¿cuánto es?"', 'Clientes que ya saben qué pagan', 'Más reservas sin escribir', 'Tu página trabaja las 24 horas'],
+        },
+        cta(),
+      ],
+    },
+    {
+      id: 22,
+      nombre: '3 cosas si eres barbero (mié 21 oct)',
+      laminas: [
+        { tipo: 'portada', fondo: 'negro', kicker: '✂️ Barberos', titulo: ['3 COSAS QUE', 'TIENES QUE', 'SABER.'], clase: 'grande', texto: 'La 3 es la que casi nadie hace.' },
+        { tipo: 'senal', fondo: 'blanco', num: '01', titulo: ['EL CLIENTE FIEL', 'SE CUIDA CON', 'HORARIO FIJO.'], texto: 'Su hora de siempre, reservada y sin pedirla.' },
+        { tipo: 'senal', fondo: 'negro', num: '02', titulo: ['EL DE LAS', '9 P. M. NO', 'ESPERA.'], texto: 'Si le contestas en la mañana, ya reservó en otro lado.' },
+        { tipo: 'senal', fondo: 'blanco', num: '03', titulo: ['TU LINK VALE', 'MÁS QUE', 'TU NÚMERO.'], texto: 'Tu número lo guardan. Tu link lo usan para reservar.' },
+        { tipo: 'telefono', fondo: 'negro', kicker: 'Tu link de reservas', titulo: ['TU BARBERÍA,', 'EN UN LINK'], texto: 'Servicios, precios y horas libres. Una cita por hora.', img: F + '1-inicio.jpg' },
+        cta(['ORGANIZA TU', 'BARBERÍA.']),
+      ],
+    },
+    {
+      id: 23,
+      nombre: 'Una hora que no cobras (jue 22 oct)',
+      laminas: [
+        { tipo: 'portada', fondo: 'blanco', kicker: 'Si hubiera sabido…', titulo: ['20 VECES', 'AL DÍA.'], clase: 'grande', texto: '"Tengo hora a las 4."' },
+        { tipo: 'senal', fondo: 'negro', num: '01', titulo: ['× 3', 'MINUTOS.'], texto: 'Lo que tardas en contestar cada vez.' },
+        { tipo: 'senal', fondo: 'blanco', num: '02', titulo: ['= 1 HORA', 'QUE NO COBRAS.'], texto: 'Cada día. Sin contar los domingos.' },
+        {
+          tipo: 'comparar', fondo: 'negro', titulo: ['RESPONDER', 'VS ATENDER'],
+          sin: ['20 mensajes iguales', 'Una hora perdida', 'Cansancio'],
+          con: ['Tu cliente ve tus horas', 'Esa hora, atendiendo', 'Más ingresos'],
+        },
+        { tipo: 'telefono', fondo: 'blanco', kicker: 'Con bookeaa', titulo: ['QUE VEA', 'TUS HORAS', 'SOLO'], texto: 'Reserva sin escribirte y la cita cae en tu calendario.', img: F + '4-agenda.jpg' },
+        cta(),
+      ],
+    },
+    {
+      id: 24,
+      nombre: '8 estilos (vie 23 oct)',
+      laminas: [
+        { tipo: 'portada', fondo: 'negro', kicker: 'Tu página de reservas', titulo: ['8 ESTILOS.', '1 ES TUYO.'], clase: 'grande', texto: '¿Cuál va con tu negocio?' },
+        { tipo: 'grilla', fondo: 'blanco', titulo: ['1 · MINIMAL', '2 · MODERNO'], imgs: ['minimal', 'moderno', 'elegante', 'audaz'].map((e) => P + e + '.jpg'), nombres: ['1 Minimal', '2 Moderno', '3 Elegante', '4 Audaz'] },
+        { tipo: 'grilla', fondo: 'blanco', titulo: ['5 · RETRO', '6 · CLÁSICO'], imgs: ['retro', 'clasico', 'editorial', 'amable'].map((e) => P + e + '.jpg'), nombres: ['5 Retro', '6 Clásico', '7 Editorial', '8 Amable'] },
+        {
+          tipo: 'colores', fondo: 'negro', titulo: ['TU COLOR.', 'TU FONDO.'], texto: 'Claro u oscuro: los textos se ajustan solos.',
+          imgs: ['azul', 'coral', 'lima'].map((c) => C + c + '.jpg'), chips: [['#2F5BEA', '#FFFFFF'], ['#E4572E', '#FFF4EA'], ['#C6F432', '#111111']],
+        },
+        { tipo: 'texto', fondo: 'blanco', kicker: 'Con tu marca', titulo: ['TU PÁGINA,', 'TU ESTILO.'], texto: 'Tu nombre, tus servicios y tus colores. Lista en minutos.' },
+        { ...cta(['COMENTA', 'AGENDA.']), texto: 'Y te mando el link para probar bookeaa <b>gratis</b>.', boton: 'Comenta AGENDA 👇' },
+      ],
+    },
   ]
 })()

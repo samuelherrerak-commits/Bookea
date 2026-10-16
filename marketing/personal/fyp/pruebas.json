@@ -1,0 +1,218 @@
+[
+ {
+  "id": "FYP-PRUEBA-ELEVEN-VOZ",
+  "tipo": "VOZ",
+  "titulo": "Prueba de voz (ElevenLabs)",
+  "vozTexto": "Tu cliente te escribió y le respondiste tarde, entonces ya lo perdiste. Así de simple. Por eso existe bookeaa. Tú compartes tu link, tus clientes ven las horas libres que tienes y reservan solos. Si trabajas con citas, pruébalo. Te va a ahorrar horas. Link en mi perfil, y nos vemos adentro.",
+  "escenas": [
+   {
+    "ancla": "Tu cliente",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "¿Te pasó?",
+    "titulo": [
+     "¿TU CLIENTE",
+     "ESCRIBIÓ Y",
+     "RESPONDISTE",
+     "TARDE?"
+    ],
+    "estilo": "grande",
+    "burbujas": [
+     {
+      "texto": "¿Tienes hora hoy?",
+      "en": 0.7
+     },
+     {
+      "texto": "¿Hola?? 👀",
+      "en": 1.6
+     }
+    ]
+   },
+   {
+    "ancla": "entonces ya",
+    "fondo": "blanco",
+    "entrada": "lado",
+    "titulo": [
+     "ENTONCES",
+     "YA LO",
+     "PERDISTE."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Por eso",
+    "fondo": "negro",
+    "entrada": "ola",
+    "kicker": "La solución",
+    "titulo": [
+     "POR ESO",
+     "EXISTE",
+     "bookeaa."
+    ],
+    "estilo": "mega"
+   },
+   {
+    "ancla": "Tú compartes",
+    "fondo": "blanco",
+    "entrada": "ola",
+    "titulo": [
+     "TU LINK.",
+     "SUS HORAS.",
+     "RESERVAN SOLOS."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 400,
+      "x": 340,
+      "y": 880,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Si trabajas",
+    "fondo": "negro",
+    "entrada": "ola",
+    "titulo": [
+     "PRUÉBALO",
+     "GRATIS."
+    ],
+    "estilo": "mega",
+    "pastilla": "bookeaa · LINK EN EL PERFIL"
+   }
+  ]
+ },
+ {
+  "id": "FYP-PRUEBA-ESTILO-V2",
+  "tipo": "VOZ",
+  "titulo": "Prueba de estilo v2 (hilo, rieles, barrido, barras)",
+  "hilo": true,
+  "etiquetas": true,
+  "vozTexto": "¿Te cruzan las citas? No es mala suerte. Es que agendas en tres lugares a la vez: WhatsApp, Instagram y tu cabeza. Los negocios organizados tienen un solo calendario, y el cliente solo ve las horas que de verdad están libres. Eso es bookeaa. Pruébalo gratis, el link está en mi perfil.",
+  "escenas": [
+   {
+    "ancla": "Te cruzan",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "Lunes · 3:00 p. m.",
+    "titulo": [
+     "¿TE CRUZAN",
+     "LAS CITAS?"
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "No es",
+    "fondo": "blanco",
+    "entrada": "barrido",
+    "titulo": [
+     "NO ES",
+     "MALA SUERTE."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "golpes": [
+     0.9
+    ]
+   },
+   {
+    "ancla": "Es que",
+    "fondo": "negro",
+    "entrada": "barrido",
+    "kicker": "Citas anotadas",
+    "titulo": [
+     "AGENDAS EN",
+     "TRES LUGARES."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "barras": {
+     "y": 760,
+     "filas": [
+      {
+       "etiqueta": "WhatsApp",
+       "valor": 12
+      },
+      {
+       "etiqueta": "Instagram",
+       "valor": 9
+      },
+      {
+       "etiqueta": "Tu cabeza",
+       "valor": 7
+      }
+     ]
+    }
+   },
+   {
+    "ancla": "Los negocios",
+    "fondo": "blanco",
+    "entrada": "barrido",
+    "kicker": "Los organizados",
+    "titulo": [
+     "UN SOLO",
+     "CALENDARIO."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "barras": {
+     "y": 760,
+     "max": 28,
+     "filas": [
+      {
+       "etiqueta": "Calendario",
+       "valor": 28,
+       "en": 0.7
+      }
+     ]
+    }
+   },
+   {
+    "ancla": "y el cliente",
+    "fondo": "negro",
+    "entrada": "barrido",
+    "titulo": [
+     "EL CLIENTE",
+     "SOLO VE LAS",
+     "HORAS LIBRES."
+    ],
+    "estilo": "grande",
+    "agendaY": 820,
+    "agenda": [
+     {
+      "hora": "10:00",
+      "texto": "Ana · uñas",
+      "estado": "ok"
+     },
+     {
+      "hora": "12:30",
+      "texto": "Hora ocupada",
+      "estado": "vacio"
+     },
+     {
+      "hora": "3:00",
+      "texto": "Libre · reserva ya",
+      "estado": "ok"
+     }
+    ]
+   },
+   {
+    "ancla": "Eso es",
+    "fondo": "blanco",
+    "entrada": "ola",
+    "titulo": [
+     "ESO ES",
+     "bookeaa."
+    ],
+    "estilo": "mega",
+    "pastilla": "PRUÉBALO GRATIS · LINK EN EL PERFIL",
+    "golpes": [
+     0.6
+    ]
+   }
+  ]
+ }
+]

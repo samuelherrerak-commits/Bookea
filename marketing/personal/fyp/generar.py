@@ -5,10 +5,12 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
 from octubre import V, TIPO, CTA, CTA_MG
 from escenas import ESCENAS
+VOZ_TEXTOS = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'voz_textos.json'), encoding='utf-8'))
+V1 = {'FYP-S01-JUE-MG', 'FYP-S01-JUE-VOZ', 'FYP-S01-VIE-MG', 'FYP-S01-VIE-VOZ'}
 
 RAIZ = os.path.dirname(AQUI)
-DIAS = {'Lun': 'lunes', 'Mar': 'martes', 'Mié': 'miércoles', 'Jue': 'jueves', 'Vie': 'viernes'}
-HORA = {'08:00': '8:00 a. m.', '13:00': '1:00 p. m.', '20:30': '8:30 p. m.'}
+DIAS = {'Lun': 'lunes', 'Mar': 'martes', 'Mié': 'miércoles', 'Jue': 'jueves', 'Vie': 'viernes', 'Sáb': 'sábado', 'Dom': 'domingo'}
+HORA = {'08:00': '8:00 a. m.', '10:00': '10:00 a. m.', '13:00': '1:00 p. m.', '20:30': '8:30 p. m.'}
 fecha = lambda x: f"{DIAS[x['dia']]} {int(x['fecha'][8:])}"
 
 MARCA = [('2026-10-09', 'Vie', 'Carrusel 2 · 5 señales de que tu agenda necesita ayuda'), ('2026-10-12', 'Lun', 'Carrusel 3 · Cómo funciona en 3 pasos'),
@@ -37,8 +39,9 @@ for x in V:
         continue
     d = {k: x[k] for k in ('id', 'tipo', 'fecha', 'dia', 'hora', 'titulo', 'gancho', 'cta', 'caption', 'hashtags')}
     if x['tipo'] == 'VOZ':
-        d['vozTexto'] = x['cuerpo'] + ' ' + CTA_VOZ[x['cta']]
+        d['vozTexto'] = VOZ_TEXTOS.get(x['id']) or (x['cuerpo'] + ' ' + CTA_VOZ[x['cta']])
     d['escenas'] = ESCENAS.get(x['id'])
+    d['estilo2'] = x['id'] not in V1  # hilo, rieles y transiciones alternadas (los pilotos del 15 y 16 se quedan como salieron)
     vid.append(d)
 json.dump(vid, open(os.path.join(AQUI, 'videos.json'), 'w'), ensure_ascii=False, indent=1)
 

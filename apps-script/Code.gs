@@ -3734,7 +3734,10 @@ function tiktokProp_(k) { return String(PropertiesService.getScriptProperties().
 function tiktokEstado_() {
   const configurado = tiktokProp_('tiktok_client_key').length > 5 && tiktokProp_('tiktok_client_secret').length > 5;
   const conectado = configurado && !!tiktokProp_('tiktok_refresh');
-  return { configurado: configurado, conectado: conectado, usuario: conectado ? tiktokProp_('tiktok_usuario') : '', redirect: TIKTOK_REDIRECT };
+  const k = tiktokProp_('tiktok_client_key');
+  // Pista de la clave en uso (no es secreta, pero no se muestra entera): ayuda a ver si es la de producción o la del sandbox ('sb…').
+  const pista = k.length > 8 ? k.slice(0, 4) + '…' + k.slice(-4) : '';
+  return { configurado: configurado, conectado: conectado, usuario: conectado ? tiktokProp_('tiktok_usuario') : '', redirect: TIKTOK_REDIRECT, pista: pista, sandbox: /^sb/i.test(k) };
 }
 
 /** Dirección de autorización de TikTok; el state queda 10 min en caché atado al correo que la pidió. */

@@ -7,7 +7,7 @@
 // Lee fyp/videos.json (lo genera fyp/generar.py desde fyp/octubre.py y fyp/escenas.py).
 // Salida: salida/fyp/<id>.mp4 (1080×1920, 30 fps, -14 LUFS).
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { generarAudio } from '../../scripts/audio.mjs'
@@ -23,14 +23,18 @@ const FFMPEG =
 
 const args = process.argv.slice(2)
 const opcion = (n, def) => (args.includes(n) ? args[args.indexOf(n) + 1] : def)
-const flags = new Set(['--voz', '--vel', '--cuadros'])
+const flags = new Set(['--voz', '--vel', '--cuadros', '--recortes'])
 const VOZ = opcion('--voz', 'samuel') // 'samuel' = tu voz clonada (Qwen3-TTS); o una voz de Piper (es_MX-claude-high…)
 const VEL = opcion('--vel', '0.9')
+const RECORTES = opcion('--recortes', '') // con --voz archivo:/ruta.mp3 → tramos del audio, p. ej. "0-5.3,16.2-22.2"
 const CUADROS = opcion('--cuadros', null)
 const COLA = 1.4 // segundos de pantalla final (CTA) después de la última palabra
 const LEAD = 0.35
 
 const todos = JSON.parse(readFileSync(join(RAIZ, 'fyp', 'videos.json'), 'utf8'))
+// fyp/pruebas.json: videos sueltos (fuera del calendario) con el mismo formato que videos.json.
+const pruebas = join(RAIZ, 'fyp', 'pruebas.json')
+if (existsSync(pruebas)) todos.push(...JSON.parse(readFileSync(pruebas, 'utf8')))
 // --todos: todos los videos que ya tienen escenas (MG y VOZ), en orden. Pensado para dejarlo corriendo de fondo.
 const ids = args.includes('--todos')
   ? todos.filter((v) => v.escenas && v.tipo !== 'CAM').map((v) => v.id)
@@ -53,6 +57,8 @@ function absolutas(e, d) {
   if (x.evento) x.evento = { ...x.evento, en: x.evento.en + d.desde }
   if (x.agenda) x.agenda = x.agenda.map((r) => ({ ...r, en: r.en != null ? r.en + d.desde : undefined }))
   if (x.contador) x.contador = { ...x.contador, en: x.contador.en != null ? x.contador.en + d.desde : undefined }
+  if (x.golpes) x.golpes = x.golpes.map((t) => t + d.desde)
+  if (x.barras) x.barras = { ...x.barras, filas: x.barras.filas.map((f) => ({ ...f, en: f.en != null ? f.en + d.desde : undefined })) }
   return x
 }
 
@@ -63,6 +69,7 @@ function sfxAuto(escenas, total) {
     const base = entrada === 'corte' ? 0.05 : 0.3
     if (i > 0 && entrada !== 'corte') s.push({ t: e.desde - 0.05, nombre: 'whoosh', vol: 0.4 })
     if (i > 0) s.push({ t: e.desde + base + 0.1, nombre: 'pop', vol: 0.35 })
+    for (const g of e.golpes ?? []) s.push({ t: g, nombre: 'impacto', vol: 0.3 })
     for (const b of e.burbujas ?? []) s.push({ t: b.en, nombre: 'burbuja', vol: 0.55 })
     for (const t of e.telefonos ?? []) s.push({ t: t.en ?? e.desde + base + 0.5, nombre: 'barrido', vol: 0.4 })
     if (e.evento) s.push({ t: e.evento.en + 0.5, nombre: 'check', vol: 0.4 })
@@ -89,7 +96,7 @@ for (const id of ids) {
   if (v.tipo === 'VOZ') {
     const wav = join(TMP, `${id}-voz.wav`)
     const json = join(TMP, `${id}-palabras.json`)
-    correr('python3', VOZ === 'samuel' ? [join(RAIZ, 'fyp', 'voz_clon.py'), v.vozTexto, wav, json] : [join(RAIZ, 'fyp', 'voz.py'), v.vozTexto, wav, json, '--voz', VOZ, '--vel', VEL])
+    correr('python3', VOZ.startsWith('archivo:') ? [join(RAIZ, 'fyp', 'voz_archivo.py'), v.vozTexto, wav, json, '--audio', VOZ.slice(8), '--recortes', RECORTES] : VOZ === 'samuel' ? [join(RAIZ, 'fyp', 'voz_clon.py'), v.vozTexto, wav, json] : [join(RAIZ, 'fyp', 'voz.py'), v.vozTexto, wav, json, '--voz', VOZ, '--vel', VEL])
     const { duracionVoz, palabras } = JSON.parse(readFileSync(json, 'utf8'))
     voz = `tmp/fyp/${id}-voz.wav`
     total = Math.round((duracionVoz + COLA) * 10) / 10
@@ -125,6 +132,17 @@ for (const id of ids) {
     })
   }
 
+  // Estilo v2: el hilo viaja entre escenas, los titulares llevan rieles y las transiciones se alternan
+  // (barrido → ola → lado → …). Sin etiquetas de esquina (FIG. y tiempo).
+  if (v.estilo2) {
+    const ciclo = ['barrido', 'ola', 'lado']
+    escenas.forEach((e, i) => {
+      if (i > 0) e.entrada = ciclo[(i - 1) % 3]
+      if (e.rieles == null && e.titulo.length <= 3) e.rieles = true
+    })
+    v.hilo = true
+  }
+  if (v.hilo) escenas.forEach((e) => (e.hiloGlobal = true))
   const musica = `tmp/fyp/${id}-musica.wav`
   await generarAudio({ duracion: total, cues: [], destino: join(PUBLIC, musica), semilla: 11, volumenMusica: 1 })
   const props = {
@@ -136,6 +154,8 @@ for (const id of ids) {
     musica,
     volumenMusica: v.tipo === 'VOZ' ? 0.11 : 0.4,
     sfx: sfxAuto(escenas, total),
+    hilo: !!v.hilo,
+    etiquetas: !!v.etiquetas,
   }
   const ruta = join(TMP, `${id}-props.json`)
   writeFileSync(ruta, JSON.stringify(props))

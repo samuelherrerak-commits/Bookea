@@ -5,6 +5,19 @@ import { COLOR, MARGEN, OLA, TIPO, clamp, ease, lerp, p, tw } from './marca'
 import { Telefono } from './Telefono'
 import type { Escena as TEscena } from './tipos'
 
+/** Dos rieles que se abren de izquierda a derecha alrededor del titular (el de abajo lo dibuja el hilo si está activo). */
+const Rieles: React.FC<{ t: number; a: number; color: string; abajo: boolean; children: React.ReactNode }> = ({ t, a, color, abajo, children }) => {
+  const k = ease.out(p(t, a, 0.6))
+  const riel = (pos: React.CSSProperties) => <i style={{ position: 'absolute', left: 0, height: 6, width: `${k * 100}%`, background: color, ...pos }} />
+  return (
+    <div style={{ position: 'relative', padding: '26px 0 22px' }}>
+      {riel({ top: 0 })}
+      {children}
+      {abajo ? riel({ bottom: 0 }) : null}
+    </div>
+  )
+}
+
 /**
  * Escena de marca a pantalla completa, con la misma gramática que los reels de la campaña:
  * kicker, titular por líneas, texto de apoyo, link que se escribe, pastilla y teléfonos que
@@ -18,7 +31,12 @@ export const Escena: React.FC<{ e: TEscena; rel: (t: number) => number }> = ({ e
   const tinta = negro ? COLOR.papel : COLOR.carbon
   const fondo = negro ? COLOR.carbon : COLOR.papel
   const entrada = e.entrada ?? 'ola'
+  const barrido = entrada === 'barrido'
   const k = ease.inOut(p(t, 0, 0.45))
+  const kb = ease.inOut(p(t, 0, 0.5))
+  // Golpes de cámara: un empujón de zoom que se asienta (al entrar con corte/barrido y en los beats de `golpes`).
+  const golpes = [...(e.golpes ?? []).map(rel), ...(entrada === 'corte' || barrido ? [0] : [])]
+  const empujon = golpes.reduce((s, h) => (t >= h ? s + 0.045 * (1 - ease.out(p(t, h, 0.35))) : s), 0)
   const mover = entrada === 'ola' ? `translateY(${lerp(100, 0, k)}%)` : entrada === 'lado' ? `translateX(${lerp(-100, 0, k)}%)` : 'none'
   const base = entrada === 'corte' ? 0.05 : 0.3
   const estilo = { ...TIPO[e.estilo ?? 'mega'], ...(e.tamano ? { fontSize: e.tamano } : {}) }
@@ -30,18 +48,24 @@ export const Escena: React.FC<{ e: TEscena; rel: (t: number) => number }> = ({ e
   const escrito = e.link ? e.link.slice(0, Math.round(clamp(p(t, linkEn + 0.3, 1.0)) * e.link.length)) : ''
 
   return (
-    <AbsoluteFill style={{ transform: mover }}>
+    <AbsoluteFill style={{ transform: mover, ...(barrido ? { clipPath: `inset(0 0 ${(1 - kb) * 100}% 0)` } : {}) }}>
+      {barrido && kb < 1 ? <div style={{ position: 'absolute', left: 0, right: 0, top: `calc(${kb * 100}% - 8px)`, height: 8, background: tinta, zIndex: 9 }} /> : null}
       {entrada === 'ola' ? (
         <div style={{ position: 'absolute', left: 0, right: 0, top: -159, height: 160, background: fondo, WebkitMask: `${OLA} bottom/100% 100% no-repeat`, mask: `${OLA} bottom/100% 100% no-repeat` }} />
       ) : null}
-      <AbsoluteFill style={{ background: fondo, color: tinta, overflow: 'hidden' }}>
+      <AbsoluteFill style={{ background: fondo, color: tinta, overflow: 'hidden', transform: `scale(${1 + empujon})` }}>
         {e.kicker ? <div style={{ position: 'absolute', top: 200, left: MARGEN, ...(TIPO.kicker as React.CSSProperties), transform: aparece(base - 0.05, 20).transform, opacity: 0.6 * clamp(tw(t, base - 0.05, 0.5, 0, 1)) }}>{e.kicker}</div> : null}
         <div style={{ position: 'absolute', top: 270, left: MARGEN, right: 60 }}>
-          {e.tiempos ? (
+          {(() => {
+            const titulos = (
+            e.tiempos ? (
             e.titulo.map((l, i) => <Lineas key={i} lineas={[l]} estilo={estilo} a={Math.max(base, rel(e.tiempos![i]))} />)
           ) : (
             <Lineas lineas={e.titulo} estilo={estilo} a={base} />
-          )}
+          )
+            )
+            return e.rieles ? <Rieles t={t} a={Math.max(0, base - 0.05)} color={tinta} abajo={!e.hiloGlobal}>{titulos}</Rieles> : titulos
+          })()}
           {e.texto ? (
             <div style={{ fontFamily: TEXTO, fontSize: 44, lineHeight: 1.35, maxWidth: 860, marginTop: 44, ...aparece(e.textoEn != null ? rel(e.textoEn) : base + 0.45) }}>
               <span style={{ opacity: 0.75 }}>{e.texto}</span>
@@ -156,6 +180,34 @@ export const Escena: React.FC<{ e: TEscena; rel: (t: number) => number }> = ({ e
             })}
           </div>
         ) : null}
+        {e.barras
+          ? (() => {
+              const b = e.barras
+              const max = b.max ?? Math.max(...b.filas.map((f) => f.valor))
+              return (
+                <div style={{ position: 'absolute', left: MARGEN, right: MARGEN, top: b.y ?? 820 }}>
+                  {b.filas.map((f, i) => {
+                    const a = f.en != null ? Math.max(base, rel(f.en)) : base + 0.35 + i * 0.35
+                    const k = ease.out(p(t, a, 0.9))
+                    return (
+                      <div key={i} style={{ marginBottom: 44, opacity: clamp(tw(t, a - 0.1, 0.3, 0, 1)) }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                          <span style={{ ...(TIPO.kicker as React.CSSProperties), fontSize: 44, opacity: 1 }}>{f.etiqueta}</span>
+                          <b style={{ fontFamily: LETRA, fontWeight: 800, fontSize: 84, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                            {Math.round(f.valor * k)}
+                            {b.unidad ?? ''}
+                          </b>
+                        </div>
+                        <div style={{ height: 26, marginTop: 10, background: negro ? 'rgba(255,255,255,0.18)' : 'rgba(15,15,14,0.12)' }}>
+                          <div style={{ height: '100%', width: `${(f.valor / max) * k * 100}%`, background: 'currentColor' }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()
+          : null}
         {e.contador
           ? (() => {
               const c = e.contador

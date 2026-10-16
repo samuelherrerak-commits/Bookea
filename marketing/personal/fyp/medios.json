@@ -20,5 +20,83 @@
   "https://res.cloudinary.com/drxnl87n/image/upload/v1792103415/carrusel-17-05.jpg",
   "https://res.cloudinary.com/drxnl87n/image/upload/v1792103416/carrusel-17-06.jpg",
   "https://res.cloudinary.com/drxnl87n/image/upload/v1792103416/carrusel-17-07.jpg"
- ]
+ ],
+ "CARRUSEL-18": [
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168650/carrusel-18-01.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168651/carrusel-18-02.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168651/carrusel-18-03.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168652/carrusel-18-04.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168653/carrusel-18-05.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168653/carrusel-18-06.jpg"
+ ],
+ "CARRUSEL-19": [
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168654/carrusel-19-01.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168654/carrusel-19-02.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168655/carrusel-19-03.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168656/carrusel-19-04.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168656/carrusel-19-05.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168657/carrusel-19-06.jpg"
+ ],
+ "CARRUSEL-20": [
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168658/carrusel-20-01.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168658/carrusel-20-02.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168659/carrusel-20-03.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168659/carrusel-20-04.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168660/carrusel-20-05.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168661/carrusel-20-06.jpg"
+ ],
+ "CARRUSEL-21": [
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168661/carrusel-21-01.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168662/carrusel-21-02.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168662/carrusel-21-03.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168663/carrusel-21-04.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168664/carrusel-21-05.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168664/carrusel-21-06.jpg"
+ ],
+ "CARRUSEL-22": [
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168665/carrusel-22-01.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168665/carrusel-22-02.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168666/carrusel-22-03.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168667/carrusel-22-04.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168667/carrusel-22-05.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168668/carrusel-22-06.jpg"
+ ],
+ "CARRUSEL-23": [
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168668/carrusel-23-01.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168669/carrusel-23-02.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168669/carrusel-23-03.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168670/carrusel-23-04.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168671/carrusel-23-05.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168671/carrusel-23-06.jpg"
+ ],
+ "CARRUSEL-24": [
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168672/carrusel-24-01.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168672/carrusel-24-02.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168673/carrusel-24-03.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168673/carrusel-24-04.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168674/carrusel-24-05.jpg",
+  "https://res.cloudinary.com/drxnl87n/image/upload/v1792168674/carrusel-24-06.jpg"
+ ],
+ "FYP-S01-SAB-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183255/FYP-S01-SAB-MG-v2.mp4",
+ "FYP-S01-DOM-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183256/FYP-S01-DOM-MG-v2.mp4",
+ "FYP-S02-LUN-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183257/FYP-S02-LUN-MG-v2.mp4",
+ "FYP-S02-MAR-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183258/FYP-S02-MAR-MG-v2.mp4",
+ "FYP-S02-MIE-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183259/FYP-S02-MIE-MG-v2.mp4",
+ "FYP-S02-JUE-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183260/FYP-S02-JUE-MG-v2.mp4",
+ "FYP-S02-VIE-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183261/FYP-S02-VIE-MG-v2.mp4",
+ "FYP-S03-LUN-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183263/FYP-S03-LUN-MG-v2.mp4",
+ "FYP-S03-MAR-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183264/FYP-S03-MAR-MG-v2.mp4",
+ "FYP-S03-MIE-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183265/FYP-S03-MIE-MG-v2.mp4",
+ "FYP-S03-JUE-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183266/FYP-S03-JUE-MG-v2.mp4",
+ "FYP-S03-VIE-MG": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183267/FYP-S03-VIE-MG-v2.mp4",
+ "FYP-S02-LUN-VOZ": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183268/FYP-S02-LUN-VOZ-v2.mp4",
+ "FYP-S02-MAR-VOZ": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183270/FYP-S02-MAR-VOZ-v2.mp4",
+ "FYP-S02-MIE-VOZ": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183272/FYP-S02-MIE-VOZ-v2.mp4",
+ "FYP-S02-JUE-VOZ": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183273/FYP-S02-JUE-VOZ-v2.mp4",
+ "FYP-S02-VIE-VOZ": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183274/FYP-S02-VIE-VOZ-v2.mp4",
+ "FYP-S03-LUN-VOZ": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183275/FYP-S03-LUN-VOZ-v2.mp4",
+ "FYP-S03-MAR-VOZ": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183276/FYP-S03-MAR-VOZ-v2.mp4",
+ "FYP-S03-MIE-VOZ": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183277/FYP-S03-MIE-VOZ-v2.mp4",
+ "FYP-S03-JUE-VOZ": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183279/FYP-S03-JUE-VOZ-v2.mp4",
+ "FYP-S03-VIE-VOZ": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183280/FYP-S03-VIE-VOZ-v2.mp4"
 }

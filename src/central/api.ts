@@ -343,6 +343,9 @@ export interface EstadoTikTok {
   usuario: string
   /** Redirect URI que debe estar registrada en la app de TikTok. */
   redirect: string
+  /** Pista de la Client key en uso (primeras y últimas 4 letras) y si parece de sandbox (empieza con "sb"). */
+  pista?: string
+  sandbox?: boolean
 }
 
 export const tiktokEstado = (sesion: string) =>
