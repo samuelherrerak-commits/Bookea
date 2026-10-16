@@ -4,14 +4,18 @@
 //   node marketing/scripts/render-carruseles.mjs 2 5    → solo el 2 y el 5
 //
 // Deja marketing/salida/carruseles/carrusel-N/NN.jpg, listos para subir en orden.
+// Con --tiktok (solo de los carruseles 16 en adelante) copia además cada lámina a public/fotos-tiktok/carrusel-N-NN.jpg:
+// TikTok solo baja fotos de un dominio verificado (bookeaa.com), y Central las pide de ahí con el mismo nombre que en Cloudinary.
 
-import { mkdir } from 'node:fs/promises'
+import { copyFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from 'playwright-core'
 import { RAIZ, servir } from './servidor.mjs'
 
 const CHROMIUM = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium'
-const pedidos = process.argv.slice(2).map(Number)
+const args = process.argv.slice(2)
+const paraTikTok = args.includes('--tiktok')
+const pedidos = args.filter((a) => !a.startsWith('--')).map(Number)
 
 const { url, cerrar } = await servir()
 const browser = await chromium.launch({ executablePath: CHROMIUM })
@@ -27,7 +31,12 @@ try {
     for (let s = 1; s <= n; s++) {
       await page.goto(`${url}/marketing/carruseles/index.html?c=${id}&s=${s}`, { waitUntil: 'networkidle' })
       await page.evaluate(() => window.listo)
-      await page.locator('.lamina').screenshot({ path: join(dir, `${String(s).padStart(2, '0')}.jpg`), type: 'jpeg', quality: 92 })
+      const archivo = join(dir, `${String(s).padStart(2, '0')}.jpg`)
+      await page.locator('.lamina').screenshot({ path: archivo, type: 'jpeg', quality: 92 })
+      if (paraTikTok) {
+        await mkdir(join(RAIZ, 'public/fotos-tiktok'), { recursive: true })
+        await copyFile(archivo, join(RAIZ, 'public/fotos-tiktok', `carrusel-${id}-${String(s).padStart(2, '0')}.jpg`))
+      }
     }
     console.log(`  ✓ carrusel ${id}: ${n} láminas`)
   }

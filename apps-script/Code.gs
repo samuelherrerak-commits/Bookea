@@ -3710,6 +3710,15 @@ function atenderMake_(data, ahoraMs) {
       lock.releaseLock();
     }
   }
+  if (op === 'tiktok') {
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(30000)) return { ok: true, enviadas: [], errores: {}, motivo: 'ocupado' };
+    try {
+      return tiktokAutomatico_(ahoraMs);
+    } finally {
+      lock.releaseLock();
+    }
+  }
   return { error: 'op_desconocida' };
 }
 
@@ -3825,15 +3834,55 @@ function tiktokToken_(ahoraMs) {
   return String(r.cuerpo.access_token);
 }
 
-/** Manda un video de la cola a los borradores de TikTok (subida en un solo bloque). */
+const TIKTOK_FOTOS_BASE = 'https://bookeaa.com/fotos-tiktok/';
+const TIKTOK_NOTA = 'En borradores de TikTok';
+
+/**
+ * TikTok solo baja fotos de un dominio que tú verificaste en su portal (url_ownership_unverified si no),
+ * así que las láminas del carrusel se leen de bookeaa.com/fotos-tiktok/ con el mismo nombre de archivo que en Cloudinary.
+ * Se puede cambiar con la propiedad tiktok_fotos_base.
+ */
+function fotosTikTok_(enlaces) {
+  const base = (tiktokProp_('tiktok_fotos_base') || TIKTOK_FOTOS_BASE).replace(/\/?$/, '/');
+  return enlaces.slice(0, 35).map(function (u) { return base + String(u).split('?')[0].split('/').pop(); });
+}
+
+/** Deja la marca del envío al principio de las notas (así sobrevive al recorte de 300 caracteres). */
+function tiktokNota_(pub, texto, ahoraMs) {
+  const previa = String(pub.notas || '').replace(/^(En borradores de TikTok|Error TikTok)[^·]*(·\s*)?/, '');
+  marketingGuardar_({ id: pub.id, notas: texto + ' (' + Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd HH:mm') + ')' + (previa ? ' · ' + previa : '') }, 'TikTok', ahoraMs);
+}
+
+/** Manda un video (subida en un solo bloque) o un carrusel (como fotos) de la cola a los borradores de TikTok. */
 function tiktokEnviar_(data, ahoraMs) {
   const pub = marketingCentral_().publicaciones.filter(function (p) { return p.id === String(data.id || ''); })[0];
   if (!pub) return { error: 'no_existe', mensaje: 'Esa publicación ya no está en la cola.' };
-  if (String(pub.tipo).indexOf('video') !== 0) return { error: 'datos_invalidos', mensaje: 'Solo se envían videos a TikTok (los carruseles no).' };
+  const esCarrusel = pub.tipo === 'carrusel';
+  if (!esCarrusel && String(pub.tipo).indexOf('video') !== 0) return { error: 'datos_invalidos', mensaje: 'Solo se envían videos y carruseles a TikTok.' };
   const enlaces = enlacesMedia_(pub.media);
-  if (!enlaces.length) return { error: 'datos_invalidos', mensaje: 'Esta publicación no tiene link de video.' };
+  if (!enlaces.length) return { error: 'datos_invalidos', mensaje: 'Esta publicación no tiene link de ' + (esCarrusel ? 'imágenes.' : 'video.') };
   const token = tiktokToken_(ahoraMs);
   if (!token) return { error: 'sin_conexion', mensaje: 'TikTok no está conectado (o la conexión venció). Pulsa "Conectar TikTok".' };
+  const cabecera = { Authorization: 'Bearer ' + token };
+
+  if (esCarrusel) {
+    const ini = tiktokPost_(TIKTOK_API + 'post/publish/content/init/', {
+      method: 'post', contentType: 'application/json; charset=UTF-8', headers: cabecera,
+      payload: JSON.stringify({
+        post_info: { title: limpiarTexto_(pub.titulo, 90), description: [pub.caption, pub.hashtags].filter(Boolean).join('\n\n').slice(0, 4000) },
+        source_info: { source: 'PULL_FROM_URL', photo_cover_index: 0, photo_images: fotosTikTok_(enlaces) },
+        post_mode: 'MEDIA_UPLOAD', media_type: 'PHOTO',
+      }),
+    });
+    const e = ini.cuerpo && ini.cuerpo.error || {};
+    const d = ini.cuerpo && ini.cuerpo.data;
+    if (!d || !d.publish_id || (e.code && e.code !== 'ok')) {
+      const sinVerificar = e.code === 'url_ownership_unverified';
+      return { error: 'tiktok', codigo: String(e.code || ''), mensaje: 'TikTok no aceptó las fotos: ' + (sinVerificar ? 'falta verificar bookeaa.com como propiedad de URL en el portal de TikTok.' : limpiarTexto_(e.message || e.code || ('HTTP ' + ini.codigo), 200)) };
+    }
+    tiktokNota_(pub, TIKTOK_NOTA, ahoraMs);
+    return { ok: true, publishId: String(d.publish_id), usuario: tiktokProp_('tiktok_usuario') };
+  }
 
   const archivo = UrlFetchApp.fetch(enlaces[0], { muteHttpExceptions: true });
   if (archivo.getResponseCode() !== 200) return { error: 'media', mensaje: 'No pude descargar el video (HTTP ' + archivo.getResponseCode() + ').' };
@@ -3841,13 +3890,13 @@ function tiktokEnviar_(data, ahoraMs) {
   if (!bytes.length || bytes.length > TIKTOK_MAX_BYTES) return { error: 'media', mensaje: 'El video debe pesar menos de 64 MB.' };
 
   const ini = tiktokPost_(TIKTOK_API + 'post/publish/inbox/video/init/', {
-    method: 'post', contentType: 'application/json; charset=UTF-8', headers: { Authorization: 'Bearer ' + token },
+    method: 'post', contentType: 'application/json; charset=UTF-8', headers: cabecera,
     payload: JSON.stringify({ source_info: { source: 'FILE_UPLOAD', video_size: bytes.length, chunk_size: bytes.length, total_chunk_count: 1 } }),
   });
   const d = ini.cuerpo && ini.cuerpo.data;
   if (!d || !d.upload_url || (ini.cuerpo.error && ini.cuerpo.error.code && ini.cuerpo.error.code !== 'ok')) {
     const e = ini.cuerpo && ini.cuerpo.error || {};
-    return { error: 'tiktok', mensaje: 'TikTok no aceptó el envío: ' + limpiarTexto_(e.message || e.code || ('HTTP ' + ini.codigo), 200) };
+    return { error: 'tiktok', codigo: String(e.code || ''), mensaje: 'TikTok no aceptó el envío: ' + limpiarTexto_(e.message || e.code || ('HTTP ' + ini.codigo), 200) };
   }
   const sube = UrlFetchApp.fetch(d.upload_url, {
     method: 'put', contentType: 'video/mp4', payload: bytes, muteHttpExceptions: true,
@@ -3855,8 +3904,38 @@ function tiktokEnviar_(data, ahoraMs) {
   });
   if (sube.getResponseCode() >= 300) return { error: 'tiktok', mensaje: 'TikTok no recibió el archivo (HTTP ' + sube.getResponseCode() + ').' };
 
-  marketingGuardar_({ id: pub.id, notas: 'En borradores de TikTok (' + Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd HH:mm') + ')' }, 'TikTok', ahoraMs);
+  tiktokNota_(pub, TIKTOK_NOTA, ahoraMs);
   return { ok: true, publishId: String(d.publish_id || ''), usuario: tiktokProp_('tiktok_usuario') };
+}
+
+/**
+ * Envío automático a los borradores de TikTok (lo llama Make en cada ronda, con op "tiktok").
+ * Toma videos y carruseles con link que ya tocan: aprobados (de ayer o antes de hoy) o de hoy (aprobados o ya publicados
+ * en Instagram), y que aún no tengan la marca de TikTok en las notas. Máximo 2 por llamada.
+ * Si TikTok falla se anota "Error TikTok" y no se reintenta solo (queda el botón manual de Central); con el tope de
+ * 5 borradores pendientes por día se corta y se reintenta en la siguiente ronda.
+ */
+function tiktokAutomatico_(ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const ayer = Utilities.formatDate(new Date(ahoraMs - 86400000), ZONA, 'yyyy-MM-dd');
+  const hora = Utilities.formatDate(new Date(ahoraMs), ZONA, 'HH:mm');
+  if (!tiktokToken_(ahoraMs)) return { ok: true, enviadas: [], errores: {}, motivo: 'sin_conexion' };
+  const lista = marketingCentral_().publicaciones.filter(function (p) {
+    const tipoOk = p.tipo === 'carrusel' || String(p.tipo).indexOf('video') === 0;
+    const toca = p.fecha === hoy ? p.hora <= hora : p.fecha >= ayer && p.fecha < hoy;
+    const estadoOk = p.fecha === hoy ? (p.estado === 'aprobado' || p.estado === 'publicado') : p.estado === 'aprobado';
+    return tipoOk && toca && estadoOk && enlacesMedia_(p.media).length && !/borradores de TikTok|Error TikTok/.test(p.notas);
+  }).sort(function (a, b) { return (a.fecha + a.hora).localeCompare(b.fecha + b.hora); }).slice(0, 2);
+  const enviadas = [];
+  const errores = {};
+  for (let k = 0; k < lista.length; k++) {
+    const r = tiktokEnviar_({ id: lista[k].id }, ahoraMs);
+    if (r.ok) { enviadas.push(lista[k].id); continue; }
+    if (r.error === 'sin_conexion' || r.codigo === 'spam_risk_too_many_pending_share') break; // el tope de borradores pendientes se libera solo: se reintenta en la siguiente ronda
+    errores[lista[k].id] = r.mensaje || r.error;
+    tiktokNota_(lista[k], 'Error TikTok: ' + limpiarTexto_(r.mensaje || r.error, 120), ahoraMs);
+  }
+  return { ok: true, enviadas: enviadas, errores: errores };
 }
 
 // ============================================================================
