@@ -38,6 +38,25 @@ def medios():
     return json.load(open(ruta, encoding="utf-8")) if os.path.exists(ruta) else {}
 
 
+# Segunda voz del día (guiones/GUION-VOZ-LARGO-2.txt): programada a las 18:00; entra con su audio cuando llegue.
+VOZ2 = [
+    ("2026-10-19", "LUN", "Reservas mientras duermes", "¿Cuántas citas se pierden mientras duermes?", "link"),
+    ("2026-10-20", "MAR", "Nunca más una cita olvidada", "Anotar una cita en una libreta es pedirle a tu memoria que no falle.", "link"),
+    ("2026-10-21", "MIE", "Tu link en la bio", "¿Tu bio dice \"escríbeme al privado\"?", "comenta"),
+    ("2026-10-22", "JUE", "Empieza en minutos", "Dices que no tienes tiempo para organizarte. Justo por eso necesitas organizarte.", "link"),
+    ("2026-10-23", "VIE", "El primer mes es gratis", "¿Cuál es el riesgo de probar? Ninguno.", "comenta"),
+    ("2026-10-26", "LUN", "Clientes que sí llegan", "Un cliente que elige su propia hora es un cliente que llega.", "link"),
+    ("2026-10-27", "MAR", "Tus servicios, tus reglas", "Tu negocio, tus reglas.", "link"),
+    ("2026-10-28", "MIE", "Cuánto vale tu tiempo", "¿Cuánto vale una hora de tu trabajo?", "link"),
+    ("2026-10-29", "JUE", "Para todo negocio con citas", "Barbería, uñas, spa, consultorio, estética.", "link"),
+    ("2026-10-30", "VIE", "Cierre de mes", "Se acaba el mes. Mira tu agenda: ¿cuántas horas libres se quedaron vacías?", "comenta"),
+]
+CIERRE_VOZ2 = {
+    "link": "Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
+    "comenta": "Comenta AGENDA 👇 y te mando el link para probar bookeaa gratis.",
+}
+
+
 def tipo(archivo):
     return {"MG": "video-mg", "VOZ": "video-voz", "CAM": "video-cam"}.get(archivo.rsplit("-", 1)[-1], "campana")
 
@@ -57,6 +76,18 @@ def main():
                 "caption": r["caption"] if t != "campana" else "", "hashtags": r["hashtags"] if t != "campana" else "",
                 "media": " ".join(l if isinstance(l, str) else " ".join(l) for l in [links.get(ident, "")]), "estado": "borrador",
                 "notas": "Texto y piezas en bookeaa.com/campana" if t == "campana" else "",
+            })
+    # Tu video personal (CAM) pasa a ser el 4.º del día, opcional.
+    for f in filas:
+        if f["tipo"] == "video-cam":
+            f["hora"], f["notas"] = "21:30", "Opcional: tu video personal (4.º del día)"
+    for fecha, dia, titulo, gancho, cta in VOZ2:
+        if fecha >= DESDE:
+            n = [i + 1 for i, v in enumerate(VOZ2) if v[0] == fecha][0]
+            filas.append({
+                "id": f"FYP-{'S02' if fecha < '2026-10-26' else 'S03'}-{dia}-VOZ2", "fecha": fecha, "hora": "18:00", "tipo": "video-voz",
+                "titulo": titulo + " (2.ª voz)", "plataforma": "TikTok + Reels", "caption": f"{gancho} {CIERRE_VOZ2[cta]}", "hashtags": HASHTAGS,
+                "media": "", "estado": "borrador", "notas": f"Falta el audio: bloque {n} de guiones/GUION-VOZ-LARGO-2.txt",
             })
     for c in CARRUSELES:
         if c["fecha"] >= DESDE:

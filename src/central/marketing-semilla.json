@@ -41,7 +41,7 @@
  {
   "id": "FYP-S01-JUE-CAM",
   "fecha": "2026-10-15",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "Lo que le diría a quien empieza",
   "plataforma": "TikTok + Reels",
@@ -49,7 +49,7 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  },
  {
   "id": "FYP-S01-VIE-MG",
@@ -106,7 +106,7 @@
  {
   "id": "FYP-S01-VIE-CAM",
   "fecha": "2026-10-16",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "Pruébalo gratis",
   "plataforma": "TikTok + Reels",
@@ -114,7 +114,7 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  },
  {
   "id": "FYP-S01-SAB-MG",
@@ -125,7 +125,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "Tu fin de semana no es para responder mensajes. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792169349/FYP-S01-SAB-MG.mp4",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183255/FYP-S01-SAB-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -151,7 +151,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "El lunes empieza hoy. ¿Tu agenda ya está lista? Comenta AGENDA 👇 y te mando el link para probar bookeaa gratis.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792169350/FYP-S01-DOM-MG.mp4",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183256/FYP-S01-DOM-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -177,7 +177,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "¿Te ha pasado que llegan dos clientes a la misma hora? Mándaselo a alguien que todavía agenda por WhatsApp 📲 · bookeaa, link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792169351/FYP-S02-LUN-MG.mp4",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183257/FYP-S02-LUN-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -190,7 +190,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "WhatsApp + Instagram + tu cabeza = caos. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183268/FYP-S02-LUN-VOZ-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -208,6 +208,19 @@
   "notas": "7 láminas · marketing/salida/carruseles/carrusel-20"
  },
  {
+  "id": "FYP-S02-LUN-VOZ2",
+  "fecha": "2026-10-19",
+  "hora": "18:00",
+  "tipo": "video-voz",
+  "titulo": "Reservas mientras duermes (2.ª voz)",
+  "plataforma": "TikTok + Reels",
+  "caption": "¿Cuántas citas se pierden mientras duermes? Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
+  "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
+  "media": "",
+  "estado": "borrador",
+  "notas": "Falta el audio: bloque 1 de guiones/GUION-VOZ-LARGO-2.txt"
+ },
+ {
   "id": "CAMPANA-20261019",
   "fecha": "2026-10-19",
   "hora": "19:00",
@@ -223,7 +236,7 @@
  {
   "id": "FYP-S02-LUN-CAM",
   "fecha": "2026-10-19",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "Me pasó como cliente",
   "plataforma": "TikTok + Reels",
@@ -231,7 +244,7 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  },
  {
   "id": "FYP-S02-MAR-MG",
@@ -242,7 +255,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "¿Sabías que estás perdiendo plata por no mostrar tus precios? Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792169352/FYP-S02-MAR-MG.mp4",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183258/FYP-S02-MAR-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -255,7 +268,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "El cliente que no pregunta, se va. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183270/FYP-S02-MAR-VOZ-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -273,9 +286,22 @@
   "notas": "7 láminas · marketing/salida/carruseles/carrusel-21"
  },
  {
+  "id": "FYP-S02-MAR-VOZ2",
+  "fecha": "2026-10-20",
+  "hora": "18:00",
+  "tipo": "video-voz",
+  "titulo": "Nunca más una cita olvidada (2.ª voz)",
+  "plataforma": "TikTok + Reels",
+  "caption": "Anotar una cita en una libreta es pedirle a tu memoria que no falle. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
+  "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
+  "media": "",
+  "estado": "borrador",
+  "notas": "Falta el audio: bloque 2 de guiones/GUION-VOZ-LARGO-2.txt"
+ },
+ {
   "id": "FYP-S02-MAR-CAM",
   "fecha": "2026-10-20",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "Muestra tus precios",
   "plataforma": "TikTok + Reels",
@@ -283,7 +309,7 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  },
  {
   "id": "FYP-S02-MIE-MG",
@@ -294,7 +320,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "3 cosas que tienes que saber si eres barbero ✂️. Mándaselo a alguien que todavía agenda por WhatsApp 📲 · bookeaa, link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios #barberia #barberos #barbershop",
-  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792169353/FYP-S02-MIE-MG.mp4",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183259/FYP-S02-MIE-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -307,7 +333,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "Barbero: el cliente de las 9 p. M. No te va a esperar. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios #barberia #barberos #barbershop",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183272/FYP-S02-MIE-VOZ-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -325,6 +351,19 @@
   "notas": "7 láminas · marketing/salida/carruseles/carrusel-22"
  },
  {
+  "id": "FYP-S02-MIE-VOZ2",
+  "fecha": "2026-10-21",
+  "hora": "18:00",
+  "tipo": "video-voz",
+  "titulo": "Tu link en la bio (2.ª voz)",
+  "plataforma": "TikTok + Reels",
+  "caption": "¿Tu bio dice \"escríbeme al privado\"? Comenta AGENDA 👇 y te mando el link para probar bookeaa gratis.",
+  "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
+  "media": "",
+  "estado": "borrador",
+  "notas": "Falta el audio: bloque 3 de guiones/GUION-VOZ-LARGO-2.txt"
+ },
+ {
   "id": "CAMPANA-20261021",
   "fecha": "2026-10-21",
   "hora": "19:00",
@@ -340,7 +379,7 @@
  {
   "id": "FYP-S02-MIE-CAM",
   "fecha": "2026-10-21",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "Dónde poner tu link",
   "plataforma": "TikTok + Reels",
@@ -348,7 +387,7 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios #barberia #barberos #barbershop",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  },
  {
   "id": "FYP-S02-JUE-MG",
@@ -359,7 +398,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "Si hubiera sabido esto antes… habría dejado de contestar \"tengo hora a las 4\". Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792169354/FYP-S02-JUE-MG.mp4",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183260/FYP-S02-JUE-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -372,7 +411,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "¿Cuántas veces al día escribes \"tengo hora a las 4\"? Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183273/FYP-S02-JUE-VOZ-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -390,9 +429,22 @@
   "notas": "7 láminas · marketing/salida/carruseles/carrusel-23"
  },
  {
+  "id": "FYP-S02-JUE-VOZ2",
+  "fecha": "2026-10-22",
+  "hora": "18:00",
+  "tipo": "video-voz",
+  "titulo": "Empieza en minutos (2.ª voz)",
+  "plataforma": "TikTok + Reels",
+  "caption": "Dices que no tienes tiempo para organizarte. Justo por eso necesitas organizarte. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
+  "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
+  "media": "",
+  "estado": "borrador",
+  "notas": "Falta el audio: bloque 4 de guiones/GUION-VOZ-LARGO-2.txt"
+ },
+ {
   "id": "FYP-S02-JUE-CAM",
   "fecha": "2026-10-22",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "Lo primero que haría",
   "plataforma": "TikTok + Reels",
@@ -400,7 +452,7 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  },
  {
   "id": "FYP-S02-VIE-MG",
@@ -411,7 +463,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "¿Cuál va con tu negocio? 1 al 8. Comenta AGENDA 👇 y te mando el link para probar bookeaa gratis.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792169356/FYP-S02-VIE-MG.mp4",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183261/FYP-S02-VIE-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -424,7 +476,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "Tu agenda no tiene que verse como la de todos. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183274/FYP-S02-VIE-VOZ-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -442,6 +494,19 @@
   "notas": "7 láminas · marketing/salida/carruseles/carrusel-24"
  },
  {
+  "id": "FYP-S02-VIE-VOZ2",
+  "fecha": "2026-10-23",
+  "hora": "18:00",
+  "tipo": "video-voz",
+  "titulo": "El primer mes es gratis (2.ª voz)",
+  "plataforma": "TikTok + Reels",
+  "caption": "¿Cuál es el riesgo de probar? Ninguno. Comenta AGENDA 👇 y te mando el link para probar bookeaa gratis.",
+  "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
+  "media": "",
+  "estado": "borrador",
+  "notas": "Falta el audio: bloque 5 de guiones/GUION-VOZ-LARGO-2.txt"
+ },
+ {
   "id": "CAMPANA-20261023",
   "fecha": "2026-10-23",
   "hora": "19:00",
@@ -457,7 +522,7 @@
  {
   "id": "FYP-S02-VIE-CAM",
   "fecha": "2026-10-23",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "Elige tu estilo",
   "plataforma": "TikTok + Reels",
@@ -465,7 +530,7 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  },
  {
   "id": "FYP-S03-LUN-MG",
@@ -476,7 +541,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "¿Te ha pasado que te cancelan una hora antes? Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183263/FYP-S03-LUN-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -489,14 +554,27 @@
   "plataforma": "TikTok + Reels",
   "caption": "Una cancelación no tiene que ser una hora perdida. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183275/FYP-S03-LUN-VOZ-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
  {
+  "id": "FYP-S03-LUN-VOZ2",
+  "fecha": "2026-10-26",
+  "hora": "18:00",
+  "tipo": "video-voz",
+  "titulo": "Clientes que sí llegan (2.ª voz)",
+  "plataforma": "TikTok + Reels",
+  "caption": "Un cliente que elige su propia hora es un cliente que llega. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
+  "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
+  "media": "",
+  "estado": "borrador",
+  "notas": "Falta el audio: bloque 6 de guiones/GUION-VOZ-LARGO-2.txt"
+ },
+ {
   "id": "FYP-S03-LUN-CAM",
   "fecha": "2026-10-26",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "La hora que se llena sola",
   "plataforma": "TikTok + Reels",
@@ -504,7 +582,7 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  },
  {
   "id": "FYP-S03-MAR-MG",
@@ -515,7 +593,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "¿Sabías que estás perdiendo plata por tus horas muertas? Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183264/FYP-S03-MAR-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -528,9 +606,22 @@
   "plataforma": "TikTok + Reels",
   "caption": "Los huecos en tu agenda tienen una razón. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183276/FYP-S03-MAR-VOZ-v2.mp4",
   "estado": "borrador",
   "notas": ""
+ },
+ {
+  "id": "FYP-S03-MAR-VOZ2",
+  "fecha": "2026-10-27",
+  "hora": "18:00",
+  "tipo": "video-voz",
+  "titulo": "Tus servicios, tus reglas (2.ª voz)",
+  "plataforma": "TikTok + Reels",
+  "caption": "Tu negocio, tus reglas. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
+  "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
+  "media": "",
+  "estado": "borrador",
+  "notas": "Falta el audio: bloque 7 de guiones/GUION-VOZ-LARGO-2.txt"
  },
  {
   "id": "CAMPANA-20261027",
@@ -548,7 +639,7 @@
  {
   "id": "FYP-S03-MAR-CAM",
   "fecha": "2026-10-27",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "Muestra tus horas",
   "plataforma": "TikTok + Reels",
@@ -556,7 +647,7 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  },
  {
   "id": "FYP-S03-MIE-MG",
@@ -567,7 +658,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "3 cosas que tienes que saber si tienes un spa 🧖‍♀️. Mándaselo a alguien que todavía agenda por WhatsApp 📲 · bookeaa, link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios #spa #estetica #bienestar",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183265/FYP-S03-MIE-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -580,14 +671,27 @@
   "plataforma": "TikTok + Reels",
   "caption": "Si tienes un spa, tu experiencia empieza antes de lo que crees. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios #spa #estetica #bienestar",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183277/FYP-S03-MIE-VOZ-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
  {
+  "id": "FYP-S03-MIE-VOZ2",
+  "fecha": "2026-10-28",
+  "hora": "18:00",
+  "tipo": "video-voz",
+  "titulo": "Cuánto vale tu tiempo (2.ª voz)",
+  "plataforma": "TikTok + Reels",
+  "caption": "¿Cuánto vale una hora de tu trabajo? Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
+  "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
+  "media": "",
+  "estado": "borrador",
+  "notas": "Falta el audio: bloque 8 de guiones/GUION-VOZ-LARGO-2.txt"
+ },
+ {
   "id": "FYP-S03-MIE-CAM",
   "fecha": "2026-10-28",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "Cada servicio, su tiempo",
   "plataforma": "TikTok + Reels",
@@ -595,7 +699,7 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios #spa #estetica #bienestar",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  },
  {
   "id": "FYP-S03-JUE-MG",
@@ -606,7 +710,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "Si hubiera sabido esto antes… no habría dado mi número personal para agendar. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183266/FYP-S03-JUE-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -619,9 +723,22 @@
   "plataforma": "TikTok + Reels",
   "caption": "¿Te escriben para agendar hasta en vacaciones? Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183279/FYP-S03-JUE-VOZ-v2.mp4",
   "estado": "borrador",
   "notas": ""
+ },
+ {
+  "id": "FYP-S03-JUE-VOZ2",
+  "fecha": "2026-10-29",
+  "hora": "18:00",
+  "tipo": "video-voz",
+  "titulo": "Para todo negocio con citas (2.ª voz)",
+  "plataforma": "TikTok + Reels",
+  "caption": "Barbería, uñas, spa, consultorio, estética. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
+  "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
+  "media": "",
+  "estado": "borrador",
+  "notas": "Falta el audio: bloque 9 de guiones/GUION-VOZ-LARGO-2.txt"
  },
  {
   "id": "CAMPANA-20261029",
@@ -639,7 +756,7 @@
  {
   "id": "FYP-S03-JUE-CAM",
   "fecha": "2026-10-29",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "Mi regla",
   "plataforma": "TikTok + Reels",
@@ -647,7 +764,7 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  },
  {
   "id": "FYP-S03-VIE-MG",
@@ -658,7 +775,7 @@
   "plataforma": "TikTok + Reels",
   "caption": "¿Atiendes en 2 locales o a domicilio? También. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183267/FYP-S03-VIE-MG-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
@@ -671,14 +788,27 @@
   "plataforma": "TikTok + Reels",
   "caption": "Un solo link. Todas tus sedes. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.",
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
-  "media": "",
+  "media": "https://res.cloudinary.com/drxnl87n/video/upload/v1792183280/FYP-S03-VIE-VOZ-v2.mp4",
   "estado": "borrador",
   "notas": ""
  },
  {
+  "id": "FYP-S03-VIE-VOZ2",
+  "fecha": "2026-10-30",
+  "hora": "18:00",
+  "tipo": "video-voz",
+  "titulo": "Cierre de mes (2.ª voz)",
+  "plataforma": "TikTok + Reels",
+  "caption": "Se acaba el mes. Mira tu agenda: ¿cuántas horas libres se quedaron vacías? Comenta AGENDA 👇 y te mando el link para probar bookeaa gratis.",
+  "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
+  "media": "",
+  "estado": "borrador",
+  "notas": "Falta el audio: bloque 10 de guiones/GUION-VOZ-LARGO-2.txt"
+ },
+ {
   "id": "FYP-S03-VIE-CAM",
   "fecha": "2026-10-30",
-  "hora": "20:30",
+  "hora": "21:30",
   "tipo": "video-cam",
   "titulo": "Mi primer mes",
   "plataforma": "TikTok + Reels",
@@ -686,6 +816,6 @@
   "hashtags": "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios",
   "media": "",
   "estado": "borrador",
-  "notas": ""
+  "notas": "Opcional: tu video personal (4.º del día)"
  }
 ]

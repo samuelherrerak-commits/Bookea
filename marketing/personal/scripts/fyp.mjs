@@ -132,6 +132,16 @@ for (const id of ids) {
     })
   }
 
+  // Estilo v2: el hilo viaja entre escenas, los titulares llevan rieles y las transiciones se alternan
+  // (barrido → ola → lado → …). Sin etiquetas de esquina (FIG. y tiempo).
+  if (v.estilo2) {
+    const ciclo = ['barrido', 'ola', 'lado']
+    escenas.forEach((e, i) => {
+      if (i > 0) e.entrada = ciclo[(i - 1) % 3]
+      if (e.rieles == null && e.titulo.length <= 3) e.rieles = true
+    })
+    v.hilo = true
+  }
   if (v.hilo) escenas.forEach((e) => (e.hiloGlobal = true))
   const musica = `tmp/fyp/${id}-musica.wav`
   await generarAudio({ duracion: total, cues: [], destino: join(PUBLIC, musica), semilla: 11, volumenMusica: 1 })
