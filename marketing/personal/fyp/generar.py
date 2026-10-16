@@ -7,8 +7,8 @@ from octubre import V, TIPO, CTA, CTA_MG
 from escenas import ESCENAS
 
 RAIZ = os.path.dirname(AQUI)
-DIAS = {'Lun': 'lunes', 'Mar': 'martes', 'Mié': 'miércoles', 'Jue': 'jueves', 'Vie': 'viernes'}
-HORA = {'08:00': '8:00 a. m.', '13:00': '1:00 p. m.', '20:30': '8:30 p. m.'}
+DIAS = {'Lun': 'lunes', 'Mar': 'martes', 'Mié': 'miércoles', 'Jue': 'jueves', 'Vie': 'viernes', 'Sáb': 'sábado', 'Dom': 'domingo'}
+HORA = {'08:00': '8:00 a. m.', '10:00': '10:00 a. m.', '13:00': '1:00 p. m.', '20:30': '8:30 p. m.'}
 fecha = lambda x: f"{DIAS[x['dia']]} {int(x['fecha'][8:])}"
 
 MARCA = [('2026-10-09', 'Vie', 'Carrusel 2 · 5 señales de que tu agenda necesita ayuda'), ('2026-10-12', 'Lun', 'Carrusel 3 · Cómo funciona en 3 pasos'),

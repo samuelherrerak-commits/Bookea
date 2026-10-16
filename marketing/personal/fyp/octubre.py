@@ -112,6 +112,16 @@ v('2026-10-16', 'Vie', 'CAM', 'Pruébalo gratis',
   'Tú a cámara; texto "COMENTA AGENDA".',
   'Si trabajas con citas, barbería, uñas, spa o consultorio, esto es para ti. Con bookeaa tienes tu página de reservas con tu nombre y tus clientes reservan solos. El primer mes es gratis. Comenta AGENDA y te mando el link.', 'comenta')
 
+# ── FIN DE SEMANA (17 y 18 oct) ──────────────────────────
+v('2026-10-17', 'Sáb', 'MG', 'Tu descanso no es para responder',
+  'TU FIN DE SEMANA NO ES PARA RESPONDER MENSAJES.',
+  'Un chat que llega un sábado en la noche y se contesta solo con un link.',
+  ['SÁBADO · 9:42 P. M.', '¿TIENES HORA EL LUNES?', 'TU CLIENTE RESERVA SOLO.', 'TÚ DESCANSAS.'], 'link')
+v('2026-10-18', 'Dom', 'MG', 'Tu lunes ya está lleno',
+  'EL LUNES EMPIEZA HOY. ¿TU AGENDA YA ESTÁ LISTA?',
+  'Una agenda del lunes que se llena sola de citas.',
+  ['LUNES', '9:00 · 11:30 · 2:00 · 4:30', 'YA ESTÁ LLENO.', 'SIN ESCRIBIR UN MENSAJE.'], 'comenta')
+
 # ── SEMANA 2 ─────────────────────────────────────────────
 v('2026-10-19', 'Lun', 'MG', 'Dos a la misma hora',
   '¿TE HA PASADO QUE LLEGAN DOS CLIENTES A LA MISMA HORA?',
@@ -241,8 +251,8 @@ TIPO = {
     'VOZ': ('Motion graphics + tu voz en off', 'Samuel graba AUDIO', '13:00', 'm4a'),
     'CAM': ('Tú a cámara + motion graphics', 'Samuel graba VIDEO', '20:30', 'mp4'),
 }
-SEM = {'2026-10-08': 'S00', '2026-10-09': 'S00'}
-DIA = {'Lun': 'LUN', 'Mar': 'MAR', 'Mié': 'MIE', 'Jue': 'JUE', 'Vie': 'VIE'}
+SEM = {'2026-10-08': 'S00', '2026-10-09': 'S00', '2026-10-17': 'S01', '2026-10-18': 'S01'}
+DIA = {'Lun': 'LUN', 'Mar': 'MAR', 'Mié': 'MIE', 'Jue': 'JUE', 'Vie': 'VIE', 'Sáb': 'SAB', 'Dom': 'DOM'}
 def semana(f):
     d = int(f[8:])
     return SEM.get(f) or ('S01' if d <= 16 else 'S02' if d <= 23 else 'S03')
@@ -258,7 +268,7 @@ def frase(t):
     return t
 for x in V:
     x['id'] = f"FYP-{semana(x['fecha'])}-{DIA[x['dia']]}-{x['tipo']}"
-    x['hora'] = TIPO[x['tipo']][2]
+    x['hora'] = '10:00' if x['dia'] in ('Sáb', 'Dom') else TIPO[x['tipo']][2]  # fin de semana: una sola publicación por día
     x['archivo'] = f"{x['id']}.{TIPO[x['tipo']][3]}" if TIPO[x['tipo']][3] else '(lo armo yo)'
     x['cta_texto'] = CTA_MG[x['cta']] if x['tipo'] == 'MG' else CTA[x['cta']]
     x['hashtags'] = '#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #negocios' + (' ' + x['extra'] if x['extra'] else '')

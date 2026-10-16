@@ -19,6 +19,13 @@ HASHTAGS = "#bookeaa #emprendimiento #agendaonline #emprendedoresvenezolanos #ne
 CARRUSELES = [
     {"n": 16, "fecha": "2026-10-15", "titulo": "La libreta", "caption": "¿Tu agenda está en un papel? Tu cliente no la puede ver, y por eso te escribe. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil."},
     {"n": 17, "fecha": "2026-10-16", "titulo": "Cero mensajes", "caption": "¿Cuántos mensajes escribes para agendar una cita? Con bookeaa son cero. Comenta AGENDA 👇 y te mando el link para probar gratis."},
+    {"n": 18, "fecha": "2026-10-17", "titulo": "Tu descanso no es para responder", "caption": "Tu fin de semana no es para contestar mensajes. Los negocios que saben organizar su tiempo dejan que su link responda por ellos 📅 Pruébalo gratis: link en el perfil."},
+    {"n": 19, "fecha": "2026-10-18", "titulo": "Tu lunes ya está lleno", "caption": "El lunes empieza hoy. ¿Tu agenda ya está lista? Comenta AGENDA 👇 y te mando el link para probar bookeaa gratis."},
+    {"n": 20, "fecha": "2026-10-19", "titulo": "Dos a la misma hora", "caption": "Dos clientes. Una hora. Los negocios que saben organizar su tiempo tienen un solo calendario: una hora, una cita 📅 Pruébalo gratis: link en el perfil."},
+    {"n": 21, "fecha": "2026-10-20", "titulo": "Precios a la vista", "caption": "¿Se ven tus precios? El que no pregunta, se va. Los negocios que saben vender muestran sus servicios con precio 📅 Pruébalo gratis: link en el perfil."},
+    {"n": 22, "fecha": "2026-10-21", "titulo": "3 cosas si eres barbero", "caption": "3 cosas que tienes que saber si eres barbero ✂️ La 3 es la que casi nadie hace. Organiza tu barbería con bookeaa 📅 Pruébalo gratis: link en el perfil.", "extra": "#barberia #barberos"},
+    {"n": 23, "fecha": "2026-10-22", "titulo": "Una hora que no cobras", "caption": "20 veces al día × 3 minutos = 1 hora que no cobras. Que tu cliente vea tus horas solo 📅 bookeaa, pruébalo gratis: link en el perfil."},
+    {"n": 24, "fecha": "2026-10-23", "titulo": "8 estilos", "caption": "8 estilos, 1 es tuyo. ¿Cuál va con tu negocio? Comenta AGENDA 👇 y te mando el link para probar bookeaa gratis."},
 ]
 # Ya salieron en Instagram (pruebas de Make): se importan como publicados para no repetirlos.
 PUBLICADOS = {"FYP-S01-JUE-MG": "Publicado como prueba de Make el 15 oct", "CARRUSEL-16": "Publicado como prueba de Make el 15 oct"}
@@ -55,7 +62,7 @@ def main():
         if c["fecha"] >= DESDE:
             filas.append({
                 "id": f"CARRUSEL-{c['n']}", "fecha": c["fecha"], "hora": "17:00", "tipo": "carrusel",
-                "titulo": c["titulo"], "plataforma": "Instagram", "caption": c["caption"], "hashtags": HASHTAGS,
+                "titulo": c["titulo"], "plataforma": "Instagram", "caption": c["caption"], "hashtags": (HASHTAGS + " " + c["extra"]).strip() if c.get("extra") else HASHTAGS,
                 "media": " ".join(links.get(f"CARRUSEL-{c['n']}", [])), "estado": "borrador", "notas": f"7 láminas · marketing/salida/carruseles/carrusel-{c['n']}",
             })
     for f in filas:

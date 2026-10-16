@@ -50,6 +50,8 @@ La tabla completa con captions y hashtags está en `CALENDARIO-OCTUBRE.csv`.
 | **Mié 14** | 3 cosas si haces uñas | Dos horas que no vuelven | Reel 2 · Así reserva tu cliente | Tu agenda también vende |
 | **Jue 15** | La libreta | Tu cliente no ve tu libreta | — | Lo que le diría a quien empieza |
 | **Vie 16** | Reservar en 10 segundos | Cero mensajes | Carrusel 4 · Conectado a Google Calendar | Pruébalo gratis |
+| **Sáb 17** | — | — | — | — |
+| **Dom 18** | — | — | — | — |
 | **Lun 19** | Dos a la misma hora | Tres agendas = caos | Carrusel 5 · 8 estilos para tu página | Me pasó como cliente |
 | **Mar 20** | No mostrar tus precios | El cliente que no pregunta | — | Muestra tus precios |
 | **Mié 21** | 3 cosas si eres barbero | El cliente de las 9 p. m. | Reel 3 · Tu marca, tu estilo | Dónde poner tu link |
@@ -239,6 +241,24 @@ Grabas **17 audios** y **17 videos a cámara**. Los guiones para leer están en 
 - **Dices a cámara:** "Si trabajas con citas, barbería, uñas, spa o consultorio, esto es para ti. Con bookeaa tienes tu página de reservas con tu nombre y tus clientes reservan solos. El primer mes es gratis. Comenta AGENDA y te mando el link."
 - **Llamado a la acción** (comenta, va incluido en lo que dices o como texto al final).
 - **Caption:** Si trabajas con citas, esto es para ti. Comenta AGENDA 👇 y te mando el link para probar bookeaa gratis.
+
+### Sábado 17 de octubre
+
+#### FYP-S01-SAB-MG · Tu descanso no es para responder  _(Motion graphics + canción · sin voz, 10:00 a. m.)_
+- **Gancho de texto:** TU FIN DE SEMANA NO ES PARA RESPONDER MENSAJES.
+- **Gancho visual:** Un chat que llega un sábado en la noche y se contesta solo con un link.
+- **Secuencia en pantalla:** SÁBADO · 9:42 P. M. → ¿TIENES HORA EL LUNES? → TU CLIENTE RESERVA SOLO. → TÚ DESCANSAS.
+- **Cierre en pantalla:** LOS NEGOCIOS ORGANIZADOS AGENDAN CON UN LINK. → bookeaa · LINK EN EL PERFIL
+- **Caption:** Tu fin de semana no es para responder mensajes. Los negocios que saben organizar su tiempo agendan con bookeaa 📅 Pruébalo gratis: link en el perfil.
+
+### Domingo 18 de octubre
+
+#### FYP-S01-DOM-MG · Tu lunes ya está lleno  _(Motion graphics + canción · sin voz, 10:00 a. m.)_
+- **Gancho de texto:** EL LUNES EMPIEZA HOY. ¿TU AGENDA YA ESTÁ LISTA?
+- **Gancho visual:** Una agenda del lunes que se llena sola de citas.
+- **Secuencia en pantalla:** LUNES → 9:00 · 11:30 · 2:00 · 4:30 → YA ESTÁ LLENO. → SIN ESCRIBIR UN MENSAJE.
+- **Cierre en pantalla:** COMENTA "AGENDA" Y TE MANDO EL LINK 👇
+- **Caption:** El lunes empieza hoy. ¿Tu agenda ya está lista? Comenta AGENDA 👇 y te mando el link para probar bookeaa gratis.
 
 ## SEMANA 2 · 19–23 de octubre
 
