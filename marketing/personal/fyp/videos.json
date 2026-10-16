@@ -2607,5 +2607,820 @@
    }
   ],
   "estilo2": true
+ },
+ {
+  "id": "FYP-S02-JUE-VOZ2",
+  "tipo": "VOZ",
+  "titulo": "FYP-S02-JUE-VOZ2",
+  "vozTexto": "Dices que no tienes tiempo para organizarte. Justo por eso necesitas organizarte. En bookeaa pones tu nombre, tus servicios, tus precios y tus horas libres, y tu página de reservas queda lista para compartir. Y si te trabas, te ayudamos a configurarla. Escríbenos, link en mi perfil.",
+  "escenas": [
+   {
+    "ancla": "Dices que",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "Seguro lo dijiste",
+    "titulo": [
+     "\"NO TENGO",
+     "TIEMPO PARA",
+     "ORGANIZARME\"."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Justo por",
+    "fondo": "blanco",
+    "titulo": [
+     "JUSTO POR",
+     "ESO LO",
+     "NECESITAS."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "En bookeaa",
+    "fondo": "negro",
+    "titulo": [
+     "TU NOMBRE.",
+     "TUS SERVICIOS.",
+     "TUS HORAS."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "telefonos": [
+     {
+      "img": "flujo/2-servicios.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 800,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Y si te",
+    "fondo": "blanco",
+    "titulo": [
+     "¿TE TRABAS?",
+     "TE AYUDAMOS."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "Escríbenos",
+    "fondo": "negro",
+    "titulo": [
+     "PRUÉBALO",
+     "GRATIS."
+    ],
+    "estilo": "mega",
+    "pastilla": "bookeaa · LINK EN EL PERFIL"
+   }
+  ],
+  "estilo2": true
+ },
+ {
+  "id": "FYP-S02-LUN-VOZ2",
+  "tipo": "VOZ",
+  "titulo": "FYP-S02-LUN-VOZ2",
+  "vozTexto": "¿Cuántas citas se pierden mientras duermes? Un cliente quiere reservar a las once de la noche, no encuentra cómo, y se va a otro lado. Con bookeaa tu link recibe reservas las veinticuatro horas, aunque tú estés descansando. Despiertas, abres tu calendario, y ya están ahí. Pruébalo gratis, link en mi perfil.",
+  "escenas": [
+   {
+    "ancla": "Cuántas citas",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "11:00 p. m.",
+    "titulo": [
+     "¿CUÁNTAS CITAS",
+     "SE PIERDEN",
+     "MIENTRAS",
+     "DUERMES?"
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Un cliente",
+    "fondo": "blanco",
+    "titulo": [
+     "SE VA A",
+     "OTRO LADO."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "burbujas": [
+     {
+      "texto": "¿Tienes hora mañana?",
+      "en": 0.6
+     }
+    ],
+    "visto": {
+     "texto": "Sin respuesta · 11:04 p. m.",
+     "en": 1.6
+    }
+   },
+   {
+    "ancla": "Con bookeaa",
+    "fondo": "negro",
+    "titulo": [
+     "TU LINK RECIBE",
+     "RESERVAS",
+     "24 HORAS."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Despiertas",
+    "fondo": "blanco",
+    "titulo": [
+     "DESPIERTAS.",
+     "YA ESTÁN AHÍ."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "agendaY": 820,
+    "agenda": [
+     {
+      "hora": "9:00",
+      "texto": "Ana · uñas",
+      "estado": "ok"
+     },
+     {
+      "hora": "11:30",
+      "texto": "Carlos · corte",
+      "estado": "ok",
+      "en": 0.6
+     }
+    ]
+   },
+   {
+    "ancla": "Pruébalo gratis",
+    "fondo": "negro",
+    "titulo": [
+     "PRUÉBALO",
+     "GRATIS."
+    ],
+    "estilo": "mega",
+    "pastilla": "bookeaa · LINK EN EL PERFIL"
+   }
+  ],
+  "estilo2": true
+ },
+ {
+  "id": "FYP-S02-MAR-VOZ2",
+  "tipo": "VOZ",
+  "titulo": "FYP-S02-MAR-VOZ2",
+  "vozTexto": "Anotar una cita en una libreta es pedirle a tu memoria que no falle. Y falla. Cuando alguien reserva en bookeaa, la cita cae sola en tu Google Calendar y en el de tu cliente. Cero olvidos, cero citas perdidas. Así se organiza un negocio de verdad. El primer mes es gratis, link en mi perfil.",
+  "escenas": [
+   {
+    "ancla": "Anotar una",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "La libreta",
+    "titulo": [
+     "ANOTAR UNA CITA",
+     "EN UNA LIBRETA…"
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Y falla",
+    "fondo": "blanco",
+    "titulo": [
+     "Y FALLA."
+    ],
+    "estilo": "mega",
+    "rieles": true,
+    "golpes": [
+     0.5
+    ]
+   },
+   {
+    "ancla": "Cuando alguien",
+    "fondo": "negro",
+    "titulo": [
+     "LA CITA CAE",
+     "SOLA EN TU",
+     "CALENDARIO."
+    ],
+    "estilo": "grande",
+    "evento": {
+     "titulo": "Corte y barba",
+     "cuando": "Mié 8 oct · 2:00 – 2:45 p. m.",
+     "quien": "Carlos M.",
+     "en": 0.9,
+     "x": 150,
+     "y": 800
+    }
+   },
+   {
+    "ancla": "Cero olvidos",
+    "fondo": "blanco",
+    "titulo": [
+     "CERO OLVIDOS.",
+     "CERO CITAS",
+     "PERDIDAS."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "El primer",
+    "fondo": "negro",
+    "titulo": [
+     "PRIMER MES",
+     "GRATIS."
+    ],
+    "estilo": "mega",
+    "pastilla": "bookeaa · LINK EN EL PERFIL"
+   }
+  ],
+  "estilo2": true
+ },
+ {
+  "id": "FYP-S02-MIE-VOZ2",
+  "tipo": "VOZ",
+  "titulo": "FYP-S02-MIE-VOZ2",
+  "vozTexto": "¿Tu bio dice \"escríbeme al privado\"? Cada vez que alguien tiene que escribirte para saber si hay hora, tú pierdes unos minutos, y el cliente pierde las ganas. Pon un link de reservas en tu bio. Tu cliente entra, ve tus horas libres y reserva en segundos. Eso es bookeaa. Comenta AGENDA y te mando el link.",
+  "escenas": [
+   {
+    "ancla": "Tu bio",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "Tu bio",
+    "titulo": [
+     "¿TU BIO DICE",
+     "\"ESCRÍBEME",
+     "AL PRIVADO\"?"
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Cada vez",
+    "fondo": "blanco",
+    "titulo": [
+     "TÚ PIERDES",
+     "MINUTOS.",
+     "ÉL, LAS GANAS."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "Pon un",
+    "fondo": "negro",
+    "titulo": [
+     "PON UN LINK",
+     "EN TU BIO."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "link": "tu-negocio"
+   },
+   {
+    "ancla": "Tu cliente entra",
+    "fondo": "blanco",
+    "titulo": [
+     "ENTRA.",
+     "VE TUS HORAS.",
+     "RESERVA."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Eso es",
+    "fondo": "negro",
+    "titulo": [
+     "ESO ES",
+     "bookeaa."
+    ],
+    "estilo": "mega"
+   },
+   {
+    "ancla": "Comenta agenda",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "AGENDA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE MANDO EL LINK 👇"
+   }
+  ],
+  "estilo2": true
+ },
+ {
+  "id": "FYP-S02-VIE-VOZ2",
+  "tipo": "VOZ",
+  "titulo": "FYP-S02-VIE-VOZ2",
+  "vozTexto": "¿Cuál es el riesgo de probar? Ninguno. El primer mes de bookeaa es gratis, sin tarjeta. Lo configuras, lo compartes con tus clientes, y ves por ti mismo cuánto tiempo te devuelve. Si te gusta, sigues. Si no, no pasó nada. Comenta AGENDA y te mando el link.",
+  "escenas": [
+   {
+    "ancla": "Cuál es",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "Probar bookeaa",
+    "titulo": [
+     "¿CUÁL ES EL",
+     "RIESGO DE",
+     "PROBAR?"
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Ninguno",
+    "fondo": "blanco",
+    "titulo": [
+     "NINGUNO."
+    ],
+    "estilo": "mega",
+    "rieles": true,
+    "golpes": [
+     0.4
+    ]
+   },
+   {
+    "ancla": "El primer",
+    "fondo": "negro",
+    "titulo": [
+     "PRIMER MES",
+     "GRATIS.",
+     "SIN TARJETA."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "Lo configuras",
+    "fondo": "blanco",
+    "titulo": [
+     "CONFIGURA.",
+     "COMPARTE.",
+     "MIDE."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "Si te gusta",
+    "fondo": "negro",
+    "titulo": [
+     "SI TE GUSTA,",
+     "SIGUES.",
+     "SI NO,",
+     "NO PASÓ NADA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Comenta agenda",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "AGENDA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE MANDO EL LINK 👇"
+   }
+  ],
+  "estilo2": true
+ },
+ {
+  "id": "FYP-S03-JUE-VOZ2",
+  "tipo": "VOZ",
+  "titulo": "FYP-S03-JUE-VOZ2",
+  "vozTexto": "Barbería, uñas, spa, consultorio, estética. Si trabajas con citas, tu agenda puede vivir en un solo lugar. bookeaa es una página de reservas con tu nombre, tus servicios y tus horas libres, y se comparte con un solo link. Pruébalo gratis. Link en mi perfil.",
+  "escenas": [
+   {
+    "ancla": "Barbería",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "Si trabajas con citas",
+    "titulo": [
+     "BARBERÍA. UÑAS.",
+     "SPA. CONSULTORIO.",
+     "ESTÉTICA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Si trabajas",
+    "fondo": "blanco",
+    "titulo": [
+     "TU AGENDA,",
+     "EN UN SOLO",
+     "LUGAR."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "bookeaa es",
+    "fondo": "negro",
+    "titulo": [
+     "UNA PÁGINA",
+     "CON TU NOMBRE."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "telefonos": [
+     {
+      "img": "flujo/1-inicio.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 760,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "y se comparte",
+    "fondo": "blanco",
+    "titulo": [
+     "UN SOLO",
+     "LINK."
+    ],
+    "estilo": "mega",
+    "rieles": true,
+    "link": "tu-negocio"
+   },
+   {
+    "ancla": "Pruébalo gratis",
+    "fondo": "negro",
+    "titulo": [
+     "PRUÉBALO",
+     "GRATIS."
+    ],
+    "estilo": "mega",
+    "pastilla": "bookeaa · LINK EN EL PERFIL"
+   }
+  ],
+  "estilo2": true
+ },
+ {
+  "id": "FYP-S03-LUN-VOZ2",
+  "tipo": "VOZ",
+  "titulo": "FYP-S03-LUN-VOZ2",
+  "vozTexto": "Un cliente que elige su propia hora es un cliente que llega. Porque nadie se la impuso, la escogió él. En bookeaa reserva servicio y hora desde su celular, y la cita queda en su calendario. Más compromiso, menos olvidos. Pruébalo gratis, link en mi perfil.",
+  "escenas": [
+   {
+    "ancla": "Un cliente",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "Elegir la hora",
+    "titulo": [
+     "EL CLIENTE QUE",
+     "ELIGE SU HORA",
+     "LLEGA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Porque nadie",
+    "fondo": "blanco",
+    "titulo": [
+     "NADIE SE LA",
+     "IMPUSO.",
+     "LA ESCOGIÓ."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "En bookeaa",
+    "fondo": "negro",
+    "titulo": [
+     "SERVICIO",
+     "Y HORA."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "telefonos": [
+     {
+      "img": "flujo/2-servicios.jpg",
+      "ancho": 330,
+      "x": 150,
+      "y": 760,
+      "rot": -4,
+      "en": 0.5
+     },
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 600,
+      "y": 790,
+      "rot": 4,
+      "en": 1.0
+     }
+    ]
+   },
+   {
+    "ancla": "Más compromiso",
+    "fondo": "blanco",
+    "titulo": [
+     "MÁS COMPROMISO.",
+     "MENOS OLVIDOS."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "Pruébalo gratis",
+    "fondo": "negro",
+    "titulo": [
+     "PRUÉBALO",
+     "GRATIS."
+    ],
+    "estilo": "mega",
+    "pastilla": "bookeaa · LINK EN EL PERFIL"
+   }
+  ],
+  "estilo2": true
+ },
+ {
+  "id": "FYP-S03-MAR-VOZ2",
+  "tipo": "VOZ",
+  "titulo": "FYP-S03-MAR-VOZ2",
+  "vozTexto": "Tu negocio, tus reglas. En bookeaa decides qué servicios ofreces, cuánto duran, cuánto cuestan y en qué horas atiendes. Y tu cliente solo puede reservar lo que tú permites. Se acabaron las citas imposibles. Pruébalo gratis. Link en mi perfil.",
+  "escenas": [
+   {
+    "ancla": "Tu negocio",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "Tú mandas",
+    "titulo": [
+     "TU NEGOCIO.",
+     "TUS REGLAS."
+    ],
+    "estilo": "mega"
+   },
+   {
+    "ancla": "En bookeaa",
+    "fondo": "blanco",
+    "titulo": [
+     "QUÉ OFRECES.",
+     "CUÁNTO DURA.",
+     "CUÁNTO CUESTA."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "telefonos": [
+     {
+      "img": "flujo/2-servicios.jpg",
+      "ancho": 300,
+      "x": 390,
+      "y": 830,
+      "en": 1.0
+     }
+    ]
+   },
+   {
+    "ancla": "Y tu cliente",
+    "fondo": "negro",
+    "titulo": [
+     "SOLO RESERVA",
+     "LO QUE TÚ",
+     "PERMITES."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "Se acabaron",
+    "fondo": "blanco",
+    "titulo": [
+     "SE ACABARON LAS",
+     "CITAS IMPOSIBLES."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "golpes": [
+     0.6
+    ]
+   },
+   {
+    "ancla": "Pruébalo gratis",
+    "fondo": "negro",
+    "titulo": [
+     "PRUÉBALO",
+     "GRATIS."
+    ],
+    "estilo": "mega",
+    "pastilla": "bookeaa · LINK EN EL PERFIL"
+   }
+  ],
+  "estilo2": true
+ },
+ {
+  "id": "FYP-S03-MIE-VOZ2",
+  "tipo": "VOZ",
+  "titulo": "FYP-S03-MIE-VOZ2",
+  "vozTexto": "¿Cuánto vale una hora de tu trabajo? Ahora piensa cuántas pasas contestando mensajes. Esas horas se pueden recuperar. Con un link de reservas, tu cliente agenda solo y tú dedicas ese tiempo a lo que sí cobras. Así valoran su tiempo los negocios organizados. Pruébalo gratis, link en mi perfil.",
+  "escenas": [
+   {
+    "ancla": "Cuánto vale",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "Tu tiempo",
+    "titulo": [
+     "¿CUÁNTO VALE",
+     "UNA HORA DE",
+     "TU TRABAJO?"
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Ahora piensa",
+    "fondo": "blanco",
+    "titulo": [
+     "¿CUÁNTAS PASAS",
+     "CONTESTANDO?"
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "burbujas": [
+     {
+      "texto": "¿Precio?",
+      "en": 0.6
+     },
+     {
+      "texto": "¿Tienes hora?",
+      "en": 1.2
+     },
+     {
+      "texto": "¿Y a las 4?",
+      "en": 1.8
+     }
+    ]
+   },
+   {
+    "ancla": "Esas horas",
+    "fondo": "negro",
+    "titulo": [
+     "SE PUEDEN",
+     "RECUPERAR."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "Con un",
+    "fondo": "blanco",
+    "titulo": [
+     "TU CLIENTE",
+     "AGENDA SOLO."
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Así valoran",
+    "fondo": "negro",
+    "titulo": [
+     "ASÍ VALORAN SU",
+     "TIEMPO LOS",
+     "ORGANIZADOS."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "Pruébalo gratis",
+    "fondo": "blanco",
+    "titulo": [
+     "PRUÉBALO",
+     "GRATIS."
+    ],
+    "estilo": "mega",
+    "pastilla": "bookeaa · LINK EN EL PERFIL"
+   }
+  ],
+  "estilo2": true
+ },
+ {
+  "id": "FYP-S03-VIE-VOZ2",
+  "tipo": "VOZ",
+  "titulo": "FYP-S03-VIE-VOZ2",
+  "vozTexto": "Se acaba el mes. Mira tu agenda: ¿cuántas horas libres se quedaron vacías? ¿Cuántos mensajes tuviste que contestar? El próximo mes puede ser distinto. Un link, una agenda y tú, atendiendo. Comenta AGENDA y te mando el link para probar bookeaa gratis.",
+  "escenas": [
+   {
+    "ancla": "Se acaba",
+    "fondo": "negro",
+    "entrada": "corte",
+    "kicker": "Fin de mes",
+    "titulo": [
+     "SE ACABA",
+     "EL MES."
+    ],
+    "estilo": "mega"
+   },
+   {
+    "ancla": "Mira tu",
+    "fondo": "blanco",
+    "titulo": [
+     "¿CUÁNTAS HORAS",
+     "SE QUEDARON",
+     "VACÍAS?"
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "agendaY": 900,
+    "agenda": [
+     {
+      "hora": "MAR 3:00",
+      "texto": "vacío",
+      "estado": "vacio"
+     },
+     {
+      "hora": "JUE 11:00",
+      "texto": "vacío",
+      "estado": "vacio",
+      "en": 0.8
+     }
+    ]
+   },
+   {
+    "ancla": "Cuántos mensajes",
+    "fondo": "negro",
+    "titulo": [
+     "¿CUÁNTOS",
+     "MENSAJES?"
+    ],
+    "estilo": "grande",
+    "rieles": true,
+    "burbujas": [
+     {
+      "texto": "¿Tienes hora?",
+      "en": 0.5
+     },
+     {
+      "texto": "¿Cuánto cuesta?",
+      "en": 1.1
+     }
+    ]
+   },
+   {
+    "ancla": "El próximo",
+    "fondo": "blanco",
+    "titulo": [
+     "EL PRÓXIMO MES",
+     "PUEDE SER",
+     "DISTINTO."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "Un link",
+    "fondo": "negro",
+    "titulo": [
+     "UN LINK.",
+     "UNA AGENDA.",
+     "TÚ ATENDIENDO."
+    ],
+    "estilo": "grande",
+    "rieles": true
+   },
+   {
+    "ancla": "Comenta agenda",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "AGENDA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE MANDO EL LINK 👇"
+   }
+  ],
+  "estilo2": true
  }
 ]

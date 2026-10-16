@@ -43,6 +43,10 @@ for x in V:
     d['escenas'] = ESCENAS.get(x['id'])
     d['estilo2'] = x['id'] not in V1  # hilo, rieles y transiciones alternadas (los pilotos del 15 y 16 se quedan como salieron)
     vid.append(d)
+# 2.ª voz del día (18:00): entra con la voz de guiones/GUION-VOZ-LARGO-2.txt, ya sin ligarse al calendario de octubre.
+for k in sorted(ESCENAS):
+    if k.endswith('-VOZ2'):
+        vid.append({'id': k, 'tipo': 'VOZ', 'titulo': k, 'vozTexto': VOZ_TEXTOS[k], 'escenas': ESCENAS[k], 'estilo2': True})
 json.dump(vid, open(os.path.join(AQUI, 'videos.json'), 'w'), ensure_ascii=False, indent=1)
 
 # ── Markdown ──────────────────────────────────────
