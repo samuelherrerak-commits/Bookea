@@ -171,6 +171,11 @@ export function Marketing({ sesion, hoy, alSalir, retornoTikTok, alTerminarRetor
                 : tt.configurado ? 'Conecta tu cuenta para mandar videos a tus borradores.'
                 : 'Faltan las claves: en el Apps Script, menú SaaS Reservas → "TikTok: guardar claves de la app".'}
             </p>
+            {tt.configurado && (
+              <p className="mt-1 text-[12px] text-muted">
+                Client key en uso: <span className="font-mono">{tt.pista || '—'}</span> ({tt.sandbox ? 'sandbox' : 'producción'}) · Redirect URI: <span className="font-mono">{tt.redirect}</span>
+              </p>
+            )}
           </div>
           {tt.conectado ? (
             <button type="button" onClick={() => void desconectarTt()} disabled={ocupadoTt} className="rounded-full px-4 py-2 text-[14px] ring-1 ring-line disabled:opacity-50">Desconectar</button>

@@ -52,6 +52,14 @@ describe('Code.gs · TikTok (borradores)', () => {
     expect(url).not.toContain('SECRET')
   })
 
+  it('estado: da una pista de la clave en uso, sin mostrarla entera, y detecta el sandbox', () => {
+    const prod = entorno([], { tiktok_client_key: 'awa9sk36vafewy4l' }).f.tiktokEstado_()
+    expect(prod).toMatchObject({ configurado: true, conectado: false, pista: 'awa9…wy4l', sandbox: false, redirect: 'https://bookeaa.com/central' })
+    expect(JSON.stringify(prod)).not.toContain('sk36vafe')
+    expect(entorno([], { tiktok_client_key: 'sbawabcdefgh1234' }).f.tiktokEstado_().sandbox).toBe(true)
+    expect(entorno([], { tiktok_client_key: '', tiktok_client_secret: '' }).f.tiktokEstado_()).toMatchObject({ configurado: false, pista: '' })
+  })
+
   it('conectar: exige el state del mismo correo, canjea el código y guarda tokens y nombre', () => {
     const { f, guardado, llamadas, cache } = entorno([
       () => respuesta(200, { access_token: 'AT', expires_in: 86400, refresh_token: 'RT', refresh_expires_in: 31536000, open_id: 'OID', scope: 'user.info.basic,video.upload' }),
