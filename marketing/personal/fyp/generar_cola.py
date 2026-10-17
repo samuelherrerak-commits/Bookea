@@ -93,7 +93,7 @@ def main():
         if c["fecha"] >= DESDE:
             filas.append({
                 "id": f"CARRUSEL-{c['n']}", "fecha": c["fecha"], "hora": "17:00", "tipo": "carrusel",
-                "titulo": c["titulo"], "plataforma": "Instagram", "caption": c["caption"], "hashtags": (HASHTAGS + " " + c["extra"]).strip() if c.get("extra") else HASHTAGS,
+                "titulo": c["titulo"], "plataforma": "Instagram + TikTok", "caption": c["caption"], "hashtags": (HASHTAGS + " " + c["extra"]).strip() if c.get("extra") else HASHTAGS,
                 "media": " ".join(links.get(f"CARRUSEL-{c['n']}", [])), "estado": "borrador", "notas": f"7 láminas · marketing/salida/carruseles/carrusel-{c['n']}",
             })
     for f in filas:

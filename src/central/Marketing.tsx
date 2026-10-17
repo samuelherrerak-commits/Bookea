@@ -382,6 +382,7 @@ function Detalle({ tt, pub, sesion, onCerrar, onCambio, falla }: { tt: api.Estad
     }
   }
   const esVideo = pub.tipo.startsWith('video')
+  const puedeTt = esVideo || pub.tipo === 'carrusel'
   const enviarTt = async () => {
     setEnviando(true)
     setAviso('')
@@ -446,11 +447,11 @@ function Detalle({ tt, pub, sesion, onCerrar, onCambio, falla }: { tt: api.Estad
             <button type="button" disabled={guardando} onClick={() => void guardar({ estado: 'omitido' })} className="rounded-full px-5 py-3 text-[15px] text-muted underline underline-offset-4 disabled:opacity-50">Omitir</button>
           )}
         </div>
-        {esVideo && tt?.conectado && f.media.trim() && (
+        {puedeTt && tt?.conectado && f.media.trim() && (
           <div className="mt-4 rounded-3xl bg-sand p-4">
-            <p className="text-[14px]">Se enviará como borrador a <b>{tt.usuario}</b> en TikTok.</p>
+            <p className="text-[14px]">Se enviará como {esVideo ? 'borrador' : 'borrador de fotos'} a <b>{tt.usuario}</b> en TikTok.</p>
             <button type="button" onClick={() => void enviarTt()} disabled={enviando || cambios.includes('media')} className="mt-2 rounded-full bg-ink px-5 py-2.5 text-[14px] font-semibold text-bg disabled:opacity-50">
-              {enviando ? 'Enviando…' : 'Enviar a TikTok (borrador)'}
+              {enviando ? 'Enviando…' : esVideo ? 'Enviar a TikTok (borrador)' : 'Enviar fotos a TikTok (borrador)'}
             </button>
             {cambios.includes('media') && <p className="mt-1 text-[12px] text-muted">Guarda el link nuevo antes de enviar.</p>}
             {aviso && <p role="status" className="mt-2 text-[13px]">{aviso}</p>}
