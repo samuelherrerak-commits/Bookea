@@ -1,0 +1,201 @@
+{
+  "name": "bookeaa - publicar en Instagram (webhook)",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "parameters": {
+        "hook": null,
+        "maxResults": 1
+      },
+      "mapper": {},
+      "metadata": {}
+    },
+    {
+      "id": 2,
+      "module": "builtin:BasicRouter",
+      "version": 1,
+      "parameters": {},
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 3,
+              "module": "instagram-business:CreateCarouselPhoto",
+              "version": 1,
+              "parameters": {
+                "__IMTCONN__": null
+              },
+              "mapper": {
+                "accountId": "ID_DE_LA_CUENTA_DE_INSTAGRAM",
+                "files": "{{1.archivos}}",
+                "caption": "{{1.caption}}"
+              },
+              "onerror": [
+                {
+                  "id": 6,
+                  "module": "http:ActionSendData",
+                  "version": 3,
+                  "parameters": {
+                    "handleErrors": true,
+                    "useNewZLibDeCompress": true
+                  },
+                  "mapper": {
+                    "url": "https://script.google.com/macros/s/AKfycbzX8PIP_j_UNfQHb-nGwcEdQMGeZ7lYH4wWxLnP5G-bJwrSHQNwWBHed8XwINOMXFjG4g/exec",
+                    "method": "post",
+                    "bodyType": "raw",
+                    "contentType": "application/json",
+                    "parseResponse": false,
+                    "data": "{\"accion\":\"make\",\"token\":\"{{1.token}}\",\"op\":\"publicado\",\"id\":\"{{1.id}}\",\"ok\":false,\"error\":\"{{substring(replace(replace(error.message; newline; ' '); '\\\\\\\"'; ''); 0; 150)}}\"}",
+                    "followRedirect": true,
+                    "followAllRedirects": true,
+                    "serializeUrl": false,
+                    "shareCookies": false,
+                    "rejectUnauthorized": true,
+                    "useQuerystring": false,
+                    "gzip": true,
+                    "useMtls": false
+                  }
+                },
+                {
+                  "id": 7,
+                  "module": "builtin:Ignore",
+                  "version": 1
+                }
+              ],
+              "filter": {
+                "name": "Carrusel",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{1.esCarrusel}}",
+                      "b": "true",
+                      "o": "boolean:equal"
+                    }
+                  ]
+                ]
+              }
+            },
+            {
+              "id": 4,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": {
+                "handleErrors": true,
+                "useNewZLibDeCompress": true
+              },
+              "mapper": {
+                "url": "https://script.google.com/macros/s/AKfycbzX8PIP_j_UNfQHb-nGwcEdQMGeZ7lYH4wWxLnP5G-bJwrSHQNwWBHed8XwINOMXFjG4g/exec",
+                "method": "post",
+                "bodyType": "raw",
+                "contentType": "application/json",
+                "parseResponse": false,
+                "data": "{\"accion\":\"make\",\"token\":\"{{1.token}}\",\"op\":\"publicado\",\"id\":\"{{1.id}}\",\"ok\":true,\"post\":\"{{3.id}}\"}",
+                "followRedirect": true,
+                "followAllRedirects": true,
+                "serializeUrl": false,
+                "shareCookies": false,
+                "rejectUnauthorized": true,
+                "useQuerystring": false,
+                "gzip": true,
+                "useMtls": false
+              }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 5,
+              "module": "instagram-business:CreateAReelPost",
+              "version": 1,
+              "parameters": {
+                "__IMTCONN__": null
+              },
+              "mapper": {
+                "accountId": "ID_DE_LA_CUENTA_DE_INSTAGRAM",
+                "video_url": "{{1.video_url}}",
+                "caption": "{{1.caption}}",
+                "share_to_feed": true
+              },
+              "onerror": [
+                {
+                  "id": 8,
+                  "module": "http:ActionSendData",
+                  "version": 3,
+                  "parameters": {
+                    "handleErrors": true,
+                    "useNewZLibDeCompress": true
+                  },
+                  "mapper": {
+                    "url": "https://script.google.com/macros/s/AKfycbzX8PIP_j_UNfQHb-nGwcEdQMGeZ7lYH4wWxLnP5G-bJwrSHQNwWBHed8XwINOMXFjG4g/exec",
+                    "method": "post",
+                    "bodyType": "raw",
+                    "contentType": "application/json",
+                    "parseResponse": false,
+                    "data": "{\"accion\":\"make\",\"token\":\"{{1.token}}\",\"op\":\"publicado\",\"id\":\"{{1.id}}\",\"ok\":false,\"error\":\"{{substring(replace(replace(error.message; newline; ' '); '\\\\\\\"'; ''); 0; 150)}}\"}",
+                    "followRedirect": true,
+                    "followAllRedirects": true,
+                    "serializeUrl": false,
+                    "shareCookies": false,
+                    "rejectUnauthorized": true,
+                    "useQuerystring": false,
+                    "gzip": true,
+                    "useMtls": false
+                  }
+                },
+                {
+                  "id": 9,
+                  "module": "builtin:Ignore",
+                  "version": 1
+                }
+              ],
+              "filter": {
+                "name": "Video",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{1.esCarrusel}}",
+                      "b": "false",
+                      "o": "boolean:equal"
+                    }
+                  ]
+                ]
+              }
+            },
+            {
+              "id": 10,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": {
+                "handleErrors": true,
+                "useNewZLibDeCompress": true
+              },
+              "mapper": {
+                "url": "https://script.google.com/macros/s/AKfycbzX8PIP_j_UNfQHb-nGwcEdQMGeZ7lYH4wWxLnP5G-bJwrSHQNwWBHed8XwINOMXFjG4g/exec",
+                "method": "post",
+                "bodyType": "raw",
+                "contentType": "application/json",
+                "parseResponse": false,
+                "data": "{\"accion\":\"make\",\"token\":\"{{1.token}}\",\"op\":\"publicado\",\"id\":\"{{1.id}}\",\"ok\":true,\"post\":\"{{5.id}}\"}",
+                "followRedirect": true,
+                "followAllRedirects": true,
+                "serializeUrl": false,
+                "shareCookies": false,
+                "rejectUnauthorized": true,
+                "useQuerystring": false,
+                "gzip": true,
+                "useMtls": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1
+  }
+}
