@@ -155,3 +155,19 @@ Lo que no coincide queda **Por verificar**, con una pista: el abono que más se 
    La primera vez Google te pide permiso para leer Gmail. Si el botón da error de permisos, en el editor del Apps Script ejecuta una vez la función **`instalarCobros`** y acepta. También puedes hacerlo desde el menú del archivo maestro: **Cobros: activar automáticos**.
 
    Los correos del banco tienen que llegar al **mismo Gmail dueño del Apps Script**.
+
+
+## Programador de publicaciones (Instagram vía webhook + TikTok), sin gastar créditos de Make
+
+El escenario original de Make consultaba a Central cada 15 minutos (3–4 créditos por vuelta aunque no hubiera nada): unos 380 créditos al día, y el plan gratis trae 1.000 al mes. Ahora **Apps Script lleva el reloj** (los temporizadores son gratis) y **Make solo corre cuando hay una pieza que publicar**:
+
+1. Un temporizador de Apps Script (`programadorMarketing`, cada 15 min) busca lo **aprobado, con link y que ya toca** (fecha y hora de Caracas).
+2. Cada pieza se manda por **webhook** a Make (`makeEnviarPendientes_`) y queda con la marca *Enviado a Make* en Notas, para no repetirse. Si el webhook falla, no hay marca y se reintenta en la siguiente ronda. Aprobar de nuevo una pieza quita la marca y permite reenviarla.
+3. El escenario de Make (`docs/make-webhook-blueprint.json`) tiene 3 pasos: recibir, publicar en Instagram y avisar a Central con `op: "publicado"` (o devolverla a borrador con el error). **≈3 créditos por pieza**, unos 12 al día con 4 piezas.
+4. El mismo temporizador manda a TikTok (borradores y fotos) con `tiktokAutomatico_`, sin pasar por Make: 0 créditos.
+
+Puesta en marcha (una vez):
+- En Make: escenario nuevo desde `docs/make-webhook-blueprint.json` (Importar blueprint), con un webhook propio y tu conexión de Instagram; completa el ID de la cuenta de Instagram y activa el escenario.
+- En el Apps Script: menú **"Make: guardar webhook de publicación"** (pega la dirección `https://hook.…` del webhook; no va en el repo ni en un chat) y luego **"Marketing: activar programador (Instagram y TikTok)"**.
+- El token de Make (`make_token`) sigue siendo el que genera el menú *Make: generar token de marketing*; Apps Script lo incluye en cada llamada para que Make pueda avisar el resultado.
+- Con el programador activo se desactiva el escenario viejo que consulta cada 15 min (el `op: "pendientes"` sigue existiendo por si se quiere volver a ese modo).

@@ -402,6 +402,8 @@ function onOpen() {
     .addItem('Actualizar la tasa cada 2 horas', 'instalarDisparadorTasa')
     .addSeparator()
     .addItem('Make: generar token de marketing', 'promptGenerarTokenMake')
+    .addItem('Make: guardar webhook de publicación', 'promptWebhookMake')
+    .addItem('Marketing: activar programador (Instagram y TikTok)', 'instalarProgramador')
     .addItem('TikTok: guardar claves de la app', 'promptClavesTikTok')
     .addItem('Bot de WhatsApp: generar token', 'promptGenerarTokenBot')
     .addItem('Bot de WhatsApp: avisos y calendario', 'promptAjustesBot')
@@ -3637,6 +3639,7 @@ function marketingGuardar_(data, email, ahoraMs) {
     if (MARKETING_ESTADOS.indexOf(data.estado) === -1) return { error: 'datos_invalidos', mensaje: 'Estado no válido.' };
     c.Estado = data.estado;
     c.Publicado_En = data.estado === 'publicado' ? Utilities.formatDate(new Date(ahoraMs), ZONA, "yyyy-MM-dd HH:mm") + ' · ' + email : '';
+    if (data.estado === 'aprobado') c.Notas = paraCelda_(limpiarTexto_(String(o.Notas || '').replace(/Enviado a Make \([^)]*\)( · )?/g, ''), 300)); // aprobar de nuevo permite reenviar
   }
   if ('fecha' in data) {
     if (!ymd_(data.fecha || '')) return { error: 'datos_invalidos', mensaje: 'Revisa la fecha.' };
@@ -3674,28 +3677,90 @@ function enlacesMedia_(media) {
   return String(media || '').split(/[\s,]+/).filter(function (u) { return /^https:\/\/\S+$/.test(u); });
 }
 
+const MAKE_NOTA = 'Enviado a Make';
+
+/** Aprobadas con link a las que ya les toca (fecha y hora de Caracas), de la más antigua a la más nueva. */
+function publicacionesVencidas_(ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const hora = Utilities.formatDate(new Date(ahoraMs), ZONA, 'HH:mm');
+  return marketingCentral_().publicaciones.filter(function (p) {
+    return p.estado === 'aprobado' && enlacesMedia_(p.media).length && (p.fecha < hoy || (p.fecha === hoy && p.hora <= hora));
+  }).sort(function (a, b) { return (a.fecha + a.hora).localeCompare(b.fecha + b.hora); });
+}
+
+/** Lo que Make necesita para publicar una pieza en Instagram. */
+function piezaParaMake_(p) {
+  const enlaces = enlacesMedia_(p.media);
+  return {
+    id: p.id, tipo: p.tipo, titulo: p.titulo, esCarrusel: p.tipo === 'carrusel',
+    caption: [p.caption, p.hashtags].filter(Boolean).join('\n\n'),
+    video_url: p.tipo === 'carrusel' ? '' : enlaces[0],
+    archivos: p.tipo === 'carrusel' ? enlaces.slice(0, 10).map(function (u) { return { media_type: 'IMAGE', image_url: u }; }) : [],
+  };
+}
+
+function promptWebhookMake() {
+  const ui = SpreadsheetApp.getUi();
+  const r = ui.prompt('Make: webhook de publicación', 'Pega la dirección del webhook del escenario de Make (empieza con https://hook.…). Se guarda solo en las propiedades de este script. No la compartas por chat.', ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  const url = r.getResponseText().trim();
+  if (!/^https:\/\/hook\.[a-z0-9.-]+\/[A-Za-z0-9]+$/.test(url)) { ui.alert('Esa no parece una dirección de webhook de Make.'); return; }
+  PropertiesService.getScriptProperties().setProperty('make_webhook', url);
+  ui.alert('Webhook guardado', 'Ahora activa el programador: menú "Marketing: activar programador (Instagram y TikTok)".', ui.ButtonSet.OK);
+}
+
+/**
+ * Programador: Apps Script lleva el reloj (gratis) y Make solo corre cuando hay algo que publicar.
+ * Manda cada pieza vencida al webhook de Make (una llamada por pieza) y deja la marca "Enviado a Make" en las notas
+ * para no repetirla; Make avisa el resultado con op "publicado". Máximo 3 por ronda.
+ */
+function makeEnviarPendientes_(ahoraMs) {
+  const props = PropertiesService.getScriptProperties();
+  const url = String(props.getProperty('make_webhook') || '');
+  const token = String(props.getProperty('make_token') || '');
+  if (!url) return { enviadas: [], errores: {}, motivo: 'sin_webhook' };
+  if (token.length < 24) return { enviadas: [], errores: {}, motivo: 'sin_token' };
+  const lista = publicacionesVencidas_(ahoraMs).filter(function (p) { return p.notas.indexOf(MAKE_NOTA) === -1; }).slice(0, 3);
+  const enviadas = [];
+  const errores = {};
+  lista.forEach(function (p) {
+    const r = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify(Object.assign({ token: token }, piezaParaMake_(p))) });
+    const codigo = r.getResponseCode();
+    if (codigo < 200 || codigo >= 300) { errores[p.id] = 'HTTP ' + codigo; return; }
+    const previa = p.notas.replace(/Enviado a Make \([^)]*\)( · )?/g, '');
+    marketingGuardar_({ id: p.id, notas: MAKE_NOTA + ' (' + Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd HH:mm') + ')' + (previa ? ' · ' + previa : '') }, 'Programador', ahoraMs);
+    enviadas.push(p.id);
+  });
+  return { enviadas: enviadas, errores: errores };
+}
+
+/** Función del temporizador: Instagram (vía Make) y borradores de TikTok. */
+function programadorMarketing() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return;
+  try {
+    const ahora = Date.now();
+    try { makeEnviarPendientes_(ahora); } catch (e) { console.error('Make: ' + e.message); }
+    try { tiktokAutomatico_(ahora); } catch (e) { console.error('TikTok: ' + e.message); }
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function instalarProgramador() {
+  const ui = SpreadsheetApp.getUi();
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'programadorMarketing') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('programadorMarketing').timeBased().everyMinutes(15).create();
+  ui.alert('Programador activado', 'Cada 15 minutos revisa Marketing: manda a Make lo aprobado que ya toca (Instagram) y a tus borradores de TikTok. No gasta créditos de Make mientras no haya nada que publicar.', ui.ButtonSet.OK);
+}
+
 function atenderMake_(data, ahoraMs) {
   const esperado = String(PropertiesService.getScriptProperties().getProperty('make_token') || '');
   if (esperado.length < 24 || String(data.token || '') !== esperado) return { error: 'no_autorizado' };
   const op = String(data.op || '');
   const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
   const hora = Utilities.formatDate(new Date(ahoraMs), ZONA, 'HH:mm');
-  if (op === 'pendientes') {
-    const lista = marketingCentral_().publicaciones.filter(function (p) {
-      return p.estado === 'aprobado' && enlacesMedia_(p.media).length && (p.fecha < hoy || (p.fecha === hoy && p.hora <= hora));
-    }).sort(function (a, b) { return (a.fecha + a.hora).localeCompare(b.fecha + b.hora); }).slice(0, 3);
-    return {
-      publicaciones: lista.map(function (p) {
-        const enlaces = enlacesMedia_(p.media);
-        return {
-          id: p.id, tipo: p.tipo, titulo: p.titulo, esCarrusel: p.tipo === 'carrusel',
-          caption: [p.caption, p.hashtags].filter(Boolean).join('\n\n'),
-          video_url: p.tipo === 'carrusel' ? '' : enlaces[0],
-          archivos: p.tipo === 'carrusel' ? enlaces.slice(0, 10).map(function (u) { return { media_type: 'IMAGE', image_url: u }; }) : [],
-        };
-      }),
-    };
-  }
+  if (op === 'pendientes') return { publicaciones: publicacionesVencidas_(ahoraMs).slice(0, 3).map(piezaParaMake_) };
   if (op === 'publicado') {
     const lock = LockService.getScriptLock();
     if (!lock.tryLock(30000)) return { error: 'servidor', mensaje: 'Hay otra operación en curso.' };

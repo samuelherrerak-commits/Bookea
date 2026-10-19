@@ -24,17 +24,19 @@ function hoja() {
   }
 }
 
-function maestro() {
+function maestro(webhook: string | null = null, fetchHook?: (url: string, o: any) => { getResponseCode: () => number }) {
   const hojas: Record<string, ReturnType<typeof hoja>> = {}
   const ss = { getSheetByName: (n: string) => hojas[n] ?? null, insertSheet: (n: string) => (hojas[n] = hoja()) }
   const f = funcionesGs<Record<string, Fn>>(gs, [
     'hojaCon_', 'objetos_', 'escribirFila_', 'hojaMarketing_', 'publicacionDe_', 'marketingCentral_', 'marketingImportar_', 'marketingGuardar_',
-    'ymd_', 'limpiarTexto_', 'paraCelda_', 'enlacesMedia_', 'atenderMake_',
+    'ymd_', 'limpiarTexto_', 'paraCelda_', 'enlacesMedia_', 'atenderMake_', 'publicacionesVencidas_', 'piezaParaMake_', 'makeEnviarPendientes_',
   ], {
+    MAKE_NOTA: constanteGs(gs, 'MAKE_NOTA'),
     MARKETING_HEADERS: constanteGs(gs, 'MARKETING_HEADERS'), MARKETING_ESTADOS: constanteGs(gs, 'MARKETING_ESTADOS'), ZONA: 'America/Caracas',
     SpreadsheetApp: { getActiveSpreadsheet: () => ss },
     Utilities: { formatDate: (d: Date, _z: string, fmt: string) => (fmt === 'yyyy-MM-dd' ? d.toISOString().slice(0, 10) : fmt === 'HH:mm' ? d.toISOString().slice(11, 16) : d.toISOString().slice(0, 16).replace('T', ' ')) },
-    PropertiesService: { getScriptProperties: () => ({ getProperty: (k: string) => (k === 'make_token' ? 'make_' + 'x'.repeat(30) : null) }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (k: string) => (k === 'make_token' ? 'make_' + 'x'.repeat(30) : k === 'make_webhook' ? webhook : null) }) },
+    UrlFetchApp: { fetch: (u: string, o: any) => fetchHook!(u, o) },
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => undefined }) },
   })
   return { f, hojas }
@@ -127,5 +129,36 @@ describe('Code.gs · Marketing de central', () => {
     expect(l[0].publicadoEn).toContain('Make')
     expect(l[1]).toMatchObject({ estado: 'borrador' })
     expect(l[1].notas).toContain('Media URL no accesible')
+  })
+
+  it('programador: manda a Make cada pieza vencida una sola vez y deja la marca; aprobar de nuevo permite reenviar', () => {
+    const llamadas: { url: string; cuerpo: any }[] = []
+    const { f } = maestro('https://hook.eu1.make.com/abc123', (url, o) => { llamadas.push({ url, cuerpo: JSON.parse(o.payload) }); return { getResponseCode: () => 200 } })
+    const ahora = Date.UTC(2026, 9, 15, 17)
+    f.marketingImportar_({ filas: [
+      fila('A', { hora: '10:00', media: 'https://res.cloudinary.com/x/v.mp4', estado: 'aprobado' }),
+      fila('B', { tipo: 'carrusel', hora: '11:00', media: 'https://res.cloudinary.com/x/1.jpg https://res.cloudinary.com/x/2.jpg', estado: 'aprobado' }),
+      fila('FUTURO', { hora: '23:00', media: 'https://res.cloudinary.com/x/v.mp4', estado: 'aprobado' }),
+      fila('BORRADOR', { media: 'https://res.cloudinary.com/x/v.mp4' }),
+    ] })
+    expect(f.makeEnviarPendientes_(ahora)).toEqual({ enviadas: ['A', 'B'], errores: {} })
+    expect(llamadas.map((l) => l.url)).toEqual(['https://hook.eu1.make.com/abc123', 'https://hook.eu1.make.com/abc123'])
+    expect(llamadas[0].cuerpo).toMatchObject({ token: 'make_' + 'x'.repeat(30), id: 'A', esCarrusel: false, video_url: 'https://res.cloudinary.com/x/v.mp4' })
+    expect(llamadas[1].cuerpo.archivos).toHaveLength(2)
+    const l = f.marketingCentral_().publicaciones
+    expect(l[0].notas).toContain('Enviado a Make')
+    expect(f.makeEnviarPendientes_(ahora)).toEqual({ enviadas: [], errores: {} }) // no repite
+    f.marketingGuardar_({ id: 'A', estado: 'aprobado' }, 'a@b.c', ahora)
+    expect(f.marketingCentral_().publicaciones[0].notas).not.toContain('Enviado a Make')
+    expect(f.makeEnviarPendientes_(ahora).enviadas).toEqual(['A'])
+  })
+
+  it('programador: sin webhook no hace nada y un HTTP malo no deja marca (se reintenta)', () => {
+    const sin = maestro(null, () => { throw new Error('no debe llamar') })
+    expect(sin.f.makeEnviarPendientes_(Date.UTC(2026, 9, 15, 17))).toEqual({ enviadas: [], errores: {}, motivo: 'sin_webhook' })
+    const { f } = maestro('https://hook.eu1.make.com/abc123', () => ({ getResponseCode: () => 500 }))
+    f.marketingImportar_({ filas: [fila('A', { hora: '10:00', media: 'https://res.cloudinary.com/x/v.mp4', estado: 'aprobado' })] })
+    expect(f.makeEnviarPendientes_(Date.UTC(2026, 9, 15, 17))).toEqual({ enviadas: [], errores: { A: 'HTTP 500' } })
+    expect(f.marketingCentral_().publicaciones[0].notas).toBe('')
   })
 })
