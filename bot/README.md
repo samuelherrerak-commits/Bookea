@@ -148,3 +148,6 @@ Archivos:
 - `src/textos.ts`: todo lo que dice el bot.
 - `src/bandeja.ts` y `src/bandejaHtml.ts`: la bandeja.
 - `src/apps.ts`: las llamadas al Apps Script.
+
+## Conector de Claude (`/mcp`)
+El mismo Worker atiende el conector MCP para administrar bookeaa desde Claude, con OAuth (`src/oauth.ts`) y herramientas (`src/mcp.ts`). Guía: [docs/CONECTOR.md](../docs/CONECTOR.md).

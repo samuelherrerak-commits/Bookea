@@ -4,6 +4,7 @@
  *   POST /webhook   mensajes entrantes (firmados con el App Secret)
  *   /bandeja        bandeja web para atender los chats
  *   /push/*         avisos de "Mi negocio" (Web Push): los llama el Apps Script
+ *   /mcp            conector de Claude para administrar bookeaa (OAuth en oauth.ts)
  *   cron            recordatorios y resumen de la mañana (cada 5 minutos)
  */
 import { serviciosAppsScript, type EnvApps } from './apps'
@@ -11,6 +12,8 @@ import { avisar, avisoPrueba, clavesVapid, nuevaReserva, quitar, repasar, suscri
 import { manejarBandeja } from './bandeja'
 import { guardarConversacion, guardarMensaje, leerConversacion, nueva, sumarUso } from './db'
 import { firmaMetaValida } from './firma'
+import { manejarMcp } from './mcp'
+import { manejarOAuth } from './oauth'
 import { procesar } from './flujo'
 import { cuerpoMensaje, enviar, marcarLeido, mensajesDelWebhook, textoDeSalida, type Recibido } from './whatsapp'
 import type { Servicios } from './tipos'
@@ -20,6 +23,8 @@ export type Env = EnvApps & {
   APP_SECRET: string
   VERIFY_TOKEN: string
   BANDEJA_CLAVE: string
+  /** Sitio de bookeaa (donde está /conectar). Por defecto https://www.bookeaa.com. */
+  SITIO_URL?: string
 }
 
 export default {
@@ -32,6 +37,9 @@ export default {
     }
     if (url.pathname === '/bandeja' || url.pathname.startsWith('/bandeja/')) return manejarBandeja(req, env)
     if (url.pathname.startsWith('/push/')) return manejarPush(req, url.pathname, env)
+    if (url.pathname === '/mcp') return manejarMcp(req, url, env)
+    const oauth = await manejarOAuth(req, url, env)
+    if (oauth) return oauth
     if (url.pathname === '/favicon.ico') return new Response(null, { status: 204 })
     if (url.pathname === '/') return Response.redirect(`${url.origin}/bandeja`, 302)
     return new Response('No encontrado', { status: 404 })
