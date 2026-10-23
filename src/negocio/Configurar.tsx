@@ -3,6 +3,7 @@ import { formatTime12 } from '../lib/format'
 import { LUGAR_TIPOS } from '../lib/lugar'
 import { ESTILO_DEF, ESTILOS, PALETAS } from '../lib/theme'
 import { BOOKEAA_WHATSAPP } from '../config'
+import { fotoCuadrada } from '../lib/image'
 import * as api from './api'
 import { MiPlan } from './MiPlan'
 import { MisBloqueos } from './MisBloqueos'
@@ -986,6 +987,86 @@ const MODOS: [api.EquipoConfig['modo'], string, string][] = [
   ['ambos', 'Los dos', 'El equipo arriba (opcional) y los servicios abajo.'],
 ]
 
+/** Foto de perfil: se elige del teléfono o la computadora, se recorta en cuadrado y se guarda al guardar el equipo. */
+function FotoPersona({ foto, nombre, onChange }: { foto: string; nombre: string; onChange: (foto: string) => void }) {
+  const [error, setError] = useState('')
+  const [cargando, setCargando] = useState(false)
+  const input = useRef<HTMLInputElement>(null)
+  const iniciales = (nombre || '?').split(/\s+/).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('')
+  return (
+    <div>
+      <span className="block text-[14px] font-semibold">Foto</span>
+      <div className="mt-1.5 flex items-center gap-3">
+        <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-sand text-[18px] font-semibold">
+          {foto ? <img src={foto} alt={`Foto de ${nombre || 'la persona'}`} className="size-16 object-cover" /> : iniciales}
+        </span>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => input.current?.click()} disabled={cargando}
+            className="rounded-full px-4 py-2.5 text-[14px] font-semibold ring-1 ring-line disabled:opacity-50">
+            {cargando ? 'Preparando…' : foto ? 'Cambiar foto' : 'Subir foto'}
+          </button>
+          {foto && <button type="button" onClick={() => onChange('')} className="px-2 text-[14px] text-muted underline underline-offset-4">Quitar</button>}
+        </div>
+        <input ref={input} type="file" accept="image/*" className="hidden" aria-label="Elegir foto"
+          onChange={async (e) => {
+            const archivo = e.target.files?.[0]
+            e.target.value = ''
+            if (!archivo) return
+            setError('')
+            setCargando(true)
+            try {
+              onChange(await fotoCuadrada(archivo))
+            } catch (err) {
+              setError((err as Error).message)
+            } finally {
+              setCargando(false)
+            }
+          }} />
+      </div>
+      {error && <p role="alert" className="mt-1 text-[13px] text-danger">{error}</p>}
+    </div>
+  )
+}
+
+/** Si su calendario ya está compartido con su Gmail, o qué falló y cómo reintentarlo. */
+function EstadoCalendario({ persona: p, cambios, reintentar }: { persona: api.PersonaEquipo; cambios: boolean; reintentar: () => Promise<string[]> }) {
+  const [estado, setEstado] = useState<'listo' | 'enviando'>('listo')
+  const [errores, setErrores] = useState<string[]>([])
+  const [copiado, setCopiado] = useState(false)
+  const enlace = p.calendarioId ? `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(p.calendarioId)}` : ''
+  const e = p.calendarioEstado ?? (p.calendario ? 'pendiente' : 'sin_crear')
+  return (
+    <div className={'rounded-2xl px-4 py-3 text-[14px] ' + (e === 'error' ? 'bg-danger/10' : 'bg-sand')}>
+      <p className="font-semibold">
+        {e === 'compartido' ? '📅 Calendario compartido' : e === 'error' ? '⚠️ Su calendario no se pudo compartir' : e === 'sin_crear' ? '📅 Sin calendario todavía' : '📅 Calendario por compartir'}
+      </p>
+      <p className={'mt-0.5 ' + (e === 'error' ? 'text-danger' : 'text-muted')}>
+        {e === 'compartido' && `Con ${p.email}. Le llegó un correo de Google: al tocar “Agregar este calendario” lo ve en su Google Calendar.`}
+        {e === 'error' && (p.calendarioError || 'Google no respondió.')}
+        {e === 'pendiente' && `Se comparte con ${p.email || 'su Gmail'} al guardar.`}
+        {e === 'sin_crear' && 'Se crea al guardar.'}
+      </p>
+      {errores.length > 0 && <p role="alert" className="mt-1 text-danger">{errores.join(' ')}</p>}
+      <div className="mt-2 flex flex-wrap gap-2">
+        {e !== 'compartido' && (
+          <button type="button" disabled={cambios || estado === 'enviando'} title={cambios ? 'Guarda primero los cambios' : ''}
+            onClick={async () => { setEstado('enviando'); setErrores(await reintentar()); setEstado('listo') }}
+            className="rounded-full bg-ink px-4 py-2 text-[14px] font-semibold text-bg disabled:opacity-50">
+            {estado === 'enviando' ? 'Compartiendo…' : 'Reintentar'}
+          </button>
+        )}
+        {enlace && e === 'compartido' && (
+          <>
+            <a href={enlace} target="_blank" rel="noopener noreferrer" className="rounded-full px-4 py-2 text-[14px] font-semibold ring-1 ring-line">Abrir en Google Calendar</a>
+            <button type="button" onClick={async () => { await navigator.clipboard?.writeText(enlace).catch(() => {}); setCopiado(true); setTimeout(() => setCopiado(false), 1500) }}
+              className="rounded-full px-4 py-2 text-[14px] font-semibold ring-1 ring-line">{copiado ? '✓ Copiado' : 'Copiar enlace para enviárselo'}</button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesion: string; alSalir: () => void }) {
   const original = datos.equipo ?? { plan: 'individual' as const, activo: false, modo: 'servicio' as const, cualquiera: true, personas: [] }
   const [eq, setEq, cambios] = useBorrador<api.EquipoConfig>({
@@ -1005,6 +1086,14 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
   const activas = eq.personas.filter((p) => p.activo).length
   const precio = 25 + Math.max(0, activas - 5) * 5
   const link = (id: string) => `${location.origin}/u/${slug}?con=${id}`
+  const guardarEquipo = () => {
+    const sinServicios = eq.personas.filter((p, i) => soloAlgunos(i) && !p.servicios.length)
+    if (sinServicios.length) return Promise.resolve(sinServicios.map((p) => `${p.nombre || 'Persona nueva'}: marca al menos un servicio o deja "Hace todos los servicios".`))
+    return guardar('equipo', {
+      config: { equipo_activo: eq.activo ? 'si' : 'no', equipo_modo: eq.modo, equipo_cualquiera: eq.cualquiera ? 'si' : 'no' },
+      equipo: eq.personas,
+    })
+  }
 
   if (bloqueosDe) {
     const p = eq.personas.find((x) => x.id === bloqueosDe)
@@ -1077,10 +1166,8 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
                   <Campo etiqueta="Su Gmail" ayuda="Con este correo entra a Mi negocio y recibe su calendario de citas.">
                     <Texto type="email" inputMode="email" value={p.email} placeholder="carla@gmail.com" onChange={(e) => editar(i, { email: e.target.value.trim() })} />
                   </Campo>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Campo etiqueta="Cargo"><Texto value={p.cargo} placeholder="Estilista" onChange={(e) => editar(i, { cargo: e.target.value })} /></Campo>
-                    <Campo etiqueta="Foto (enlace)"><Texto value={p.foto} placeholder="https://…" onChange={(e) => editar(i, { foto: e.target.value.trim() })} /></Campo>
-                  </div>
+                  <Campo etiqueta="Cargo"><Texto value={p.cargo} placeholder="Estilista" onChange={(e) => editar(i, { cargo: e.target.value })} /></Campo>
+                  <FotoPersona foto={p.foto} nombre={p.nombre} onChange={(foto) => editar(i, { foto })} />
                   <div>
                     <Interruptor
                       activo={!soloAlgunos(i)}
@@ -1136,6 +1223,7 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
                     )}
                   </div>
                   <Interruptor activo={p.activo} onChange={(v) => editar(i, { activo: v })}>Activa (recibe reservas)</Interruptor>
+                  {p.id && <EstadoCalendario persona={p} cambios={cambios} reintentar={guardarEquipo} />}
                   {p.id && (
                     <div className="grid grid-cols-2 gap-2">
                       <button type="button" onClick={async () => { await navigator.clipboard?.writeText(link(p.id)).catch(() => {}); setCopiado(p.id); setTimeout(() => setCopiado(''), 1500) }}
@@ -1161,17 +1249,10 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
         className="mt-3 w-full rounded-full px-5 py-3 text-[15px] font-semibold ring-1 ring-line">
         + Agregar persona
       </button>
-      <p className="mt-3 text-[13px] text-muted">A cada persona nueva le creamos su calendario de citas y se lo compartimos a su Gmail. Quien sale del equipo queda inactiva: su calendario y sus citas no se borran.</p>
+      <p className="mt-3 text-[13px] text-muted">Al guardar, a cada persona nueva le creamos su calendario de citas y se lo compartimos a su Gmail (y a ti): le llega un correo de Google para agregarlo. Quien sale del equipo queda inactiva: su calendario y sus citas no se borran.</p>
       <Guardar
         cambios={cambios}
-        alGuardar={() => {
-          const sinServicios = eq.personas.filter((p, i) => soloAlgunos(i) && !p.servicios.length)
-          if (sinServicios.length) return Promise.resolve(sinServicios.map((p) => `${p.nombre || 'Persona nueva'}: marca al menos un servicio o deja "Hace todos los servicios".`))
-          return guardar('equipo', {
-            config: { equipo_activo: eq.activo ? 'si' : 'no', equipo_modo: eq.modo, equipo_cualquiera: eq.cualquiera ? 'si' : 'no' },
-            equipo: eq.personas,
-          })
-        }}
+        alGuardar={guardarEquipo}
       />
     </>
   )

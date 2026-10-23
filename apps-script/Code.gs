@@ -45,8 +45,9 @@ const PROPIEDAD_TEMPLATE = 'tenant_plantilla_id';
 
 // bookeaa team. Servicios = IDs separados por coma (vacío = hace todos). Horario = "lun 09:00-18:00, sáb 09:00-14:00"
 // (vacío = el horario del negocio). Calendario_Id lo crea bookeaa y lo comparte con su Gmail.
-const EQUIPO_HEADERS = ['ID', 'Nombre', 'Email', 'Calendario_Id', 'Foto_URL', 'Cargo', 'Servicios', 'Horario', 'Activo'];
+const EQUIPO_HEADERS = ['ID', 'Nombre', 'Email', 'Calendario_Id', 'Foto_URL', 'Cargo', 'Servicios', 'Horario', 'Activo', 'Compartido'];
 const MAX_EQUIPO = 30;
+const MAX_FOTO_EQUIPO = 400000; // caracteres de la foto subida (data URL); Mi negocio la manda en ~30 KB
 
 const SHEETS = [
   {
@@ -353,7 +354,7 @@ function crearTenant(slug, nombre, email, opt) {
   }
   if (email) {
     try { ss.getOwner().addEditor(email); } catch (_) {}
-    try { calendario.addOwner(email); } catch (_) {}
+    compartirCalendario_(calendarioId, email, 'owner');
     try { carpeta.addEditor(email); } catch (_) {}
   }
 
@@ -3129,14 +3130,18 @@ function duenoLeerConfig_(ss, tenant, ahoraMs) {
       };
     }).filter(function (c) { return c.codigo; }),
     logo: leerLogoHoja_(ss),
-    // bookeaa team: sin correo de calendario ni ID de calendario hacia afuera.
+    // bookeaa team (solo lo ve el administrador): el ID del calendario sirve para su enlace de Google Calendar.
     equipo: {
       plan: planDe_((filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })[0] || {}).Plan),
       activo: String(todo.equipo_activo || '').toLowerCase() === 'si',
       modo: String(todo.equipo_modo || 'servicio').toLowerCase(),
       cualquiera: String(todo.equipo_cualquiera || 'si').toLowerCase() !== 'no',
       personas: equipoLeer_(ss).map(function (p) {
-        return { id: p.id, nombre: p.nombre, email: p.email, foto: p.foto, cargo: p.cargo, servicios: p.servicios, horarios: p.horario, activo: p.activo, calendario: !!p.calendarioId };
+        const cal = estadoCalendarioEquipo_(p);
+        return {
+          id: p.id, nombre: p.nombre, email: p.email, foto: p.foto, cargo: p.cargo, servicios: p.servicios, horarios: p.horario, activo: p.activo,
+          calendario: !!p.calendarioId, calendarioId: p.calendarioId, calendarioEstado: cal.estado, calendarioError: cal.error,
+        };
       }),
     },
   };
@@ -4752,6 +4757,7 @@ function equipoLeer_(ss) {
       foto: /^https:\/\//.test(v('Foto_URL')) ? v('Foto_URL') : '', cargo: v('Cargo'),
       servicios: v('Servicios').split(/[,;]+/).map(function (x) { return x.trim(); }).filter(Boolean),
       horario: parsearHorarioEquipo_(v('Horario')) || [], activo: !/^(no|false|0)$/i.test(v('Activo')),
+      compartido: v('Compartido'),
     };
   }).filter(function (p) { return p.id && p.nombre; });
 }
@@ -4855,16 +4861,68 @@ function idPersona_(nombre, usados) {
   return id;
 }
 
-/** Comparte un calendario con un Gmail (lo ve y lo edita en su Google Calendar). Nunca lanza. */
+/**
+ * Comparte un calendario con un Gmail (lo ve y lo edita en su Google Calendar y le llega un
+ * correo de Google). Usa el servicio avanzado Calendar si está activado en el proyecto; si no,
+ * la misma API por UrlFetchApp con el permiso de calendario que ya tiene el script.
+ * Nunca lanza: devuelve {ok, error}.
+ */
 function compartirCalendario_(calendarioId, email, rol) {
-  if (!calendarioId || !email) return false;
-  try {
-    Calendar.Acl.insert({ role: rol || 'writer', scope: { type: 'user', value: email } }, calendarioId, { sendNotifications: true });
-    return true;
-  } catch (err) {
-    console.warn('No se pudo compartir el calendario con ' + email + ': ' + err);
-    return false;
+  if (!calendarioId || !email) return { ok: false, error: 'Falta el calendario o el correo.' };
+  const regla = { role: rol || 'writer', scope: { type: 'user', value: email } };
+  let error = '';
+  if (typeof Calendar !== 'undefined' && Calendar.Acl) {
+    try {
+      Calendar.Acl.insert(regla, calendarioId, { sendNotifications: true });
+      return { ok: true, error: '' };
+    } catch (err) {
+      error = String(err && err.message || err);
+    }
   }
+  try {
+    const r = UrlFetchApp.fetch('https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarioId) + '/acl?sendNotifications=true', {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(regla),
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true,
+    });
+    if (r.getResponseCode() < 300) return { ok: true, error: '' };
+    let msg = '';
+    try { msg = JSON.parse(r.getContentText()).error.message; } catch (_) { msg = 'HTTP ' + r.getResponseCode(); }
+    error = msg || error;
+  } catch (err) {
+    error = error || String(err && err.message || err);
+  }
+  console.warn('No se pudo compartir el calendario ' + calendarioId + ' con ' + email + ': ' + error);
+  return { ok: false, error: String(error).slice(0, 200) };
+}
+
+/**
+ * Guarda la foto de una persona del equipo subida desde Mi negocio ("data:image/jpeg;base64,…")
+ * en la carpeta del negocio, visible con el enlace, y devuelve la dirección que ve la página.
+ * Si no se puede, devuelve '' (se queda la foto anterior).
+ */
+function guardarFotoEquipo_(dataUrl, nombre, carpetaId) {
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
+  if (!m) return '';
+  try {
+    let carpeta = null;
+    try { carpeta = carpetaId ? DriveApp.getFolderById(carpetaId) : null; } catch (_) { carpeta = null; }
+    const ext = m[1] === 'image/png' ? 'png' : m[1] === 'image/webp' ? 'webp' : 'jpg';
+    const blob = Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], 'Foto ' + limpiarTexto_(nombre, 60) + '.' + ext);
+    const archivo = carpeta ? carpeta.createFile(blob) : DriveApp.createFile(blob);
+    archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return 'https://lh3.googleusercontent.com/d/' + archivo.getId() + '=w400';
+  } catch (err) {
+    console.warn('No se pudo guardar la foto de ' + nombre + ': ' + err);
+    return '';
+  }
+}
+
+/** Cómo va el calendario de una persona, para Mi negocio. */
+function estadoCalendarioEquipo_(p) {
+  if (!p.calendarioId) return { estado: 'sin_crear', error: '' };
+  if (p.compartido && p.compartido.toLowerCase() === p.email) return { estado: 'compartido', error: '' };
+  if (/^error:/i.test(p.compartido || '')) return { estado: 'error', error: p.compartido.replace(/^error:\s*/i, '') };
+  return { estado: 'pendiente', error: '' };
 }
 
 /**
@@ -4888,25 +4946,35 @@ function equipoGuardar_(ss, tenant, lista) {
     vistos[id] = true;
     const email = String(n.email || '').trim().toLowerCase();
     let calendarioId = previa ? previa.calendarioId : '';
+    let compartido = previa ? previa.compartido : '';
     if (!calendarioId) {
-      const cal = CalendarApp.createCalendar('Citas ' + limpiarTexto_(n.nombre, 60) + ' · ' + negocio, { timeZone: ZONA });
-      calendarioId = cal.getId();
-      compartirCalendario_(calendarioId, email, 'writer');
-    } else if (previa && previa.email !== email) {
-      compartirCalendario_(calendarioId, email, 'writer');
+      try {
+        calendarioId = CalendarApp.createCalendar('Citas ' + limpiarTexto_(n.nombre, 60) + ' · ' + negocio, { timeZone: ZONA }).getId();
+      } catch (err) {
+        compartido = 'error: No se pudo crear su calendario (' + String(err && err.message || err).slice(0, 150) + ')';
+      }
     }
+    // Se comparte (y se reintenta en cada guardado) hasta que Google lo confirme con su correo
+    // actual. Al dueño del negocio también, para que vea la agenda de cada quien.
+    if (calendarioId && compartido.toLowerCase() !== email) {
+      const r = compartirCalendario_(calendarioId, email, 'writer');
+      compartido = r.ok ? email : 'error: ' + r.error;
+      if (r.ok && tenant.email && tenant.email.toLowerCase() !== email) compartirCalendario_(calendarioId, tenant.email.toLowerCase(), 'writer');
+    }
+    let foto = String(n.foto || '').trim();
+    if (/^data:image\//.test(foto)) foto = guardarFotoEquipo_(foto, n.nombre, tenant.carpetaId) || (previa ? previa.foto : '');
     const servicios = (Array.isArray(n.servicios) ? n.servicios : []).map(function (x) { return limpiarTexto_(x, 60); }).filter(Boolean);
-    filas.push([id, paraCelda_(limpiarTexto_(n.nombre, 60)), email, calendarioId, String(n.foto || '').trim().slice(0, 500),
+    filas.push([id, paraCelda_(limpiarTexto_(n.nombre, 60)), email, calendarioId, /^https:\/\//.test(foto) ? foto.slice(0, 500) : '',
       paraCelda_(limpiarTexto_(n.cargo || '', 60)), servicios.join(', '), horarioEquipoTexto_((n.horarios || []).map(function (h) {
         return { dia: parseDia_(h.dia), inicio: hhmm_(toMinutes_(h.inicio)), fin: hhmm_(toMinutes_(h.fin)) };
-      })), n.activo === false ? 'no' : 'si']);
+      })), n.activo === false ? 'no' : 'si', compartido]);
   });
   actuales.forEach(function (p) {
     if (vistos[p.id]) return;
-    filas.push([p.id, p.nombre, p.email, p.calendarioId, p.foto, p.cargo, p.servicios.join(', '), horarioEquipoTexto_(p.horario), 'no']);
+    filas.push([p.id, p.nombre, p.email, p.calendarioId, p.foto, p.cargo, p.servicios.join(', '), horarioEquipoTexto_(p.horario), 'no', p.compartido]);
   });
   sheet.getRange(1, 1, 1, EQUIPO_HEADERS.length).setValues([EQUIPO_HEADERS]);
-  sheet.getRange('A:I').setNumberFormat('@');
+  sheet.getRange(1, 1, sheet.getMaxRows(), EQUIPO_HEADERS.length).setNumberFormat('@');
   cfgReemplazar_(sheet, EQUIPO_HEADERS.length, filas);
   actualizarIndiceEquipo_(tenant.slug, filas.map(function (f) {
     return { id: f[0], nombre: f[1], email: f[2], activo: f[8] !== 'no' };
@@ -4929,7 +4997,9 @@ function equipoValidar_(datos) {
     if (!/^[^\s@,]+@[^\s@,]+\.[a-z]{2,}$/i.test(email)) errores.push(nombre + ': escribe su Gmail.');
     else if (correos.indexOf(email) !== -1) errores.push(nombre + ': ese correo ya está en el equipo.');
     correos.push(email);
-    if (p.foto && !/^https:\/\//.test(String(p.foto).trim())) errores.push(nombre + ': la foto tiene que ser un enlace https://');
+    const foto = String(p.foto || '').trim();
+    if (foto && !/^https:\/\//.test(foto) && !/^data:image\/(jpeg|png|webp);base64,/.test(foto)) errores.push(nombre + ': la foto tiene que ser una imagen o un enlace https://');
+    else if (foto.length > MAX_FOTO_EQUIPO) errores.push(nombre + ': la foto pesa mucho, prueba con otra.');
     (p.horarios || []).forEach(function (h) {
       if (parseDia_(h.dia) === null || isNaN(toMinutes_(h.inicio)) || isNaN(toMinutes_(h.fin)) || toMinutes_(h.fin) <= toMinutes_(h.inicio)) {
         errores.push(nombre + ': revisa su horario (' + (h.dia || '?') + ').');
