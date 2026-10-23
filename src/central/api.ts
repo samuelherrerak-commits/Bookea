@@ -221,6 +221,10 @@ async function llamar<T>(datos: Record<string, unknown>): Promise<T> {
   return json
 }
 
+/** Quién es el administrador y dónde está el Worker del conector de Claude (bot_bandeja_url). */
+export const yo = (sesion: string) =>
+  DEMO_MODE ? Promise.resolve({ email: 'demo@gmail.com', conector: '' }) : llamar<{ email: string; conector: string }>({ op: 'yo', sesion })
+
 export const resumen = (sesion: string) => (DEMO_MODE ? demo.resumen() : llamar<Resumen>({ op: 'resumen', sesion }))
 
 export const registrarPago = (sesion: string, d: { slug: string; meses: number; monto: number; metodo: string; referencia: string }) =>

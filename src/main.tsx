@@ -31,6 +31,15 @@ if (/^\/central\/?$/.test(window.location.pathname)) {
       </StrictMode>,
     )
   })
+} else if (/^\/conectar\/?$/.test(window.location.pathname)) {
+  // /conectar: el administrador autoriza el conector de Claude (OAuth del Worker del bot).
+  void import('./conectar/ConectarApp').then(({ default: ConectarApp }) => {
+    root.render(
+      <StrictMode>
+        <ConectarApp />
+      </StrictMode>,
+    )
+  })
 } else if (/^\/negocio\/?$/.test(window.location.pathname)) {
   // /negocio: la app de cada dueño ("Mi negocio"). Su propio chunk.
   void import('./negocio/NegocioApp').then(({ default: NegocioApp }) => {

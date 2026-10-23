@@ -3491,6 +3491,8 @@ function atenderCentral_(data, ahoraMs) {
   if (!email) return { error: 'sesion', mensaje: 'Tu sesión venció. Entra otra vez.' };
   if (!esAdminDueno_(email)) return { error: 'no_autorizado', mensaje: email + ' no es administrador de bookeaa (propiedad dueno_admins).' };
   const op = String(data.op || '');
+  // Para el conector de Claude: quién es el administrador y dónde está el Worker que lo atiende.
+  if (op === 'yo') return { email: email, conector: urlWorker_() };
   if (op === 'resumen') return resumenCentral_(ahoraMs);
   if (op === 'cobros') return cobrosCentral_(ahoraMs);
   if (op === 'metricas') return metricasCentral_(ahoraMs, !!data.fresco);
