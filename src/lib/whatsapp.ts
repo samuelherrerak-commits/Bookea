@@ -22,6 +22,8 @@ export interface WhatsAppInput {
   recibo?: number | null
   comprobanteUrl?: string | null
   calendarUrl?: string | null
+  /** bookeaa team: nombre de quien atiende. */
+  profesional?: string | null
 }
 
 /** Los valores de cada {variable}. Vacío = la línea que la usa desaparece del mensaje. */
@@ -60,12 +62,18 @@ export function variablesMensaje(input: WhatsAppInput): VariablesMensaje {
     reserva: reservaId
       ? `#${reservaId.slice(0, 8).toUpperCase()}${recibo ? ` · ticket N.º ${String(recibo).padStart(6, '0')}` : ''}`
       : '',
+    profesional: input.profesional?.trim() ?? '',
   }
 }
 
 /** El mensaje que el cliente envía al negocio al terminar la reserva, con la plantilla elegida. */
 export function buildWhatsAppMessage(input: WhatsAppInput): string {
-  return renderMensaje(input.plantilla?.trim() || PLANTILLAS_MENSAJE[0].texto, variablesMensaje(input))
+  let texto = input.plantilla?.trim() || PLANTILLAS_MENSAJE[0].texto
+  // bookeaa team: si la plantilla no dice con quién, va debajo de la hora (o al final).
+  if (input.profesional?.trim() && !texto.includes('{profesional}')) {
+    texto = /\{hora\}/.test(texto) ? texto.replace(/^(.*\{hora\}.*)$/m, '$1\n💁 Con: {profesional}') : `${texto}\n💁 Con: {profesional}`
+  }
+  return renderMensaje(texto, variablesMensaje(input))
 }
 
 export function buildWhatsAppUrl(numero: string, message: string): string {

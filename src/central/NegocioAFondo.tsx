@@ -102,6 +102,17 @@ export function NegocioAFondo({ sesion, slug, hoy, alVolver, alGestionar, alSali
         </Tarjeta>
       </div>
 
+      {!!e.porPersona?.length && (
+        <Tarjeta titulo="Por persona del equipo" detalle={`bookeaa team · ${n.personas ?? e.porPersona.length} personas activas · $${n.precio ?? 25} al mes`}>
+          <div className="grid gap-x-8 md:grid-cols-2">
+            <BarrasH items={e.porPersona} formato={(v) => `${v} ${v === 1 ? 'cita' : 'citas'}`} extra={(i) => dineroCorto(e.porPersona![i].ingresos)} />
+            <p className="mt-4 text-[13px] text-muted md:mt-0">
+              Citas y facturación de los últimos 12 meses, sin las canceladas. Con “Cualquiera disponible”, cuenta para quien la atendió.
+            </p>
+          </div>
+        </Tarjeta>
+      )}
+
       <div className="grid gap-5 md:grid-cols-3">
         <Tarjeta titulo="Clientes nuevos por mes">
           <BarrasMes nombre="Clientes nuevos por mes" meses={e.meses} valores={e.clientesNuevosMes} alto={150} />
@@ -152,6 +163,7 @@ export function NegocioAFondo({ sesion, slug, hoy, alVolver, alGestionar, alSali
         <Tarjeta titulo="Su plan en bookeaa" detalle={textoVence(n)}>
           <dl className="space-y-1.5 text-[14px]">
             {[
+              ['Plan', n.plan === 'team' ? `bookeaa team · ${n.personas ?? 0} personas · $${n.precio ?? 25}/mes` : `Individual · $${n.precio ?? 10}/mes`],
               ['Último pago', n.ultimoPago ? fechaCorta(n.ultimoPago) : 'Nunca'],
               ['Pagó en total', `$${d.pagos.reduce((a, p) => a + p.monto, 0).toLocaleString('es-VE')} · ${d.pagos.length} ${d.pagos.length === 1 ? 'pago' : 'pagos'}`],
               ['Gmail', n.email || '—'],

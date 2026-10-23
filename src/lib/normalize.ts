@@ -1,5 +1,5 @@
 import { DEFAULT_WHATSAPP } from '../config'
-import type { BusinessConfig, BusyRange, Catalog, Money, Promo, Sede, Service, Tasa, ThemeEstilo } from '../types'
+import type { BusinessConfig, BusyRange, Catalog, Equipo, Money, Profesional, Promo, Sede, Service, Tasa, ThemeEstilo } from '../types'
 import { parseHHMM } from './format'
 import { derivarAcento } from './color'
 import { capitalizar, etiquetaLugar, sedeId } from './lugar'
@@ -368,6 +368,38 @@ export function normalizeCitas(rows: unknown): BusyRange[] {
     .filter((c) => !Number.isNaN(c.inicio.getTime()) && !Number.isNaN(c.fin.getTime()) && c.fin > c.inicio)
 }
 
+/** bookeaa team: las personas que atienden y la ocupación de cada una. null = sin equipo. */
+export function normalizeEquipo(personasRaw: unknown, citasRaw: unknown, configRaw: unknown): Equipo | null {
+  if (!Array.isArray(personasRaw)) return null
+  const personas: Profesional[] = []
+  for (const r of personasRaw as Row[]) {
+    const id = str(r.id)
+    const nombre = str(r.nombre)
+    if (!id || !nombre || personas.some((p) => p.id === id)) continue
+    personas.push({
+      id,
+      nombre,
+      foto: /^https:\/\//i.test(str(r.foto)) ? str(r.foto) : '',
+      cargo: str(r.cargo),
+      servicios: Array.isArray(r.servicios) ? (r.servicios as unknown[]).map(str).filter(Boolean) : [],
+      horario: normalizeHorarios(r.horarios),
+    })
+  }
+  if (!personas.length) return null
+  const map: Record<string, string> = {}
+  if (configRaw && typeof configRaw === 'object' && !Array.isArray(configRaw)) {
+    for (const [k, v] of Object.entries(configRaw)) map[k.toLowerCase()] = str(v).trim().toLowerCase()
+  }
+  const citasObj = citasRaw && typeof citasRaw === 'object' ? (citasRaw as Record<string, unknown>) : {}
+  const modo = map.equipo_modo
+  return {
+    modo: modo === 'persona' || modo === 'ambos' ? modo : 'servicio',
+    cualquiera: !/^(no|false|0)$/.test(map.equipo_cualquiera ?? ''),
+    personas,
+    citas: Object.fromEntries(personas.map((p) => [p.id, normalizeCitas(citasObj[p.id])])),
+  }
+}
+
 export function normalizeCatalog(data: Row): Catalog {
   const servicios = normalizeServices(data.servicios)
   return {
@@ -376,5 +408,6 @@ export function normalizeCatalog(data: Row): Catalog {
     config: normalizeConfig(data.config, data.horarios, { sedes: data.sedes, mensajes: data.mensajes, logo: data.logo }),
     tasa: normalizeTasa(data.tasa),
     citas: normalizeCitas(data.citasAgendadas),
+    equipo: normalizeEquipo(data.equipo, data.citasEquipo, data.config),
   }
 }

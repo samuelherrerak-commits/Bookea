@@ -119,8 +119,8 @@ const RUBROS: Record<string, { servicios: typeof SERVICIOS; promociones: typeof 
  * Sirve para ver y capturar las plantillas sin tocar una hoja. En producción el
  * mock no se usa, así que el negocio real solo se configura desde su hoja.
  */
-function previewOverrides(): { config: Record<string, string>; rubro: string; sedes: string } {
-  if (typeof window === 'undefined') return { config: {}, rubro: '', sedes: '' }
+function previewOverrides(): { config: Record<string, string>; rubro: string; sedes: string; equipo: string } {
+  if (typeof window === 'undefined') return { config: {}, rubro: '', sedes: '', equipo: '' }
   const q = new URLSearchParams(window.location.search)
   const config: Record<string, string> = {}
   const set = (param: string, key: string) => {
@@ -136,22 +136,54 @@ function previewOverrides(): { config: Record<string, string>; rubro: string; se
   set('lugar', 'lugar_tipo')
   set('domicilio', 'permite_domicilio')
   set('mensaje', 'mensaje_plantilla')
-  return { config, rubro: q.get('rubro') ?? '', sedes: q.get('sedes') ?? '' }
+  return { config, rubro: q.get('rubro') ?? '', sedes: q.get('sedes') ?? '', equipo: q.get('equipo') ?? '' }
+}
+
+/**
+ * Solo en demo: ?equipo=servicio|persona|ambos arma un equipo de bookeaa team con tres
+ * personas, cada una con su agenda: una hace todo, otra solo parte de los servicios y
+ * la tercera trabaja en la tarde de martes a sábado.
+ */
+function demoEquipo(servicios: typeof SERVICIOS) {
+  const today = zonedParts(new Date(), 'America/Caracas').ymd
+  const at = (days: number, from: string, to: string) => ({
+    inicio: `${addDays(today, days)}T${from}:00-04:00`,
+    fin: `${addDays(today, days)}T${to}:00-04:00`,
+  })
+  const base = servicios.filter((s) => !/adic/i.test(s.Tipo))
+  const parte = [...base.filter((_, i) => i % 2 === 0), ...servicios.filter((s) => /adic/i.test(s.Tipo))].map((s) => s.ID)
+  const tarde = [2, 3, 4, 5, 6].map((dia) => ({ dia, inicio: '12:00', fin: '20:00' }))
+  return {
+    equipo: [
+      { id: 'carla', nombre: 'Carla Méndez', foto: '', cargo: 'Directora', servicios: [], horarios: null },
+      { id: 'andrea', nombre: 'Andrea Rojas', foto: '', cargo: 'Especialista', servicios: parte, horarios: null },
+      { id: 'sofia', nombre: 'Sofía Pérez', foto: '', cargo: 'Turno de la tarde', servicios: [], horarios: tarde },
+    ],
+    citasEquipo: {
+      carla: [at(0, '09:00', '12:00'), at(1, '10:00', '13:00'), at(2, '09:00', '19:00'), at(4, '14:00', '17:00')],
+      andrea: [at(0, '15:00', '17:00'), at(1, '09:00', '11:00'), at(3, '13:00', '16:00')],
+      sofia: [at(1, '12:00', '15:00'), at(2, '16:00', '18:00')],
+    },
+  }
 }
 
 export async function mockFetchData(): Promise<Catalog> {
   await wait(650)
   const preview = previewOverrides()
   const rubro = RUBROS[preview.rubro]
+  const conEquipo = ['servicio', 'persona', 'ambos'].includes(preview.equipo)
+  const equipo = conEquipo ? demoEquipo(rubro?.servicios ?? SERVICIOS) : null
   return normalizeCatalog({
     servicios: rubro?.servicios ?? SERVICIOS,
     promociones: rubro?.promociones ?? PROMOCIONES,
-    config: { ...CONFIG, ...preview.config },
+    config: { ...CONFIG, ...preview.config, ...(conEquipo ? { equipo_activo: 'si', equipo_modo: preview.equipo, equipo_cualquiera: 'si' } : {}) },
+    ...(equipo ?? {}),
     // ?sedes=2 muestra un negocio con dos sedes (una sola agenda).
     sedes: preview.sedes === '2' ? SEDES_DEMO : [],
     mensajes: PLANTILLAS_MENSAJE.map((p) => ({ Nombre: p.nombre, Texto: p.texto })),
     tasa: { valor: 412.35, fecha: new Date().toISOString().slice(0, 10), fuente: 'BCV (demo)' },
-    citasAgendadas: demoCitas(),
+    // Con equipo, la ocupación va por persona: lo de todos es solo lo que cierra el local.
+    citasAgendadas: conEquipo ? [] : demoCitas(),
   })
 }
 
@@ -177,5 +209,11 @@ export async function mockSubmitReservation(payload: ReservationPayload): Promis
     tasa: null,
     comprobanteUrl: payload.comprobante ? 'https://drive.google.com/file/d/demo/view' : null,
     recibo: ++reciboDemo,
+    profesional:
+      payload.profesional && payload.profesional !== '*'
+        ? { id: payload.profesional, nombre: payload.profesional.charAt(0).toUpperCase() + payload.profesional.slice(1) }
+        : payload.profesional === '*'
+          ? { id: 'carla', nombre: 'Carla Méndez' }
+          : null,
   }
 }

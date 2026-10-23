@@ -71,6 +71,10 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
   const comprobanteRef = useRef<HTMLDivElement>(null)
 
   const { customer, payment, schedule, coupon, modalidad, sedeId } = state
+  // bookeaa team: con quién (con "Cualquiera", el servidor asigna y lo devuelve).
+  const equipo = catalog.equipo ?? null
+  const persona = equipo?.personas.find((p) => p.id === state.profesional) ?? null
+  const conQuien = !equipo ? '' : persona ? `con ${persona.nombre.split(/\s+/)[0]}` : 'con quien esté libre'
 
   // El dibujo del ticket se baja mientras la clienta llena el formulario,
   // así al confirmar no hay que esperarlo.
@@ -120,6 +124,7 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
         payment.metodo === 'pago_movil' && payment.comprobante
           ? { ...splitDataUrl(payment.comprobante.dataUrl), nombre: payment.comprobante.nombre }
           : null,
+      ...(equipo ? { profesional: state.profesional ?? '*' } : {}),
     }
 
     setSubmitting(true)
@@ -158,6 +163,7 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
         recibo: result.recibo,
         comprobanteUrl: result.comprobanteUrl,
         calendarUrl,
+        profesional: result.profesional?.nombre || persona?.nombre || null,
       })
       const pagoMovil = payment.metodo === 'pago_movil'
       const ticket: DatosTicket | null =
@@ -220,7 +226,10 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
               </span>
               <div className="flex-1">
                 <p className="text-[15px] font-medium">{capitalize(formatLongDate(schedule.fecha))}</p>
-                <p className="text-[13px] text-muted">{formatTime12(schedule.hora)}</p>
+                <p className="text-[13px] text-muted">
+                  {formatTime12(schedule.hora)}
+                  {conQuien && ` · ${conQuien}`}
+                </p>
               </div>
               <button
                 type="button"

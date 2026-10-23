@@ -80,13 +80,16 @@ export function Cifra({ etiqueta, valor, pie }: { etiqueta: string; valor: React
  * Barras verticales por mes. `enCurso` aclara la última barra (el mes no ha terminado).
  * Al pasar el mouse (o tocar) una barra se ve su valor exacto.
  */
-export function BarrasMes({ meses, valores, formato = (n) => String(n), alto = 200, enCurso = true, nombre }: {
+export function BarrasMes({ meses, valores, formato = (n) => String(n), alto = 200, enCurso = true, nombre, etiqueta = mesCorto, etiquetaLarga = mesLargo }: {
+  /** Claves del eje: 'yyyy-MM' (o lo que entiendan `etiqueta` y `etiquetaLarga`, por ejemplo días). */
   meses: string[]
   valores: number[]
   formato?: (n: number) => string
   alto?: number
   enCurso?: boolean
   nombre: string
+  etiqueta?: (clave: string) => string
+  etiquetaLarga?: (clave: string) => string
 }) {
   const [ref, ancho] = useAncho<HTMLDivElement>()
   const [activa, setActiva] = useState<number | null>(null)
@@ -98,14 +101,16 @@ export function BarrasMes({ meses, valores, formato = (n) => String(n), alto = 2
   const tope = ticks[ticks.length - 1] || 1
   const util = Math.max(0, ancho - izq)
   const col = valores.length ? util / valores.length : 0
-  const barra = Math.max(4, Math.min(36, col - 8))
+  const barra = Math.max(3, Math.min(36, col - (col > 12 ? 8 : 2)))
+  // Con muchas barras (los días de un mes) se rotula una de cada `paso`, siempre la última.
+  const paso = Math.max(1, Math.ceil(28 / Math.max(col, 1)))
   const y = (v: number) => arriba + (alto - arriba - abajo) * (1 - v / tope)
   const base = y(0)
 
   return (
     <div ref={ref} className="relative" onMouseLeave={() => setActiva(null)}>
       {ancho > 0 && (
-        <svg width={ancho} height={alto} role="img" aria-label={`${nombre}: ${meses.map((m, i) => `${mesLargo(m)} ${formato(valores[i])}`).join(', ')}`}>
+        <svg width={ancho} height={alto} role="img" aria-label={`${nombre}: ${meses.map((m, i) => `${etiquetaLarga(m)} ${formato(valores[i])}`).join(', ')}`}>
           {ticks.map((t) => (
             <g key={t}>
               <line x1={izq} x2={ancho} y1={y(t)} y2={y(t)} stroke="var(--color-line)" strokeWidth={1} />
@@ -126,9 +131,9 @@ export function BarrasMes({ meses, valores, formato = (n) => String(n), alto = 2
                     opacity={activa === null || activa === i ? (ultimo ? 0.45 : 1) : ultimo ? 0.25 : 0.55}
                   />
                 )}
-                {(col >= 26 || i % 2 === valores.length % 2 || i === valores.length - 1) && (
+                {(i % paso === (valores.length - 1) % paso) && (
                   <text x={izq + col * i + col / 2} y={alto - 6} textAnchor="middle" fontSize={11} fill={activa === i ? 'var(--color-ink)' : 'var(--color-muted)'} fontWeight={activa === i ? 600 : 400}>
-                    {mesCorto(meses[i])}
+                    {etiqueta(meses[i])}
                   </text>
                 )}
                 {/* Zona de toque: toda la columna, más grande que la barra. */}
@@ -143,7 +148,7 @@ export function BarrasMes({ meses, valores, formato = (n) => String(n), alto = 2
           className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-xl bg-ink px-3 py-2 text-[12px] text-bg shadow-card"
           style={{ left: Math.min(Math.max(izq + col * activa + col / 2, 70), ancho - 70), top: Math.max(y(valores[activa]) - 6, 40) }}
         >
-          <span className="block opacity-75">{mesLargo(meses[activa])}{enCurso && activa === valores.length - 1 ? ' (en curso)' : ''}</span>
+          <span className="block opacity-75">{etiquetaLarga(meses[activa])}{enCurso && activa === valores.length - 1 ? ' (en curso)' : ''}</span>
           <b className="text-[14px] tabular-nums">{formato(valores[activa])}</b>
         </div>
       )}

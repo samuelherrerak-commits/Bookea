@@ -10,6 +10,8 @@ export interface OrderState {
   sedeId: string | null
   customer: Customer
   payment: Payment | null
+  /** bookeaa team: id de la persona, "*" = cualquiera disponible, null = sin elegir. */
+  profesional: string | null
 }
 
 export type OrderAction =
@@ -22,6 +24,7 @@ export type OrderAction =
   | { type: 'setModalidad'; modalidad: Modalidad | null; sedeId: string | null }
   | { type: 'setPagado'; pagado: boolean }
   | { type: 'setComprobante'; comprobante: Comprobante | null }
+  | { type: 'setProfesional'; profesional: string | null }
   | { type: 'reset' }
 
 export const initialOrder: OrderState = {
@@ -32,6 +35,7 @@ export const initialOrder: OrderState = {
   sedeId: null,
   customer: { nombre: '', telefono: '' },
   payment: null,
+  profesional: null,
 }
 
 const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
@@ -67,8 +71,13 @@ export function orderReducer(state: OrderState, action: OrderAction): OrderState
     case 'setComprobante':
       if (state.payment?.metodo !== 'pago_movil') return state
       return { ...state, payment: { ...state.payment, pagado: true, comprobante: action.comprobante } }
+    // Otra persona tiene otra agenda: la hora elegida deja de valer.
+    case 'setProfesional':
+      if (state.profesional === action.profesional) return state
+      return { ...state, profesional: action.profesional, schedule: null }
     case 'reset':
-      return initialOrder
+      // Quien entró por el link de una persona (?con=) sigue con ella para la próxima reserva.
+      return { ...initialOrder, profesional: state.profesional }
   }
 }
 

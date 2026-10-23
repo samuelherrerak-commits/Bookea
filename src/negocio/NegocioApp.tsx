@@ -6,6 +6,8 @@ import { formatMonto } from '../lib/ticket'
 import * as api from './api'
 import { resumenPlan } from './MiPlan'
 import { Configurar } from './Configurar'
+import { MisBloqueos } from './MisBloqueos'
+import { PanelNegocio } from './PanelNegocio'
 import { botonGoogle } from './google'
 import { activarAvisos, apagarAvisos, esIOS, estadoAvisos, instalada, type EstadoAvisos } from './push'
 
@@ -136,7 +138,17 @@ export function Entrar({
 
 // ---------- Panel ----------
 
-type Pestana = 'hoy' | 'proximas' | 'configurar' | 'ajustes'
+type Pestana = 'hoy' | 'proximas' | 'panel' | 'configurar' | 'bloqueos' | 'ajustes'
+type Icono = 'hoy' | 'proximas' | 'panel' | 'configurar' | 'bloqueos' | 'ajustes'
+
+const ICONOS: Record<Icono, string> = {
+  hoy: 'M4 7h16M4 7v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2M8 2v4M16 2v4M9 14l2 2 4-4',
+  proximas: 'M4 6h16M4 12h16M4 18h10',
+  panel: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  configurar: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
+  bloqueos: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M5.6 5.6l12.8 12.8',
+  ajustes: 'M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0',
+}
 
 function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void }) {
   const pedido = new URLSearchParams(location.search).get('n')
@@ -151,6 +163,10 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
   const [agenda, setAgenda] = useState<api.Agenda | null>(null)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  // bookeaa team: una persona del equipo ve solo lo suyo (sus citas, sus bloqueos y sus avisos).
+  const actual = sesion.negocios.find((n) => n.slug === slug)
+  const esEquipo = actual?.rol === 'equipo'
+  const [filtroPersona, setFiltroPersona] = useState('')
 
   const cargar = useCallback(async () => {
     if (!slug) return
@@ -169,14 +185,29 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
   useEffect(() => {
     guardar(CLAVE_NEGOCIO, slug)
     setAgenda(null)
+    setFiltroPersona('')
     void cargar()
   }, [slug, cargar])
+
+  // Si cambia de negocio a uno donde es del equipo, Configurar no existe: pasa a Bloqueos (y al revés).
+  useEffect(() => {
+    if (esEquipo && (pestana === 'configurar' || pestana === 'panel')) setPestana(pestana === 'panel' ? 'hoy' : 'bloqueos')
+    if (!esEquipo && pestana === 'bloqueos') setPestana('configurar')
+  }, [esEquipo, pestana])
+
+  // El administrador puede ver las citas de una sola persona del equipo.
+  const personasAgenda = useMemo(() => [...new Set((agenda?.citas ?? []).map((c) => c.profesional || '').filter(Boolean))].sort(), [agenda])
+  const vista = useMemo(() => {
+    if (!agenda) return null
+    if (esEquipo) return { ...agenda, citas: agenda.citas.map((c) => ({ ...c, profesional: '' })) }
+    return filtroPersona ? { ...agenda, citas: agenda.citas.filter((c) => c.profesional === filtroPersona) } : agenda
+  }, [agenda, esEquipo, filtroPersona])
 
   // El estado del plan, para avisar en Hoy si hay un pago pendiente (si falla, no se muestra nada).
   useEffect(() => {
     setPlan(null)
-    if (slug) api.plan(sesion.sesion, slug).then(setPlan, () => {})
-  }, [sesion.sesion, slug, pestana])
+    if (slug && !esEquipo) api.plan(sesion.sesion, slug).then(setPlan, () => {})
+  }, [sesion.sesion, slug, pestana, esEquipo])
 
   const abrirPlan = () => {
     setSeccion((x) => ({ id: 'plan', n: x.n + 1 }))
@@ -206,13 +237,44 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
 
   const nombre = agenda?.negocio.nombre || sesion.negocios.find((n) => n.slug === slug)?.nombre || ''
 
+  // Pestañas según el rol: el administrador tiene Panel y Configurar; el equipo, sus Bloqueos.
+  const pestanas: [Pestana, string, Icono][] = esEquipo
+    ? [['hoy', 'Hoy', 'hoy'], ['proximas', 'Próximas', 'proximas'], ['bloqueos', 'Bloqueos', 'bloqueos'], ['ajustes', 'Avisos', 'ajustes']]
+    : [['hoy', 'Hoy', 'hoy'], ['proximas', 'Próximas', 'proximas'], ['panel', 'Panel', 'panel'], ['configurar', 'Configurar', 'configurar'], ['ajustes', 'Avisos', 'ajustes']]
+  const titulo = pestanas.find(([id]) => id === pestana)?.[1] ?? ''
+
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
-      <header className="sticky top-0 z-10 flex items-center gap-3 bg-bg/90 px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur">
-        <Logo className="size-9 shrink-0" />
+    <div className="lg:flex">
+      {/* Computadora: barra lateral con las secciones (en el teléfono van abajo). */}
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-surface/70 px-4 py-6 lg:flex">
+        <div className="flex items-center gap-2.5 px-2">
+          <Logo className="size-9 shrink-0" />
+          <div className="min-w-0">
+            <p className="truncate text-[15px] font-semibold leading-tight">{nombre || 'Mi negocio'}</p>
+            <p className="truncate text-[12px] text-muted">{esEquipo && actual?.persona ? actual.persona.nombre : 'Mi negocio'}</p>
+          </div>
+        </div>
+        <nav className="mt-8 space-y-1" aria-label="Secciones">
+          {pestanas.map(([id, t, icono]) => (
+            <button key={id} type="button" onClick={() => setPestana(id)} aria-current={pestana === id ? 'page' : undefined}
+              className={'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-[15px] ' + (pestana === id ? 'bg-ink font-semibold text-bg' : 'text-ink hover:bg-sand')}>
+              <svg viewBox="0 0 24 24" className="size-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={ICONOS[icono]} /></svg>
+              {t}
+            </button>
+          ))}
+        </nav>
+        <p className="mt-auto px-2 text-[12px] text-muted">{agenda ? capitalize(formatLongDate(agenda.hoy)) : ''}</p>
+      </aside>
+
+      <div className="mx-auto flex min-h-dvh max-w-xl flex-col lg:mx-0 lg:min-w-0 lg:max-w-none lg:flex-1">
+      <header className="sticky top-0 z-10 flex items-center gap-3 bg-bg/90 px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur lg:px-8 lg:pt-5">
+        <Logo className="size-9 shrink-0 lg:hidden" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[17px] font-semibold leading-tight">{nombre || 'Mi negocio'}</p>
-          <p className="text-[13px] text-muted">{agenda ? capitalize(formatLongDate(agenda.hoy)) : ' '}</p>
+          <p className="truncate text-[17px] font-semibold leading-tight lg:hidden">{nombre || 'Mi negocio'}</p>
+          <p className="hidden font-display text-[30px] leading-tight lg:block">{titulo}</p>
+          <p className="text-[13px] text-muted">
+            {esEquipo && actual?.persona ? `Tu agenda · ${actual.persona.nombre.split(/\s+/)[0]}` : agenda ? capitalize(formatLongDate(agenda.hoy)) : ' '}
+          </p>
         </div>
         <button
           type="button"
@@ -227,40 +289,49 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
         </button>
       </header>
 
-      <main className="flex-1 px-5 pb-28">
+      <main className="flex-1 px-5 pb-28 lg:px-8 lg:pb-12">
+        <div className={'mx-auto w-full lg:mx-0 ' + (pestana === 'panel' ? 'lg:max-w-6xl' : 'lg:max-w-3xl')}>
         {error && (
           <p role="alert" className="mb-4 rounded-2xl bg-danger/10 px-4 py-3 text-[14px] text-danger">
             {error}
           </p>
         )}
         {pestana === 'hoy' && plan && ['pendiente', 'vencido', 'suspendido'].includes(plan.estado) && <AvisoPlan plan={plan} onAbrir={abrirPlan} />}
-        {pestana === 'hoy' && <Hoy agenda={agenda} onConfirmar={confirmar} />}
-        {pestana === 'proximas' && <Proximas agenda={agenda} onConfirmar={confirmar} />}
+        {(pestana === 'hoy' || pestana === 'proximas') && !esEquipo && personasAgenda.length > 1 && (
+          <div className="-mx-5 mb-1 mt-2 flex gap-2 overflow-x-auto px-5 pb-1 no-scrollbar lg:mx-0 lg:px-0" role="group" aria-label="Ver citas de">
+            {['', ...personasAgenda].map((p) => (
+              <button key={p || 'todos'} type="button" aria-pressed={filtroPersona === p} onClick={() => setFiltroPersona(p)}
+                className={'shrink-0 rounded-full px-3.5 py-1.5 text-[14px] ring-1 ' + (filtroPersona === p ? 'bg-ink text-bg ring-ink' : 'ring-line')}>
+                {p ? p.split(/\s+/)[0] : 'Todo el equipo'}
+              </button>
+            ))}
+          </div>
+        )}
+        {pestana === 'hoy' && <Hoy agenda={vista} onConfirmar={confirmar} />}
+        {pestana === 'proximas' && <Proximas agenda={vista} onConfirmar={confirmar} />}
+        {pestana === 'panel' && !esEquipo && <PanelNegocio sesion={sesion.sesion} slug={slug} alSalir={alSalir} />}
+        {pestana === 'bloqueos' && <MisBloqueos sesion={sesion.sesion} slug={slug} alSalir={alSalir} />}
         {pestana === 'configurar' && <Configurar key={`${slug}-${seccion.n}`} sesion={sesion.sesion} slug={slug} alSalir={alSalir} inicial={seccion.id} />}
         {pestana === 'ajustes' && (
           <Ajustes sesion={sesion} slug={slug} onSlug={setSlug} onSalir={alSalir} />
         )}
+        </div>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur" aria-label="Secciones">
-        <div className="mx-auto grid max-w-xl grid-cols-4">
-          <BotonPestana activa={pestana === 'hoy'} onClick={() => setPestana('hoy')} icono="hoy">Hoy</BotonPestana>
-          <BotonPestana activa={pestana === 'proximas'} onClick={() => setPestana('proximas')} icono="proximas">Próximas</BotonPestana>
-          <BotonPestana activa={pestana === 'configurar'} onClick={() => setPestana('configurar')} icono="configurar">Configurar</BotonPestana>
-          <BotonPestana activa={pestana === 'ajustes'} onClick={() => setPestana('ajustes')} icono="ajustes">Avisos</BotonPestana>
+      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden" aria-label="Secciones">
+        <div className={'mx-auto grid max-w-xl ' + (pestanas.length === 5 ? 'grid-cols-5' : 'grid-cols-4')}>
+          {pestanas.map(([id, t, icono]) => (
+            <BotonPestana key={id} activa={pestana === id} onClick={() => setPestana(id)} icono={icono}>{t}</BotonPestana>
+          ))}
         </div>
       </nav>
+      </div>
     </div>
   )
 }
 
-function BotonPestana({ activa, onClick, icono, children }: { activa: boolean; onClick: () => void; icono: 'hoy' | 'proximas' | 'configurar' | 'ajustes'; children: ReactNode }) {
-  const d = {
-    hoy: 'M4 7h16M4 7v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2M8 2v4M16 2v4M9 14l2 2 4-4',
-    proximas: 'M4 6h16M4 12h16M4 18h10',
-    configurar: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
-    ajustes: 'M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0',
-  }[icono]
+function BotonPestana({ activa, onClick, icono, children }: { activa: boolean; onClick: () => void; icono: Icono; children: ReactNode }) {
+  const d = ICONOS[icono]
   return (
     <button type="button" onClick={onClick} aria-current={activa ? 'page' : undefined} className={'flex flex-col items-center gap-1 py-2 text-[12px] ' + (activa ? 'font-semibold text-ink' : 'text-muted')}>
       <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={activa ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -386,6 +457,7 @@ function TarjetaCita({ c, moneda, pasada, onConfirmar }: { c: api.Cita; moneda: 
         <p className="mt-1 text-[13px] text-muted">
           {formatMonto(c.total, moneda)}
           {c.lugar ? ` · ${c.lugar}` : ''}
+          {c.profesional ? ` · con ${c.profesional.split(/\s+/)[0]}` : ''}
         </p>
         {porVerificar && (
           <div className="mt-3 rounded-2xl bg-sand px-3 py-2 text-[13px]">

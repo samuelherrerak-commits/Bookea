@@ -84,7 +84,7 @@ export function Hero({ config, loading = false }: { config: BusinessConfig | nul
   const c = config ?? DEFAULT_CONFIG
   const marca = (c.marca || c.nombreNegocio).trim() || DEFAULT_CONFIG.marca
   return (
-    <header className="relative overflow-hidden px-5 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))]">
+    <header className="relative overflow-hidden px-5 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))] md:pb-12">
       {/* Halo del color de acento, muy sutil */}
       <div
         aria-hidden
@@ -121,10 +121,10 @@ export function Hero({ config, loading = false }: { config: BusinessConfig | nul
         <p className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-rose-deep">
           <IconSparkle size={16} /> Reserva en un minuto
         </p>
-        <h1 className="font-display text-[44px] leading-[1.02] tracking-[-0.02em] text-balance">
+        <h1 className="font-display text-[44px] leading-[1.02] tracking-[-0.02em] text-balance md:max-w-[18ch] md:text-[60px]">
           {c.heroTitulo}
         </h1>
-        <p className="mt-4 max-w-[34ch] text-[15px] leading-relaxed text-muted text-pretty">
+        <p className="mt-4 max-w-[34ch] text-[15px] leading-relaxed text-muted text-pretty md:max-w-[46ch] md:text-[17px]">
           {c.heroSubtitulo}
         </p>
         {config && (

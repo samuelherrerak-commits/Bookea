@@ -23,7 +23,7 @@ interface Herramienta {
 }
 
 const ESTADOS = ['activo', 'prueba', 'pendiente', 'vencido', 'suspendido', 'sin_fecha']
-const SECCIONES = ['marca', 'estilo', 'lugar', 'horario', 'servicios', 'pagos', 'mensaje', 'comprobantes', 'bloqueos', 'cupones']
+const SECCIONES = ['marca', 'estilo', 'lugar', 'horario', 'servicios', 'pagos', 'mensaje', 'comprobantes', 'bloqueos', 'cupones', 'equipo']
 
 const obj = (properties: Record<string, unknown>, required: string[] = []) => ({ type: 'object', properties, required, additionalProperties: false })
 const slug = { type: 'string', description: 'Link del negocio, lo que va después de /u/ (ej. "barberia-norte").' }
@@ -55,6 +55,7 @@ export const HERRAMIENTAS: Herramienta[] = [
       negocios: (r.negocios || []).filter((n: any) => !a.estado || n.estado === a.estado).map((n: any) => ({
         slug: n.slug, nombre: n.nombre, estado: n.estado, vence: n.vence, dias: n.dias, email: n.email, telefono: n.telefono,
         creado: n.creado, ultimoPago: n.ultimoPago, notas: n.notas || undefined, pagina: `https://www.bookeaa.com/u/${n.slug}`,
+        plan: n.plan, personas: n.personas || undefined, precioUsd: n.precio,
       })),
       prospectos: r.prospectos,
     }),
@@ -86,18 +87,19 @@ export const HERRAMIENTAS: Herramienta[] = [
       telefono: { type: 'string', description: 'WhatsApp del dueño, ej. 04121234567.' },
       dias_prueba: { type: 'integer', minimum: 0, maximum: 365, description: 'Días gratis antes del primer cobro. Por defecto 30.' },
       notas: { type: 'string' },
+      plan: { type: 'string', enum: ['individual', 'team'], description: 'individual ($10 al mes) o team (bookeaa team: una agenda por persona; $25 hasta 5 personas + $5 por persona extra). Por defecto individual.' },
     }, ['nombre']),
     annotations: escritura,
     pedido: (a) => ({
       accion: 'central', op: 'crear', nombre: a.nombre, slug: a.slug || slugDe(String(a.nombre || '')), email: a.email || '',
-      telefono: a.telefono || '', diasPrueba: a.dias_prueba ?? 30, notas: a.notas || '',
+      telefono: a.telefono || '', diasPrueba: a.dias_prueba ?? 30, notas: a.notas || '', plan: a.plan || 'individual',
     }),
   },
   {
     name: 'editar_negocio',
     title: 'Editar datos de un negocio',
-    description: 'Cambia el Gmail del dueño, su WhatsApp, las notas o la fecha de corte (vence, yyyy-MM-dd) de un negocio.',
-    inputSchema: obj({ slug, email: { type: 'string' }, telefono: { type: 'string' }, notas: { type: 'string' }, vence: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } }, ['slug']),
+    description: 'Cambia el Gmail del dueño, su WhatsApp, las notas, la fecha de corte (vence, yyyy-MM-dd) o el plan (individual o team) de un negocio.',
+    inputSchema: obj({ slug, email: { type: 'string' }, telefono: { type: 'string' }, notas: { type: 'string' }, vence: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' }, plan: { type: 'string', enum: ['individual', 'team'] } }, ['slug']),
     annotations: escritura,
     pedido: (a) => ({ accion: 'central', op: 'editar', ...a }),
   },
@@ -157,6 +159,14 @@ export const HERRAMIENTAS: Herramienta[] = [
     pedido: (a) => ({ accion: 'dueno', op: 'citas', slug: a.slug, desde: a.desde, dias: a.dias || 14 }),
   },
   {
+    name: 'ver_panel',
+    title: 'Ver el panel de un negocio',
+    description: 'Lo que el negocio facturó según sus reservas en un período (hoy, semana, mes, mes_pasado, 30 días o 12m): total, ya atendido y agendado, por verificar, canceladas, ticket promedio, clientes, por persona del equipo, por servicio, por forma de pago y día a día, con el período anterior para comparar. En la moneda del negocio.',
+    inputSchema: obj({ slug, periodo: { type: 'string', enum: ['hoy', 'semana', 'mes', 'mes_pasado', '30', '12m'] } }, ['slug']),
+    annotations: lectura,
+    pedido: (a) => ({ accion: 'dueno', op: 'panel', slug: a.slug, periodo: a.periodo || 'mes' }),
+  },
+  {
     name: 'ver_configuracion',
     title: 'Ver la configuración de un negocio',
     description: 'Todo lo que el dueño ve en Mi negocio → Configurar: claves de config (marca, estilo, lugar, horario, pagos, mensaje, comprobantes), servicios, horarios, sedes, mensajes, bloqueos, cupones y el link público. Léela antes de guardar_configuracion.',
@@ -179,7 +189,8 @@ export const HERRAMIENTAS: Herramienta[] = [
       '- comprobantes: {config:{facturacion_modo (interno|fiscal), ticket_reserva (si|no), facturacion_rif, facturacion_razon_social, facturacion_proveedor}}',
       '- bloqueos: {bloqueos:[{fecha:"yyyy-MM-dd", inicio, fin, motivo}]}',
       '- cupones: {cupones:[{codigo, porcentaje, monto, usos}]}',
-      'Ojo: servicios, horarios, sedes, mensajes, bloqueos y cupones REEMPLAZAN la lista completa: manda también los que se quedan.',
+      '- equipo (bookeaa team: una agenda por persona): {config:{equipo_activo (si|no), equipo_modo (servicio = primero el servicio | persona = primero la persona | ambos), equipo_cualquiera (si|no: ofrecer "Cualquiera disponible")}, equipo:[{id (de ver_configuracion; sin id = persona nueva), nombre, email (su Gmail: recibe su calendario), cargo, foto (https), servicios:[ids de servicios; vacío = todos], horarios:[{dia:"Lunes", inicio, fin}] (vacío = el del negocio), activo}]}. A cada persona nueva se le crea su calendario "Citas <nombre> · <negocio>" y se le comparte. Su link: https://www.bookeaa.com/u/<slug>?con=<id>.',
+      'Ojo: servicios, horarios, sedes, mensajes, bloqueos, cupones y equipo REEMPLAZAN la lista completa: manda también los que se quedan (en equipo, quien no venga queda inactivo).',
     ].join('\n'),
     inputSchema: obj({ slug, seccion: { type: 'string', enum: SECCIONES }, datos: { type: 'object', additionalProperties: true } }, ['slug', 'seccion', 'datos']),
     annotations: escritura,

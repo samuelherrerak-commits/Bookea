@@ -257,8 +257,9 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
               <Cifra valor={datos.totales.porVencer} etiqueta="Vencen en 5 días" activo={filtro === 'por_vencer'} onClick={() => setFiltro(filtro === 'por_vencer' ? 'todos' : 'por_vencer')} />
             </section>
             <p className="mt-3 text-[14px] text-muted">
-              Ingreso mensual: <b className="text-ink">${datos.totales.activos * datos.precio}</b>
-              {datos.totales.prueba > 0 && <> · +${datos.totales.prueba * datos.precio} si pagan los que están en prueba</>}
+              Ingreso mensual: <b className="text-ink">${datos.totales.mrr ?? datos.totales.activos * datos.precio}</b>
+              {datos.totales.prueba > 0 && <> · +${datos.totales.mrrPrueba ?? datos.totales.prueba * datos.precio} si pagan los que están en prueba</>}
+              {!!datos.totales.team && <> · {datos.totales.team} en bookeaa team</>}
               {datos.totales.suspendidos > 0 && <> · {datos.totales.suspendidos} {datos.totales.suspendidos === 1 ? "suspendido" : "suspendidos"}</>}
             </p>
 
@@ -286,6 +287,7 @@ function Panel({ sesion, alSalir }: { sesion: Sesion; alSalir: () => void }) {
                       <div className="flex items-center gap-2">
                         <p className="truncate text-[16px] font-semibold">{n.nombre}</p>
                         <span className={'shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold ' + ETIQUETA[n.estado].clase}>{ETIQUETA[n.estado].texto}</span>
+                        {n.plan === 'team' && <EtiquetaTeam n={n} />}
                       </div>
                       <p className={'mt-0.5 text-[13px] ' + (n.dias !== null && n.dias <= 5 && n.estado !== 'suspendido' ? 'font-semibold text-danger' : 'text-muted')}>{textoVence(n)}</p>
                       <p className="truncate text-[13px] text-muted">/u/{n.slug}{n.email ? ` · ${n.email}` : ''}</p>
@@ -362,7 +364,10 @@ function TablaNegocios({ lista, metricas, hoy, onAFondo, onGestionar }: {
                   <button type="button" onClick={() => onAFondo(n.slug)} className="block max-w-full truncate text-left font-semibold hover:underline">{n.nombre}</button>
                   <span className="block truncate text-[12px] text-muted">/u/{n.slug} · desde {fechaCorta(n.creado) || '—'}</span>
                 </td>
-                <td className="px-3 py-3"><span className={'whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-semibold ' + ETIQUETA[n.estado].clase}>{ETIQUETA[n.estado].texto}</span></td>
+                <td className="px-3 py-3">
+                  <span className={'whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-semibold ' + ETIQUETA[n.estado].clase}>{ETIQUETA[n.estado].texto}</span>
+                  {n.plan === 'team' && <span className="ml-1.5"><EtiquetaTeam n={n} /></span>}
+                </td>
                 <td className={'px-3 py-3 text-[13px] ' + (n.dias !== null && n.dias <= 5 && n.estado !== 'suspendido' ? 'font-semibold text-danger' : 'text-muted')}>{textoVence(n)}</td>
                 <td className="px-3 py-3 text-right font-semibold tabular-nums">{m ? (m.reservas30 ?? '—') : <span className="inline-block h-4 w-8 animate-pulse rounded bg-sand" />}</td>
                 <td className="px-3 py-3">{m && <Minibarras valores={m.porMes} etiqueta={`Reservas de los últimos 6 meses: ${m.porMes.join(', ')}`} />}</td>
@@ -442,6 +447,8 @@ const METODOS = ['Pago Móvil', 'Zelle', 'Binance', 'Efectivo', 'Transferencia',
 function Detalle({ negocio: n, precio, sesion, onCerrar, onCambio, onAFondo }: { negocio: api.Negocio; precio: number; sesion: string; onCerrar: () => void; onCambio: () => Promise<void>; onAFondo?: () => void }) {
   const [vista, setVista] = useState<'info' | 'pago' | 'editar'>('info')
   const [meses, setMeses] = useState(1)
+  // Cada negocio paga según su plan (bookeaa team cobra por personas).
+  precio = n.precio ?? precio
   const [monto, setMonto] = useState(String(precio))
   const [metodo, setMetodo] = useState('Pago Móvil')
   const [referencia, setReferencia] = useState('')
@@ -471,6 +478,7 @@ function Detalle({ negocio: n, precio, sesion, onCerrar, onCambio, onAFondo }: {
     <Hoja titulo={n.nombre} onCerrar={onCerrar}>
       <div className="flex flex-wrap items-center gap-2">
         <span className={'rounded-full px-2.5 py-1 text-[13px] font-semibold ' + ETIQUETA[n.estado].clase}>{ETIQUETA[n.estado].texto}</span>
+        {n.plan === 'team' && <EtiquetaTeam n={n} />}
         <span className="text-[14px] text-muted">{textoVence(n)}</span>
       </div>
       {hecho && <p role="status" className="mt-3 rounded-2xl bg-ok/12 px-4 py-3 text-[14px] text-ok">{hecho}</p>}
@@ -485,6 +493,7 @@ function Detalle({ negocio: n, precio, sesion, onCerrar, onCambio, onAFondo }: {
               ['WhatsApp', n.telefono || '—'],
               ['Alta', n.creado ? fechaCorta(n.creado) : '—'],
               ['Último pago', n.ultimoPago ? fechaCorta(n.ultimoPago) : 'Nunca'],
+              ['Plan', n.plan === 'team' ? `bookeaa team · ${n.personas ?? 0} personas · $${n.precio ?? precio}/mes` : `Individual · $${n.precio ?? precio}/mes`],
               ...(n.notas ? [['Notas', n.notas]] : []),
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between gap-4 py-3">
@@ -511,6 +520,11 @@ function Detalle({ negocio: n, precio, sesion, onCerrar, onCambio, onAFondo }: {
               <a href={`/u/${n.slug}`} target="_blank" rel="noopener noreferrer" className="rounded-full px-4 py-3 text-center text-[14px] font-semibold ring-1 ring-line">Ver página</a>
               {n.hoja ? <a href={n.hoja} target="_blank" rel="noopener noreferrer" className="rounded-full px-4 py-3 text-center text-[14px] font-semibold ring-1 ring-line">Abrir hoja</a> : <span />}
             </div>
+            <button type="button" disabled={ocupado}
+              onClick={() => void hacer(() => api.editar(sesion, n.slug, { plan: n.plan === 'team' ? 'individual' : 'team' }), n.plan === 'team' ? 'Ahora es individual ($10 al mes).' : 'Ahora es bookeaa team: ya puede armar su equipo en Mi negocio.')}
+              className="rounded-full px-5 py-3.5 text-[15px] font-semibold ring-1 ring-line disabled:opacity-50">
+              {n.plan === 'team' ? 'Pasar a individual' : '👥 Pasar a bookeaa team'}
+            </button>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setVista('editar')} className="rounded-full px-4 py-3 text-[14px] font-semibold ring-1 ring-line">Editar datos</button>
               <button type="button" disabled={ocupado} onClick={() => void hacer(() => api.cambiarActivo(sesion, n.slug, !n.activo), n.activo ? 'Página suspendida: ya no recibe reservas.' : 'Página reactivada.')}
@@ -593,6 +607,7 @@ function NuevoNegocio({ inicial, sesion, onCerrar, onCreado }: { inicial: Partia
   const [telefono, setTelefono] = useState(inicial.telefono ?? '')
   const [dias, setDias] = useState('30')
   const [notas, setNotas] = useState('')
+  const [plan, setPlan] = useState<'individual' | 'team'>('individual')
   const [ocupado, setOcupado] = useState(false)
   const [error, setError] = useState('')
 
@@ -602,7 +617,7 @@ function NuevoNegocio({ inicial, sesion, onCerrar, onCreado }: { inicial: Partia
     if (!/^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/.test(slug)) return setError('El link solo lleva minúsculas, números y guiones.')
     setOcupado(true)
     try {
-      await api.crear(sesion, { nombre: nombre.trim(), slug, email: email.trim(), telefono, diasPrueba: Number(dias) || 0, notas })
+      await api.crear(sesion, { nombre: nombre.trim(), slug, email: email.trim(), telefono, diasPrueba: Number(dias) || 0, notas, plan })
       await onCreado()
     } catch (e) {
       setError((e as Error).message)
@@ -623,6 +638,18 @@ function NuevoNegocio({ inicial, sesion, onCerrar, onCreado }: { inicial: Partia
           <input inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="negocio@gmail.com" className={claseInput} />
         </Campo>
         <Campo etiqueta="WhatsApp del dueño" ayuda="Para cobrarle y escribirle desde aquí."><input inputMode="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="584121234567" className={claseInput} /></Campo>
+        <div>
+          <span className="mb-1.5 block text-[14px] font-semibold">Plan</span>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Plan">
+            {([['individual', 'Individual', '$10 al mes'], ['team', 'bookeaa team', '$25 hasta 5 personas']] as const).map(([id, t, d]) => (
+              <button key={id} type="button" role="radio" aria-checked={plan === id} onClick={() => setPlan(id)}
+                className={'rounded-2xl px-3 py-3 text-left ring-1 ' + (plan === id ? 'bg-sand ring-ink' : 'ring-line')}>
+                <span className="block text-[15px] font-semibold">{t}</span>
+                <span className="block text-[13px] text-muted">{d}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <Campo etiqueta="Días de prueba gratis"><input inputMode="numeric" value={dias} onChange={(e) => setDias(e.target.value.replace(/\D/g, ''))} className={claseInput} /></Campo>
         <Campo etiqueta="Notas (opcional)"><textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} className={claseInput} /></Campo>
         {error && <p role="alert" className="rounded-2xl bg-danger/10 px-4 py-3 text-[14px] text-danger">{error}</p>}
@@ -632,6 +659,10 @@ function NuevoNegocio({ inicial, sesion, onCerrar, onCreado }: { inicial: Partia
       </div>
     </Hoja>
   )
+}
+
+function EtiquetaTeam({ n }: { n: Pick<api.Negocio, 'personas'> }) {
+  return <span className="shrink-0 rounded-full bg-ink px-2 py-0.5 text-[12px] font-semibold text-bg">team · {n.personas ?? 0}</span>
 }
 
 // ---------- Prospectos y pagos ----------

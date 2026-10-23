@@ -75,15 +75,16 @@ export async function manejarPush(req: Request, ruta: string, env: Env): Promise
   const slug = String(cuerpo?.slug || '')
   if (!/^[a-z0-9-]{1,40}$/.test(slug)) return json({ error: 'Negocio inválido' }, 400)
   try {
-    if (ruta === '/push/suscribir') await suscribir(env.DB, slug, String(cuerpo.email || ''), cuerpo.suscripcion || {}, Date.now())
+    if (ruta === '/push/suscribir') await suscribir(env.DB, slug, String(cuerpo.email || ''), cuerpo.suscripcion || {}, Date.now(), String(cuerpo.persona || '').slice(0, 60))
     else if (ruta === '/push/quitar') await quitar(env.DB, String(cuerpo.suscripcion?.endpoint || ''))
     else if (ruta === '/push/evento' && cuerpo.tipo === 'reserva') await nuevaReserva(env.DB, slug, cuerpo.cita || {})
-    else if (ruta === '/push/evento' && cuerpo.tipo === 'prueba') return json({ ok: true, ...(await avisar(env.DB, slug, avisoPrueba(slug))) })
+    // El aviso de prueba va solo a los teléfonos de quien lo pidió (el administrador o una persona del equipo).
+    else if (ruta === '/push/evento' && cuerpo.tipo === 'prueba') return json({ ok: true, ...(await avisar(env.DB, slug, avisoPrueba(slug), { persona: String(cuerpo.persona || ''), exacto: true })) })
     else if (ruta === '/push/evento' && cuerpo.tipo === 'aviso') {
       // Avisos del cobro de bookeaa (pago aprobado o rechazado, corte, pausa): texto libre del Apps Script.
       const titulo = String(cuerpo.titulo || '').slice(0, 80)
       if (!titulo) return json({ error: 'Falta el título' }, 400)
-      return json({ ok: true, ...(await avisar(env.DB, slug, { titulo, cuerpo: String(cuerpo.cuerpo || '').slice(0, 240), tag: 'plan', url: `/negocio?n=${encodeURIComponent(slug)}&ver=plan` })) })
+      return json({ ok: true, ...(await avisar(env.DB, slug, { titulo, cuerpo: String(cuerpo.cuerpo || '').slice(0, 240), tag: 'plan', url: `/negocio?n=${encodeURIComponent(slug)}&ver=plan` }, { persona: '', exacto: true })) })
     }
     else return json({ error: 'No encontrado' }, 404)
   } catch (err) {

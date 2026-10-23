@@ -56,8 +56,12 @@ export function Metricas({ datos, cargando, onRecalcular, onAbrir }: {
   const n = datos.negocios
   const cuenta = (e: api.EstadoCobro) => n.filter((x) => x.estado === e).length
   const pagando = cuenta('activo') + cuenta('pendiente')
-  const mrr = pagando * datos.precio
+  // Cada negocio con su precio: bookeaa team paga según las personas de su equipo.
+  const precioDe = (x: api.NegocioMetricas) => x.precio ?? datos.precio
+  const mrr = suma(n.filter((x) => x.estado === 'activo' || x.estado === 'pendiente').map(precioDe))
   const enPrueba = cuenta('prueba')
+  const mrrPrueba = suma(n.filter((x) => x.estado === 'prueba').map(precioDe))
+  const team = n.filter((x) => x.plan === 'team').length
   const mesActual = datos.ingresos[datos.ingresos.length - 1] ?? 0
   const mesPasado = datos.ingresos[datos.ingresos.length - 2] ?? 0
   const r30 = suma(n.map((x) => x.reservas30 ?? 0))
@@ -89,7 +93,7 @@ export function Metricas({ datos, cargando, onRecalcular, onAbrir }: {
       </div>
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <Cifra etiqueta="Ingreso mensual recurrente" valor={usd(mrr)} pie={<>{pagando} pagando · {enPrueba > 0 ? `+${usd(enPrueba * datos.precio)} si pagan los ${enPrueba} en prueba` : 'nadie en prueba'}</>} />
+        <Cifra etiqueta="Ingreso mensual recurrente" valor={usd(mrr)} pie={<>{pagando} pagando{team ? ` (${team} team)` : ''} · {enPrueba > 0 ? `+${usd(mrrPrueba)} si pagan los ${enPrueba} en prueba` : 'nadie en prueba'}</>} />
         <Cifra etiqueta={`Cobrado en ${mesLargo(datos.meses[datos.meses.length - 1]).split(' ')[0]}`} valor={usd(mesActual)} pie={<>{usd(mesPasado)} el mes pasado</>} />
         <Cifra etiqueta="Reservas en 30 días (todos)" valor={r30.toLocaleString('es-VE')} pie={<><Cambio ahora={r30} antes={p30} /> · antes {p30.toLocaleString('es-VE')}</>} />
         <Cifra etiqueta="Negocios" valor={n.length - cuenta('suspendido')} pie={<>{cuenta('suspendido')} suspendidos · {datos.altas[datos.altas.length - 1]} nuevos este mes</>} />

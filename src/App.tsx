@@ -3,6 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { CartBar } from './components/CartBar'
 import { CartSheet } from './components/CartSheet'
 import { useCatalog } from './hooks/useCatalog'
+import { buscarPersona, hace, serviciosDelCarrito } from './lib/equipo'
 import { eleccionValida, opcionesLugar } from './lib/lugar'
 import { spring } from './lib/motion'
 import { summarize } from './lib/pricing'
@@ -11,6 +12,7 @@ import { aplicarBorrador, esVistaPrevia, useBorradorVista } from './lib/vistaPre
 import { useOrder } from './state/order'
 import type { DatosTicket } from './lib/ticket'
 import type { Modalidad } from './types'
+import { CUALQUIERA } from './types'
 import { CatalogView } from './views/CatalogView'
 
 // Agenda, pago y confirmación van en su propio JS: la primera pantalla (el catálogo)
@@ -107,6 +109,30 @@ export default function App() {
     dispatch({ type: 'setModalidad', modalidad: unica?.modalidad ?? null, sedeId: unica?.sedeId ?? null })
   }, [catalog, state.modalidad, state.sedeId, dispatch])
 
+  // bookeaa team: el link de una persona (?con=carla) la deja elegida. Y si la elegida ya no
+  // puede atender el carrito (o el negocio quitó el equipo), se vuelve a elegir en la agenda.
+  const conLink = useRef(new URLSearchParams(window.location.search).get('con'))
+  useEffect(() => {
+    if (!catalog || status !== 'ready') return
+    const equipo = catalog.equipo
+    if (!equipo) {
+      if (state.profesional) dispatch({ type: 'setProfesional', profesional: null })
+      return
+    }
+    if (conLink.current) {
+      const p = buscarPersona(equipo, conLink.current)
+      conLink.current = null
+      if (p) return dispatch({ type: 'setProfesional', profesional: p.id })
+    }
+    if (state.profesional === CUALQUIERA) {
+      if (!equipo.cualquiera) dispatch({ type: 'setProfesional', profesional: null })
+      return
+    }
+    if (!state.profesional) return
+    const p = equipo.personas.find((x) => x.id === state.profesional)
+    if (!p || !hace(p, serviciosDelCarrito(state.cart, catalog))) dispatch({ type: 'setProfesional', profesional: null })
+  }, [catalog, status, state.profesional, state.cart, dispatch])
+
   // Al entrar a la agenda la ocupación tiene que ser real: el catálogo se cachea
   // 15 min para que el arranque sea instantáneo, así que acá se salta esa caché
   // (fresh=1) y se le vuelve a preguntar al calendario. Una vez por entrada.
@@ -187,7 +213,8 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto min-h-dvh max-w-lg overflow-x-clip">
+    // En computadora el catálogo se abre a dos columnas; agenda, pago y confirmación quedan al centro.
+    <div className={'mx-auto min-h-dvh max-w-lg overflow-x-clip ' + (view === 'catalogo' ? 'md:max-w-3xl lg:max-w-5xl' : 'md:max-w-2xl')}>
       <AnimatePresence mode="wait" initial={false} custom={direction}>
         <Page key={view} direction={direction} scrollTo={view === 'catalogo' ? catalogScroll.current : 0}>
           <Suspense fallback={null}>{page}</Suspense>

@@ -106,12 +106,42 @@ export interface BusyRange {
   fin: Date
 }
 
+/** bookeaa team: una persona del equipo, con su propia agenda. */
+export interface Profesional {
+  /** También es su link: /u/<negocio>?con=<id>. */
+  id: string
+  nombre: string
+  foto: string
+  cargo: string
+  /** IDs de los servicios que hace. Vacío = todos. */
+  servicios: string[]
+  /** Su horario (mismo formato que BusinessConfig.horario). null = el del negocio. */
+  horario: Array<Array<[number, number]>> | null
+}
+
+export type ModoEquipo = 'servicio' | 'persona' | 'ambos'
+
+export interface Equipo {
+  /** servicio = primero el servicio y luego con quién; persona = primero con quién; ambos. */
+  modo: ModoEquipo
+  /** Ofrecer "Cualquiera disponible". */
+  cualquiera: boolean
+  personas: Profesional[]
+  /** Ocupación del calendario de cada persona (además de `Catalog.citas`, que ocupa a todos). */
+  citas: Record<string, BusyRange[]>
+}
+
+/** "*" = cualquiera disponible; si no, el id de la persona. */
+export const CUALQUIERA = '*'
+
 export interface Catalog {
   servicios: Service[]
   promociones: Promo[]
   config: BusinessConfig
   tasa: Tasa | null
   citas: BusyRange[]
+  /** bookeaa team. null o ausente = una sola agenda (bookeaa individual). */
+  equipo?: Equipo | null
 }
 
 export interface Coupon {
@@ -161,6 +191,8 @@ export interface ReservationPayload {
   sede: string
   direccion: string
   comprobante: { base64: string; mime: string; nombre: string } | null
+  /** bookeaa team: id de la persona o "*" (cualquiera). Ausente sin equipo. */
+  profesional?: string
 }
 
 export interface ReservationResult {
@@ -171,4 +203,6 @@ export interface ReservationResult {
   comprobanteUrl: string | null
   /** Número del ticket de reserva (no fiscal). null si el negocio no lo emite. */
   recibo: number | null
+  /** bookeaa team: quién atiende (con "Cualquiera", la que asignó el servidor). */
+  profesional: { id: string; nombre: string } | null
 }

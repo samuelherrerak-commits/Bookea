@@ -44,6 +44,29 @@ Worker del bot (bookeaa-bot) ◄── reserva nueva (Apps Script, al reservar)
 
 El dueño entra con el **Gmail de la columna `Email` de la pestaña Tenants**. Puede haber varios correos en la celda, separados por coma.
 
+## Panel (solo el administrador)
+La pestaña **Panel** muestra cuánto dinero dejaron las reservas en un período: **hoy, semana, este mes, mes pasado, 30 días o 12 meses**.
+- **Facturado:** la suma del total de cada reserva, sin las canceladas, y cuánto cambió contra el período anterior.
+- **Ya atendido y agendado:** lo de las citas hasta hoy y lo de las que vienen.
+- **Reservas, ticket promedio, clientes y canceladas.**
+- **Pagos Móviles por verificar**, con su monto.
+- **Facturado por día**, o por mes en 12 meses. Al pasar el mouse o tocar una barra se ve el monto exacto.
+- **Cuánto hizo cada persona** (bookeaa team): lo que facturaron sus citas, cuántas fueron y qué parte del total.
+- **Servicios** y **cómo te pagan**, ordenados por lo que dejaron.
+
+Son las cifras que marcó cada reserva en la página, en la moneda del negocio. No es lo que se cobró de verdad: un descuento hecho en persona no aparece. Las personas del equipo no ven el Panel.
+
+## En computadora
+Mi negocio, la central y la página de reservas se adaptan a la pantalla:
+- **Mi negocio:**
+  - las secciones van en una barra lateral, en vez de abajo;
+  - el Panel usa todo el ancho, con las cifras en una fila y los gráficos lado a lado.
+- **Página de reservas:**
+  - el catálogo se abre a dos columnas;
+  - la agenda y el pago quedan al centro, con las horas en cuatro columnas.
+
+En el teléfono todo sigue igual.
+
 ## Mi plan y pagos
 Es la primera sección de **Configurar**. Muestra:
 - el estado del plan: mes gratis, al día, pago pendiente o página en pausa;

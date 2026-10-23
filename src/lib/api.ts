@@ -170,5 +170,9 @@ export async function submitReservation(payload: ReservationPayload): Promise<Re
     tasa: data.tasa === null || data.tasa === undefined ? null : toNumber(data.tasa),
     comprobanteUrl: str(data.comprobanteUrl) || null,
     recibo: toNumber(data.recibo) > 0 ? toNumber(data.recibo) : null,
+    profesional:
+      data.profesional && typeof data.profesional === 'object' && str((data.profesional as Row).id)
+        ? { id: str((data.profesional as Row).id), nombre: str((data.profesional as Row).nombre) }
+        : null,
   }
 }
