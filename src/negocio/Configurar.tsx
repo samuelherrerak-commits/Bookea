@@ -959,6 +959,25 @@ function Ticket({ datos, guardar }: SecProps) {
 
 // ---------- Equipo (bookeaa team) ----------
 
+/** "Corte de dama" → "corte-de-dama", como slug_ del Apps Script. */
+const slugServicio = (v: string) =>
+  v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'item'
+
+/** El ID de cada servicio como lo pone la página (assignIds_): el de la hoja o el del nombre, sin repetir. */
+export function idsDeServicios<T extends { id: string; nombre: string }>(lista: T[]): T[] {
+  const usados = new Set<string>()
+  return lista.map((s) => {
+    let id = s.id.trim() || slugServicio(s.nombre)
+    if (usados.has(id)) {
+      let n = 2
+      while (usados.has(`${id}-${n}`)) n++
+      id = `${id}-${n}`
+    }
+    usados.add(id)
+    return { ...s, id }
+  })
+}
+
 const DIAS_DOMINGO = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const nombreDia = (d: string | number) => (typeof d === 'number' ? DIAS_DOMINGO[d] ?? String(d) : d)
 const MODOS: [api.EquipoConfig['modo'], string, string][] = [
@@ -977,7 +996,12 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
   const [bloqueosDe, setBloqueosDe] = useState<string | null>(null)
   const [copiado, setCopiado] = useState('')
   const editar = (i: number, c: Partial<api.PersonaEquipo>) => setEq({ ...eq, personas: eq.personas.map((p, j) => (j === i ? { ...p, ...c } : p)) })
-  const servicios = datos.servicios.filter((s) => s.nombre)
+  // Cada servicio con su ID (el mismo que usa la página). Si la hoja no lo tiene, sale del nombre
+  // igual que en el servidor (assignIds_), así nunca se confunden dos servicios.
+  const servicios = idsDeServicios(datos.servicios.filter((s) => s.nombre))
+  // Quién hace solo algunos servicios (aunque todavía no haya marcado ninguno). Lista vacía = hace todos.
+  const [algunos, setAlgunos] = useState<Record<number, boolean>>({})
+  const soloAlgunos = (i: number) => algunos[i] ?? eq.personas[i].servicios.length > 0
   const activas = eq.personas.filter((p) => p.activo).length
   const precio = 25 + Math.max(0, activas - 5) * 5
   const link = (id: string) => `${location.origin}/u/${slug}?con=${id}`
@@ -1042,7 +1066,7 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[16px] font-semibold">{p.nombre || 'Persona nueva'}</span>
                   <span className="block truncate text-[13px] text-muted">
-                    {p.activo ? '' : 'Inactiva · '}{p.cargo || p.email || 'Toca para completar'}{p.servicios.length ? ` · ${p.servicios.length} servicios` : ' · todos los servicios'}
+                    {p.activo ? '' : 'Inactiva · '}{p.cargo || p.email || 'Toca para completar'}{p.servicios.length ? ` · ${p.servicios.length} ${p.servicios.length === 1 ? 'servicio' : 'servicios'}` : ' · todos los servicios'}
                   </span>
                 </span>
                 <svg viewBox="0 0 24 24" className={'size-5 text-muted transition-transform ' + (abierto ? 'rotate-90' : '')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
@@ -1058,16 +1082,32 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
                     <Campo etiqueta="Foto (enlace)"><Texto value={p.foto} placeholder="https://…" onChange={(e) => editar(i, { foto: e.target.value.trim() })} /></Campo>
                   </div>
                   <div>
-                    <span className="mb-1.5 block text-[14px] font-semibold">Qué servicios hace</span>
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" aria-pressed={!p.servicios.length} onClick={() => editar(i, { servicios: [] })}
-                        className={'rounded-full px-3.5 py-2 text-[14px] ring-1 ' + (!p.servicios.length ? 'bg-ink text-bg ring-ink' : 'ring-line')}>Todos</button>
-                      {servicios.map((s) => (
-                        <button key={s.id || s.nombre} type="button" aria-pressed={hace(s.id)}
-                          onClick={() => editar(i, { servicios: hace(s.id) ? p.servicios.filter((x) => x !== s.id) : [...p.servicios, s.id] })}
-                          className={'rounded-full px-3.5 py-2 text-[14px] ring-1 ' + (hace(s.id) ? 'bg-ink text-bg ring-ink' : 'ring-line')}>{s.nombre}</button>
-                      ))}
-                    </div>
+                    <Interruptor
+                      activo={!soloAlgunos(i)}
+                      onChange={(todos) => {
+                        setAlgunos({ ...algunos, [i]: !todos })
+                        editar(i, { servicios: [] })
+                      }}
+                    >
+                      Hace todos los servicios
+                      <span className="block text-[13px] text-muted">
+                        {soloAlgunos(i) ? 'Marca los que hace. En tu página solo aparecerá para esos.' : 'Apágalo para elegir solo algunos.'}
+                      </span>
+                    </Interruptor>
+                    {soloAlgunos(i) && (
+                      <div className="mt-2 space-y-1.5" role="group" aria-label={`Servicios que hace ${p.nombre || 'esta persona'}`}>
+                        {servicios.map((s) => (
+                          <label key={s.id} className={'flex cursor-pointer items-center gap-3 rounded-2xl px-3.5 py-2.5 ring-1 ' + (hace(s.id) ? 'bg-sand ring-ink' : 'ring-line')}>
+                            <input type="checkbox" checked={hace(s.id)} className="size-5 shrink-0 accent-ink"
+                              onChange={() => editar(i, { servicios: hace(s.id) ? p.servicios.filter((x) => x !== s.id) : [...p.servicios, s.id] })} />
+                            <span className="min-w-0 flex-1 text-[15px]">{s.nombre}{s.adicional && <span className="text-muted"> · adicional</span>}</span>
+                          </label>
+                        ))}
+                        <p className="text-[13px] text-muted">
+                          {p.servicios.length ? `${p.servicios.length} de ${servicios.length} servicios.` : 'Marca al menos uno.'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Interruptor activo={p.horarios.length > 0} onChange={(v) => editar(i, { horarios: v ? datos.horarios.filter((h) => h.inicio && h.fin).map((h) => ({ ...h })) : [] })}>
@@ -1104,7 +1144,11 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
                         className="rounded-full px-3 py-2.5 text-[14px] font-semibold ring-1 ring-line disabled:opacity-50">Sus bloqueos</button>
                     </div>
                   )}
-                  <button type="button" onClick={() => { setEq({ ...eq, personas: eq.personas.filter((_, j) => j !== i) }); setAbiertos(null) }} className="text-[14px] text-danger underline underline-offset-4">
+                  <button type="button" onClick={() => {
+                    setEq({ ...eq, personas: eq.personas.filter((_, j) => j !== i) })
+                    setAlgunos(Object.fromEntries(Object.entries(algunos).filter(([k]) => Number(k) !== i).map(([k, v]) => [Number(k) > i ? Number(k) - 1 : Number(k), v])))
+                    setAbiertos(null)
+                  }} className="text-[14px] text-danger underline underline-offset-4">
                     Quitar del equipo
                   </button>
                 </>
@@ -1120,12 +1164,14 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
       <p className="mt-3 text-[13px] text-muted">A cada persona nueva le creamos su calendario de citas y se lo compartimos a su Gmail. Quien sale del equipo queda inactiva: su calendario y sus citas no se borran.</p>
       <Guardar
         cambios={cambios}
-        alGuardar={() =>
-          guardar('equipo', {
+        alGuardar={() => {
+          const sinServicios = eq.personas.filter((p, i) => soloAlgunos(i) && !p.servicios.length)
+          if (sinServicios.length) return Promise.resolve(sinServicios.map((p) => `${p.nombre || 'Persona nueva'}: marca al menos un servicio o deja "Hace todos los servicios".`))
+          return guardar('equipo', {
             config: { equipo_activo: eq.activo ? 'si' : 'no', equipo_modo: eq.modo, equipo_cualquiera: eq.cualquiera ? 'si' : 'no' },
             equipo: eq.personas,
           })
-        }
+        }}
       />
     </>
   )

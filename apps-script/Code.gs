@@ -1990,6 +1990,12 @@ function assignIds_(items) {
   return items;
 }
 
+/** Pone a cada servicio el ID que usa la página (el de la hoja o, si está vacío, el de assignIds_). */
+function idsComoLaPagina_(servicios) {
+  const conId = assignIds_(servicios.map(function (s) { return { ID: s.id, Nombre: s.nombre }; }));
+  return servicios.map(function (s, i) { return Object.assign({}, s, { id: conId[i].ID }); });
+}
+
 function getServicios_(ss) {
   const rows = getSheetData_(ss, 'Servicios').map(function (r) {
     return {
@@ -3092,7 +3098,9 @@ function duenoLeerConfig_(ss, tenant, ahoraMs) {
   return {
     config: config,
     paginaUrl: /^https?:\/\//.test(String(todo.pagina_url || '')) ? String(todo.pagina_url) : '',
-    servicios: cfgFilas_(ss, 'Servicios', 5).map(function (r) {
+    // Sin ID en la hoja, cada servicio lleva el mismo que le da la página (assignIds_: sale del
+    // nombre). Así el equipo puede elegir servicio por servicio y la reserva los reconoce.
+    servicios: idsComoLaPagina_(cfgFilas_(ss, 'Servicios', 5).map(function (r) {
       const tipo = String(r[4] || '').trim();
       const adicional = /adic|extra/i.test(tipo);
       return {
@@ -3100,7 +3108,7 @@ function duenoLeerConfig_(ss, tenant, ahoraMs) {
         duracion: toNumber_(r[3]) || 60, adicional: adicional,
         categoria: adicional || /^base$/i.test(tipo) ? '' : tipo,
       };
-    }).filter(function (s) { return s.nombre; }),
+    }).filter(function (s) { return s.nombre; })),
     horarios: cfgFilas_(ss, 'Horarios', 3).map(function (r) {
       return { dia: String(r[0]).trim(), inicio: cfgHora_(r[1]), fin: cfgHora_(r[2]) };
     }),

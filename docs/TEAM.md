@@ -27,7 +27,7 @@ El negocio elige el modo (`equipo_modo`):
 
 ## Mi negocio con equipo
 - **El administrador**, con el correo del negocio, ve todo lo de siempre y además:
-  - **Configurar → Equipo**: prende o apaga las reservas por persona, elige el modo y "Cualquiera disponible", y agrega personas con su nombre, Gmail, cargo, foto, servicios y horario propio. También puede copiar el link de cada persona y ver sus bloqueos.
+  - **Configurar → Equipo**: prende o apaga las reservas por persona, elige el modo y "Cualquiera disponible", y agrega personas con su nombre, Gmail, cargo, foto, servicios y horario propio. Para los servicios, apaga **"Hace todos los servicios"** y marca uno por uno los que hace; no se puede guardar sin ninguno marcado. También puede copiar el link de cada persona y ver sus bloqueos.
   - En **Hoy** y **Próximas**, cada cita dice "con Carla", y hay botones para ver las de una sola persona.
   - Activar el equipo pide el plan **team**. Si el negocio es individual, la sección muestra la oferta con un botón a WhatsApp.
 - **Cada persona del equipo** entra a `bookeaa.com/negocio` con su Gmail y ve:
