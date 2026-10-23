@@ -8,6 +8,9 @@ import { API_URL, DEMO_MODE } from '../config'
 export interface Negocio {
   slug: string
   nombre: string
+  /** bookeaa team: 'equipo' = una persona del equipo (ve solo lo suyo). Sin rol = administrador. */
+  rol?: 'admin' | 'equipo'
+  persona?: { id: string; nombre: string } | null
 }
 
 export interface Sesion {
@@ -33,6 +36,9 @@ export interface Cita {
   direccion: string
   capture: string
   recibo: number | null
+  /** bookeaa team: quién atiende ('' sin equipo). */
+  profesional?: string
+  profesionalId?: string
 }
 
 export interface Agenda {
@@ -71,7 +77,11 @@ export function entrar(credencial: string): Promise<Sesion> {
 }
 
 export function citas(sesion: string, slug: string, desde: string, dias: number): Promise<Agenda> {
-  if (DEMO_MODE) return Promise.resolve(DEMO.agenda(desde))
+  if (DEMO_MODE) {
+    const a = DEMO.agenda(desde)
+    // Carla (equipo de Spa Sol) ve solo sus citas.
+    return Promise.resolve(slug === 'spa-sol' ? { ...a, negocio: { ...a.negocio, slug, nombre: 'Spa Sol' }, citas: a.citas.filter((c) => c.profesionalId === 'carla') } : a)
+  }
   return llamar<Agenda>({ op: 'citas', sesion, slug, desde, dias })
 }
 
@@ -154,8 +164,69 @@ export interface Configuracion {
   cupones: Cupon[]
   /** data URL del logo subido ('' si no hay). */
   logo: string
+  /** bookeaa team. */
+  equipo?: EquipoConfig
 }
-export type Seccion = 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'marca' | 'estilo' | 'logo' | 'lugar' | 'pagos' | 'mensaje' | 'comprobantes'
+
+export interface PersonaEquipo {
+  /** Vacío = persona nueva (el servidor le pone id y le crea su calendario). */
+  id: string
+  nombre: string
+  email: string
+  foto: string
+  cargo: string
+  /** IDs de los servicios que hace (vacío = todos). */
+  servicios: string[]
+  /** Su horario (vacío = el del negocio). dia: "Lunes"… o 0-6. */
+  horarios: { dia: string | number; inicio: string; fin: string }[]
+  activo: boolean
+  /** Ya tiene su calendario de bookeaa. */
+  calendario?: boolean
+}
+
+export interface EquipoConfig {
+  plan: 'individual' | 'team'
+  activo: boolean
+  modo: 'servicio' | 'persona' | 'ambos'
+  cualquiera: boolean
+  personas: PersonaEquipo[]
+}
+
+/** Un bloqueo de una persona del equipo (un evento en su calendario). */
+export interface BloqueoPersona {
+  id: string
+  fecha: string
+  inicio: string
+  fin: string
+  motivo: string
+  todoElDia: boolean
+}
+
+export function bloqueosPersona(sesion: string, slug: string, persona = ''): Promise<{ bloqueos: BloqueoPersona[] }> {
+  if (DEMO_MODE) return espera({ bloqueos: structuredClone(DEMO.bloqueosPersona) })
+  return llamar({ op: 'bloqueos', sesion, slug, persona })
+}
+
+export function bloquear(sesion: string, slug: string, b: { fecha: string; inicio: string; fin: string; motivo: string }, persona = ''): Promise<{ bloqueos: BloqueoPersona[] }> {
+  if (DEMO_MODE) {
+    DEMO.bloqueosPersona.push({ id: `b${Date.now()}`, ...b, motivo: b.motivo || 'No disponible', todoElDia: !b.inicio })
+    DEMO.bloqueosPersona.sort((x, y) => (x.fecha + x.inicio).localeCompare(y.fecha + y.inicio))
+    return espera({ bloqueos: structuredClone(DEMO.bloqueosPersona) })
+  }
+  return llamar({ op: 'bloquear', sesion, slug, persona, ...b })
+}
+
+export function desbloquear(sesion: string, slug: string, id: string, persona = ''): Promise<{ bloqueos: BloqueoPersona[] }> {
+  if (DEMO_MODE) {
+    DEMO.bloqueosPersona = DEMO.bloqueosPersona.filter((x) => x.id !== id)
+    return espera({ bloqueos: structuredClone(DEMO.bloqueosPersona) })
+  }
+  return llamar({ op: 'desbloquear', sesion, slug, persona, id })
+}
+
+const espera = <T,>(v: T) => new Promise<T>((ok) => setTimeout(() => ok(v), 350))
+
+export type Seccion = 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'marca' | 'estilo' | 'logo' | 'lugar' | 'pagos' | 'mensaje' | 'comprobantes' | 'equipo'
 export interface DatosSeccion {
   config?: Record<string, string>
   servicios?: Servicio[]
@@ -165,6 +236,7 @@ export interface DatosSeccion {
   bloqueos?: Bloqueo[]
   cupones?: Cupon[]
   logo?: string
+  equipo?: PersonaEquipo[]
 }
 export interface Guardado {
   ok: boolean
@@ -183,6 +255,16 @@ export function guardar(sesion: string, slug: string, seccion: Seccion, datos: D
     Object.assign(c.config, datos.config ?? {})
     for (const k of ['servicios', 'horarios', 'sedes', 'mensajes', 'bloqueos', 'cupones'] as const) if (datos[k]) (c[k] as unknown) = datos[k]
     if (seccion === 'logo') c.logo = datos.logo ?? ''
+    if (seccion === 'equipo' && c.equipo) {
+      const cfg = datos.config ?? {}
+      c.equipo = {
+        ...c.equipo,
+        activo: cfg.equipo_activo ? cfg.equipo_activo === 'si' : c.equipo.activo,
+        modo: (cfg.equipo_modo as EquipoConfig['modo']) || c.equipo.modo,
+        cualquiera: cfg.equipo_cualquiera ? cfg.equipo_cualquiera !== 'no' : c.equipo.cualquiera,
+        personas: (datos.equipo ?? c.equipo.personas).map((p) => ({ ...p, id: p.id || p.nombre.toLowerCase().split(/\s+/)[0], calendario: true })),
+      }
+    }
     return new Promise((ok) => setTimeout(() => ok({ ok: true, errores: [], datos: structuredClone(c) }), 400))
   }
   return llamar<Guardado>({ op: 'guardar', sesion, slug, seccion, datos })
@@ -208,6 +290,9 @@ export interface PagoReportado {
 
 export interface Plan {
   estado: EstadoPlan
+  /** bookeaa team cobra según las personas activas del equipo. */
+  plan?: 'individual' | 'team'
+  personas?: number
   /** Fecha de corte (yyyy-MM-dd) o ''. */
   vence: string
   dias: number | null
@@ -289,14 +374,30 @@ const DEMO = {
     bloqueos: [{ fecha: sumarDias(hoyCaracas(), 6), inicio: '', fin: '', motivo: 'Vacaciones' }],
     cupones: [{ codigo: 'OCTUBRE10', porcentaje: 10, monto: 0, usos: null }, { codigo: 'BIENVENIDA', porcentaje: 0, monto: 2, usos: 15 }],
     logo: '',
+    equipo: {
+      plan: 'team',
+      activo: true,
+      modo: 'servicio',
+      cualquiera: true,
+      personas: [
+        { id: 'carla', nombre: 'Carla Méndez', email: 'carla@gmail.com', foto: '', cargo: 'Barbera principal', servicios: [], horarios: [], activo: true, calendario: true },
+        { id: 'andres', nombre: 'Andrés Rojas', email: 'andres@gmail.com', foto: '', cargo: 'Barbero', servicios: ['corte', 'barba'], horarios: [2, 3, 4, 5, 6].map((d) => ({ dia: d, inicio: '12:00', fin: '20:00' })), activo: true, calendario: true },
+      ],
+    },
   } as Configuracion,
+  bloqueosPersona: [{ id: 'b1', fecha: sumarDias(hoyCaracas(), 4), inicio: '', fin: '', motivo: 'Cita médica', todoElDia: true }] as BloqueoPersona[],
 
-  sesion: { sesion: 'demo', email: 'demo@gmail.com', negocios: [{ slug: 'demo', nombre: 'Barbería Norte' }], vapid: '' } as Sesion,
+  // En demo se entra como administrador de Barbería Norte y como Carla, del equipo de Spa Sol.
+  sesion: {
+    sesion: 'demo', email: 'demo@gmail.com', vapid: '',
+    negocios: [{ slug: 'demo', nombre: 'Barbería Norte', rol: 'admin' }, { slug: 'spa-sol', nombre: 'Spa Sol', rol: 'equipo', persona: { id: 'carla', nombre: 'Carla Méndez' } }],
+  } as Sesion,
   agenda(desde: string): Agenda {
     const hoy = hoyCaracas()
     const c = (id: string, fecha: string, hora: string, cliente: string, servicios: string, extra: Partial<Cita> = {}): Cita => ({
       id, cliente, telefono: '0412 555 1234', servicios, total: 16, totalBs: null, fecha, hora, metodo: 'Pago en la cita',
-      estado: 'Confirmada', lugar: 'En la barbería', direccion: 'Av. Libertador, local 12', capture: '', recibo: Number(id.replace(/\D/g, '')) || null, ...extra,
+      estado: 'Confirmada', lugar: 'En la barbería', direccion: 'Av. Libertador, local 12', capture: '', recibo: Number(id.replace(/\D/g, '')) || null,
+      profesional: Number(id) % 2 ? 'Carla Méndez' : 'Andrés Rojas', profesionalId: Number(id) % 2 ? 'carla' : 'andres', ...extra,
     })
     return {
       negocio: { slug: 'demo', nombre: 'Barbería Norte', moneda: 'EUR' },

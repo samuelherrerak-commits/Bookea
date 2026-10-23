@@ -36,9 +36,10 @@ function maestro() {
   const ss = { getSheetByName: (n: string) => hojas[n] ?? null, insertSheet: (n: string) => (hojas[n] = hoja([])) }
   const f = funcionesGs<Record<string, Fn>>(gs, [
     'estadoCobro_', 'diasEntre_', 'sumarMeses_', 'sumarDias_', 'hojaTenants_', 'filasTenants_', 'escribirTenant_', 'negocioCentral_',
-    'hojaPagos_', 'pagosRecientes_', 'registrarPagoCentral_', 'extenderVence_', 'tenantActivo_', 'ymd_', 'normKey_', 'round2_', 'toNumber_', 'limpiarTexto_', 'paraCelda_',
+    'hojaPagos_', 'pagosRecientes_', 'registrarPagoCentral_', 'planDe_', 'precioPlan_', 'extenderVence_', 'tenantActivo_', 'ymd_', 'normKey_', 'round2_', 'toNumber_', 'limpiarTexto_', 'paraCelda_',
   ], {
     TENANT_HEADERS, PAGOS_HEADERS: constanteGs(gs, 'PAGOS_HEADERS'), ZONA: 'America/Caracas', DIAS_GRACIA: 3,
+    PRECIO_MENSUAL: 10, PRECIO_TEAM: 25, TEAM_INCLUIDAS: 5, PRECIO_PERSONA_EXTRA: 5, personasActivas_: (slug: string) => (slug === 'spa' ? 7 : 0),
     SpreadsheetApp: { getActiveSpreadsheet: () => ss },
     Utilities: { formatDate: (d: Date, _z: string, formato: string) => (formato === 'yyyy-MM-dd' ? ymd(d) : d.toISOString()) },
     limpiarCacheTenants_: () => undefined,

@@ -101,7 +101,7 @@ export function MiPlan({ sesion, slug, alSalir }: { sesion: string; slug: string
   return (
     <div className="mt-4 space-y-5">
       <section className={'rounded-3xl px-5 py-5 ' + (r.tono === 'alerta' ? 'bg-danger text-white' : r.tono === 'aviso' ? 'bg-sand' : 'bg-ink text-bg')}>
-        <p className="text-[13px] uppercase tracking-[0.12em] opacity-75">Plan bookeaa · ${plan.precio} al mes</p>
+        <p className="text-[13px] uppercase tracking-[0.12em] opacity-75">Plan bookeaa{plan.plan === 'team' ? ` team (${plan.personas ?? 0} personas)` : ''} · ${plan.precio} al mes</p>
         <p className="mt-1 font-display text-[34px] leading-tight">{r.titulo}</p>
         <p className="mt-1 text-[15px] opacity-90">{r.detalle}</p>
         {plan.corteDia && <p className="mt-3 text-[13px] opacity-75">Tu fecha de corte es el día {plan.corteDia} de cada mes. Tienes {plan.gracia} días para pagar.</p>}

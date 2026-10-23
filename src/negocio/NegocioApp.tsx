@@ -6,6 +6,7 @@ import { formatMonto } from '../lib/ticket'
 import * as api from './api'
 import { resumenPlan } from './MiPlan'
 import { Configurar } from './Configurar'
+import { MisBloqueos } from './MisBloqueos'
 import { botonGoogle } from './google'
 import { activarAvisos, apagarAvisos, esIOS, estadoAvisos, instalada, type EstadoAvisos } from './push'
 
@@ -136,7 +137,7 @@ export function Entrar({
 
 // ---------- Panel ----------
 
-type Pestana = 'hoy' | 'proximas' | 'configurar' | 'ajustes'
+type Pestana = 'hoy' | 'proximas' | 'configurar' | 'bloqueos' | 'ajustes'
 
 function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void }) {
   const pedido = new URLSearchParams(location.search).get('n')
@@ -151,6 +152,10 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
   const [agenda, setAgenda] = useState<api.Agenda | null>(null)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  // bookeaa team: una persona del equipo ve solo lo suyo (sus citas, sus bloqueos y sus avisos).
+  const actual = sesion.negocios.find((n) => n.slug === slug)
+  const esEquipo = actual?.rol === 'equipo'
+  const [filtroPersona, setFiltroPersona] = useState('')
 
   const cargar = useCallback(async () => {
     if (!slug) return
@@ -169,14 +174,29 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
   useEffect(() => {
     guardar(CLAVE_NEGOCIO, slug)
     setAgenda(null)
+    setFiltroPersona('')
     void cargar()
   }, [slug, cargar])
+
+  // Si cambia de negocio a uno donde es del equipo, Configurar no existe: pasa a Bloqueos (y al revés).
+  useEffect(() => {
+    if (esEquipo && pestana === 'configurar') setPestana('bloqueos')
+    if (!esEquipo && pestana === 'bloqueos') setPestana('configurar')
+  }, [esEquipo, pestana])
+
+  // El administrador puede ver las citas de una sola persona del equipo.
+  const personasAgenda = useMemo(() => [...new Set((agenda?.citas ?? []).map((c) => c.profesional || '').filter(Boolean))].sort(), [agenda])
+  const vista = useMemo(() => {
+    if (!agenda) return null
+    if (esEquipo) return { ...agenda, citas: agenda.citas.map((c) => ({ ...c, profesional: '' })) }
+    return filtroPersona ? { ...agenda, citas: agenda.citas.filter((c) => c.profesional === filtroPersona) } : agenda
+  }, [agenda, esEquipo, filtroPersona])
 
   // El estado del plan, para avisar en Hoy si hay un pago pendiente (si falla, no se muestra nada).
   useEffect(() => {
     setPlan(null)
-    if (slug) api.plan(sesion.sesion, slug).then(setPlan, () => {})
-  }, [sesion.sesion, slug, pestana])
+    if (slug && !esEquipo) api.plan(sesion.sesion, slug).then(setPlan, () => {})
+  }, [sesion.sesion, slug, pestana, esEquipo])
 
   const abrirPlan = () => {
     setSeccion((x) => ({ id: 'plan', n: x.n + 1 }))
@@ -212,7 +232,9 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
         <Logo className="size-9 shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[17px] font-semibold leading-tight">{nombre || 'Mi negocio'}</p>
-          <p className="text-[13px] text-muted">{agenda ? capitalize(formatLongDate(agenda.hoy)) : ' '}</p>
+          <p className="text-[13px] text-muted">
+            {esEquipo && actual?.persona ? `Tu agenda · ${actual.persona.nombre.split(/\s+/)[0]}` : agenda ? capitalize(formatLongDate(agenda.hoy)) : ' '}
+          </p>
         </div>
         <button
           type="button"
@@ -234,8 +256,19 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
           </p>
         )}
         {pestana === 'hoy' && plan && ['pendiente', 'vencido', 'suspendido'].includes(plan.estado) && <AvisoPlan plan={plan} onAbrir={abrirPlan} />}
-        {pestana === 'hoy' && <Hoy agenda={agenda} onConfirmar={confirmar} />}
-        {pestana === 'proximas' && <Proximas agenda={agenda} onConfirmar={confirmar} />}
+        {(pestana === 'hoy' || pestana === 'proximas') && !esEquipo && personasAgenda.length > 1 && (
+          <div className="-mx-5 mb-1 mt-2 flex gap-2 overflow-x-auto px-5 pb-1 no-scrollbar" role="group" aria-label="Ver citas de">
+            {['', ...personasAgenda].map((p) => (
+              <button key={p || 'todos'} type="button" aria-pressed={filtroPersona === p} onClick={() => setFiltroPersona(p)}
+                className={'shrink-0 rounded-full px-3.5 py-1.5 text-[14px] ring-1 ' + (filtroPersona === p ? 'bg-ink text-bg ring-ink' : 'ring-line')}>
+                {p ? p.split(/\s+/)[0] : 'Todo el equipo'}
+              </button>
+            ))}
+          </div>
+        )}
+        {pestana === 'hoy' && <Hoy agenda={vista} onConfirmar={confirmar} />}
+        {pestana === 'proximas' && <Proximas agenda={vista} onConfirmar={confirmar} />}
+        {pestana === 'bloqueos' && <MisBloqueos sesion={sesion.sesion} slug={slug} alSalir={alSalir} />}
         {pestana === 'configurar' && <Configurar key={`${slug}-${seccion.n}`} sesion={sesion.sesion} slug={slug} alSalir={alSalir} inicial={seccion.id} />}
         {pestana === 'ajustes' && (
           <Ajustes sesion={sesion} slug={slug} onSlug={setSlug} onSalir={alSalir} />
@@ -246,7 +279,11 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
         <div className="mx-auto grid max-w-xl grid-cols-4">
           <BotonPestana activa={pestana === 'hoy'} onClick={() => setPestana('hoy')} icono="hoy">Hoy</BotonPestana>
           <BotonPestana activa={pestana === 'proximas'} onClick={() => setPestana('proximas')} icono="proximas">Próximas</BotonPestana>
-          <BotonPestana activa={pestana === 'configurar'} onClick={() => setPestana('configurar')} icono="configurar">Configurar</BotonPestana>
+          {esEquipo ? (
+            <BotonPestana activa={pestana === 'bloqueos'} onClick={() => setPestana('bloqueos')} icono="configurar">Bloqueos</BotonPestana>
+          ) : (
+            <BotonPestana activa={pestana === 'configurar'} onClick={() => setPestana('configurar')} icono="configurar">Configurar</BotonPestana>
+          )}
           <BotonPestana activa={pestana === 'ajustes'} onClick={() => setPestana('ajustes')} icono="ajustes">Avisos</BotonPestana>
         </div>
       </nav>
@@ -386,6 +423,7 @@ function TarjetaCita({ c, moneda, pasada, onConfirmar }: { c: api.Cita; moneda: 
         <p className="mt-1 text-[13px] text-muted">
           {formatMonto(c.total, moneda)}
           {c.lugar ? ` · ${c.lugar}` : ''}
+          {c.profesional ? ` · con ${c.profesional.split(/\s+/)[0]}` : ''}
         </p>
         {porVerificar && (
           <div className="mt-3 rounded-2xl bg-sand px-3 py-2 text-[13px]">

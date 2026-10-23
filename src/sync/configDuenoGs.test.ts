@@ -50,7 +50,7 @@ const cargar = (extra: Record<string, unknown> = {}) => {
     Utilities: { formatDate: (d: Date) => new Date(d.getTime() - 4 * 3600_000).toISOString().slice(0, 10) },
     limpiarCacheCatalogo_: (s: string) => (limpiado = s),
     leerLogoHoja_: () => '', logoValido_: (v: string) => v.startsWith('data:image/png'),
-    equipoLeer_: () => [], equipoValidar_: () => [], equipoGuardar_: () => 0,
+    equipoLeer_: () => [], equipoValidar_: () => [], equipoGuardar_: () => 0, planDe_: () => 'individual', filasTenants_: () => [],
     ...extra,
   })
   return { f, limpiado: () => limpiado }

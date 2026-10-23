@@ -16,3 +16,13 @@ describe('central', () => {
     expect(telefonoWa('0412-555 1234')).toBe('584125551234')
   })
 })
+
+describe('plan de cada negocio', () => {
+  it('individual $10; team según las personas activas', async () => {
+    const { precioPlan } = await import('./api')
+    expect(precioPlan('individual', 7)).toBe(10)
+    expect(precioPlan(undefined)).toBe(10)
+    expect(precioPlan('team', 3)).toBe(25)
+    expect(precioPlan('team', 7)).toBe(35)
+  })
+})

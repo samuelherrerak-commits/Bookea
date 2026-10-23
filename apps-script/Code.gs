@@ -160,7 +160,7 @@ const PLANTILLAS_MENSAJE = [
 ];
 
 // Telefono, Vence, Ultimo_Pago y Notas los usa la central (/central): el cobro mensual de bookeaa.
-const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado', 'Telefono', 'Vence', 'Ultimo_Pago', 'Notas', 'Suspendido_Auto'];
+const TENANT_HEADERS = ['Slug', 'Nombre', 'Spreadsheet_Id', 'Calendario_Id', 'Carpeta_Id', 'Token', 'Activo', 'Email', 'Creado', 'Telefono', 'Vence', 'Ultimo_Pago', 'Notas', 'Suspendido_Auto', 'Plan'];
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -2830,6 +2830,9 @@ function citasEntre_(filas, desde, hasta) {
         direccion: String(r.Direccion || ''),
         capture: /^https:\/\//.test(String(r.Comprobante || '')) ? String(r.Comprobante) : '',
         recibo: r.Recibo_N === '' || r.Recibo_N == null ? null : toNumber_(r.Recibo_N),
+        // bookeaa team: quién atiende.
+        profesional: String(r.Profesional || ''),
+        profesionalId: String(r.Profesional_ID || ''),
       };
     })
     .filter(function (c) { return c.id && c.fecha && c.fecha >= desde && c.fecha <= hasta; })
@@ -2914,18 +2917,31 @@ function atenderDueno_(data, ahoraMs) {
   if (op === 'entrar') {
     const email = correoDeGoogle_(data.credencial, ahoraMs);
     if (!email) return { error: 'no_autorizado', mensaje: 'No pudimos verificar tu cuenta de Google.' };
-    const negocios = negociosDe_(email, getTenants_());
-    if (!negocios.length) return { error: 'sin_negocio', mensaje: email + ' no tiene un negocio en bookeaa. Entra con el correo que diste al afiliarte.' };
+    const accesos = accesosDe_(email, getTenants_());
+    if (!accesos.length) return { error: 'sin_negocio', mensaje: email + ' no tiene un negocio en bookeaa. Entra con el correo que diste al afiliarte (o con el que te agregaron al equipo).' };
     return {
       sesion: crearSesion_(email, ahoraMs), email: email, vapid: claveVapid_(),
-      negocios: negocios.map(function (t) { return { slug: t.slug, nombre: t.nombre }; }),
+      negocios: accesos.map(function (a) { return { slug: a.tenant.slug, nombre: a.tenant.nombre, rol: a.rol, persona: a.persona }; }),
     };
   }
 
   const email = leerSesion_(data.sesion, ahoraMs);
   if (!email) return { error: 'sesion', mensaje: 'Tu sesión venció. Entra otra vez.' };
-  const tenant = negociosDe_(email, getTenants_()).filter(function (t) { return t.slug === String(data.slug || ''); })[0];
-  if (!tenant) return { error: 'no_autorizado', mensaje: 'Ese negocio no es tuyo.' };
+  const acceso = accesosDe_(email, getTenants_()).filter(function (a) { return a.tenant.slug === String(data.slug || ''); })[0];
+  if (!acceso) return { error: 'no_autorizado', mensaje: 'Ese negocio no es tuyo.' };
+  // bookeaa team: una persona del equipo solo ve y toca lo suyo.
+  if (acceso.rol === 'equipo') return atenderEquipo_(op, data, acceso, email, ahoraMs);
+  const tenant = acceso.tenant;
+  if (op === 'bloqueos' || op === 'bloquear' || op === 'desbloquear') {
+    return atenderBloqueos_(op, data, openTenant_(tenant), tenant, String(data.persona || ''), ahoraMs);
+  }
+  if (op === 'guardar' && String(data.seccion || '') === 'equipo' && !esAdminDueno_(email)) {
+    const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })[0] || {};
+    const activar = data.datos && data.datos.config && String(data.datos.config.equipo_activo || '') === 'si';
+    if (activar && planDe_(fila.Plan) !== 'team') {
+      return { ok: false, errores: ['El equipo es de bookeaa team. Escríbenos para cambiar tu plan.'] };
+    }
+  }
 
   if (op === 'citas') {
     const desde = /^\d{4}-\d{2}-\d{2}$/.test(String(data.desde || '')) ? String(data.desde) : Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
@@ -2987,7 +3003,7 @@ function agendaParaWorker_(data, ahoraMs) {
     try {
       agenda[t.slug] = citasEntre_(getSheetData_(openTenant_(t), 'Reservaciones'), fecha, fecha)
         .filter(function (c) { return !/cancel/i.test(c.estado); })
-        .map(function (c) { return { id: c.id, cliente: c.cliente, servicios: c.servicios, fecha: c.fecha, hora: c.hora, estado: c.estado }; });
+        .map(function (c) { return { id: c.id, cliente: c.cliente, servicios: c.servicios, fecha: c.fecha, hora: c.hora, estado: c.estado, profesionalId: c.profesionalId }; });
     } catch (err) {
       console.warn('agenda ' + t.slug + ': ' + err);
     }
@@ -3106,6 +3122,7 @@ function duenoLeerConfig_(ss, tenant, ahoraMs) {
     logo: leerLogoHoja_(ss),
     // bookeaa team: sin correo de calendario ni ID de calendario hacia afuera.
     equipo: {
+      plan: planDe_((filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })[0] || {}).Plan),
       activo: String(todo.equipo_activo || '').toLowerCase() === 'si',
       modo: String(todo.equipo_modo || 'servicio').toLowerCase(),
       cualquiera: String(todo.equipo_cualquiera || 'si').toLowerCase() !== 'no',
@@ -3332,6 +3349,21 @@ function duenoGuardar_(ss, tenant, seccion, datos, ahoraMs) {
 // en la pestaña Pagos del archivo maestro.
 
 const PRECIO_MENSUAL = 10;
+// bookeaa team: $25 al mes hasta 5 personas y $5 por cada persona más.
+const PRECIO_TEAM = 25;
+const TEAM_INCLUIDAS = 5;
+const PRECIO_PERSONA_EXTRA = 5;
+
+/** 'team' o 'individual' (la columna Plan de Tenants; vacía = individual). */
+function planDe_(valor) {
+  return /^team$/i.test(String(valor || '').trim()) ? 'team' : 'individual';
+}
+
+/** Lo que paga un negocio al mes según su plan y las personas activas de su equipo. */
+function precioPlan_(plan, personas) {
+  if (plan !== 'team') return PRECIO_MENSUAL;
+  return PRECIO_TEAM + Math.max(0, (personas || 0) - TEAM_INCLUIDAS) * PRECIO_PERSONA_EXTRA;
+}
 const DIAS_PRUEBA = 30;
 const DIAS_AVISO_VENCE = 5;
 const PAGOS_HEADERS = ['Fecha', 'Slug', 'Negocio', 'Monto', 'Meses', 'Metodo', 'Referencia', 'Vence_Antes', 'Vence_Nuevo', 'Registrado_Por'];
@@ -3441,6 +3473,9 @@ function negocioCentral_(o, hoy) {
     activo: tenantActivo_(t),
     estado: estadoCobro_(t, hoy),
     dias: vence ? diasEntre_(hoy, vence) : null,
+    plan: planDe_(o.Plan),
+    personas: personasActivas_(String(o.Slug).trim()),
+    precio: precioPlan_(planDe_(o.Plan), personasActivas_(String(o.Slug).trim())),
     hoja: o.Spreadsheet_Id ? 'https://docs.google.com/spreadsheets/d/' + o.Spreadsheet_Id + '/edit' : '',
   };
 }
@@ -3506,6 +3541,10 @@ function resumenCentral_(ahoraMs) {
       activos: cuenta('activo'), prueba: cuenta('prueba'), pendientes: cuenta('pendiente'),
       suspendidos: cuenta('suspendido'), sinFecha: cuenta('sin_fecha'),
       porVencer: negocios.filter(function (n) { return (n.estado === 'activo' || n.estado === 'prueba') && n.dias !== null && n.dias <= DIAS_AVISO_VENCE; }).length,
+      team: negocios.filter(function (n) { return n.plan === 'team'; }).length,
+      // Lo que entra al mes: cada negocio con su precio (individual o team).
+      mrr: negocios.filter(function (n) { return n.estado === 'activo' || n.estado === 'pendiente'; }).reduce(function (a, n) { return a + n.precio; }, 0),
+      mrrPrueba: negocios.filter(function (n) { return n.estado === 'prueba'; }).reduce(function (a, n) { return a + n.precio; }, 0),
     },
     negocios: negocios,
     pagos: pagosRecientes_(60),
@@ -3548,6 +3587,7 @@ function crearNegocioCentral_(data, ahoraMs) {
     Telefono: paraCelda_(String(data.telefono || '').replace(/[^\d]/g, '').slice(0, 20)),
     Vence: sumarDias_(hoy, dias), // primer mes gratis (o los días de prueba que se elijan)
     Notas: paraCelda_(limpiarTexto_(data.notas || '', 300)),
+    Plan: planDe_(data.plan),
   });
   return { ok: true, slug: creado.slug, hoja: creado.url };
 }
@@ -3613,6 +3653,7 @@ function atenderCentral_(data, ahoraMs) {
       if ('email' in data) campos.Email = String(data.email || '').trim().toLowerCase();
       if ('telefono' in data) campos.Telefono = paraCelda_(String(data.telefono || '').replace(/[^\d]/g, '').slice(0, 20));
       if ('notas' in data) campos.Notas = paraCelda_(limpiarTexto_(data.notas || '', 300));
+      if ('plan' in data) campos.Plan = planDe_(data.plan);
       if ('vence' in data) {
         if (data.vence && !/^\d{4}-\d{2}-\d{2}$/.test(String(data.vence))) return { error: 'datos_invalidos', mensaje: 'Revisa la fecha de vencimiento.' };
         campos.Vence = String(data.vence || '');
@@ -4203,7 +4244,7 @@ function planNegocio_(tenant, ahoraMs) {
     estado: n.estado, vence: n.vence, dias: n.dias, gracia: DIAS_GRACIA,
     corteDia: n.creado ? Number(n.creado.slice(8, 10)) : (n.vence ? Number(n.vence.slice(8, 10)) : null),
     limite: n.vence ? sumarDias_(n.vence, DIAS_GRACIA) : '',
-    precio: PRECIO_MENSUAL, tasa: tasa, montoBs: tasa ? round2_(PRECIO_MENSUAL * tasa) : 0,
+    precio: n.precio, plan: n.plan, personas: n.personas, tasa: tasa, montoBs: tasa ? round2_(n.precio * tasa) : 0,
     pagoMovil: datosPagoMovil_(), pagos: pagos,
     porVerificar: pagos.some(function (p) { return p.estado === 'Por verificar'; }),
   };
@@ -4370,7 +4411,7 @@ function revisarCortes() {
     if (!vence || !tenantActivo_(t)) return;
     const slug = String(o.Slug), dias = diasEntre_(hoy, vence);
     const fechaTxt = vence.split('-').reverse().join('/');
-    const monto = '$' + PRECIO_MENSUAL;
+    const monto = '$' + negocioCentral_(o, hoy).precio;
     if (dias === 3 || dias === 1) avisarNegocio_(slug, '🗓️ Tu pago de bookeaa vence el ' + fechaTxt, 'Son ' + monto + ' por Pago Móvil. Repórtalo en Configurar → Mi plan y pagos.');
     else if (dias === 0) avisarNegocio_(slug, '🗓️ Hoy es tu fecha de corte', 'Tienes ' + DIAS_GRACIA + ' días para pagar ' + monto + ' y seguir recibiendo reservas.');
     else if (dias < 0 && -dias <= DIAS_GRACIA) {
@@ -4488,6 +4529,7 @@ function estadisticasReservas_(filas, hoy, completo) {
   const r = { total: 0, canceladas: 0, ultimos30: 0, previos30: 0, ingresos30: 0, ingresosPrevios30: 0, proximas: 0, ultimaSolicitud: '', conCupon: 0 };
   const clientes = {}, primeraVez = {};
   const servicios = {}, ingresosServicio = {}, metodos = {}, modalidades = {}, estados = {};
+  const porPersona = {}, ingresosPersona = {};
   const mapa = [0, 1, 2, 3, 4, 5, 6].map(function () { return []; });
 
   filas.forEach(function (f) {
@@ -4524,6 +4566,11 @@ function estadisticasReservas_(filas, hoy, completo) {
     });
     sumarConteo_(metodos, f.Metodo_Pago);
     sumarConteo_(modalidades, f.Modalidad);
+    // bookeaa team: citas y facturación de cada persona.
+    if (String(f.Profesional || '').trim()) {
+      sumarConteo_(porPersona, f.Profesional);
+      sumarConteo_(ingresosPersona, f.Profesional, monto);
+    }
     const hora = horaTexto_(f.Hora_Cita);
     if (hora) {
       const h = Number(hora.slice(0, 2));
@@ -4553,6 +4600,7 @@ function estadisticasReservas_(filas, hoy, completo) {
   out.metodos = rankingConteo_(metodos, 8);
   out.modalidades = rankingConteo_(modalidades, 6);
   out.estados = rankingConteo_(estados, 8);
+  out.porPersona = rankingConteo_(porPersona, 30).map(function (p) { return { nombre: p.nombre, n: p.n, ingresos: round2_(ingresosPersona[p.nombre] || 0) }; });
   out.horas = { desde: hMin, hasta: hMax, dias: DIAS_SEMANA_CORTO, mapa: mapa.map(function (fila) { const v = []; for (let h = hMin; h <= hMax; h++) v.push(fila[h] || 0); return v; }) };
   return out;
 }
@@ -4604,7 +4652,7 @@ function metricasCentral_(ahoraMs, fresco) {
     }
     if (e) e.porMes.forEach(function (v, i) { reservas[i] += v; });
     return {
-      slug: n.slug, nombre: n.nombre, estado: n.estado, creado: n.creado, vence: n.vence, dias: n.dias,
+      slug: n.slug, nombre: n.nombre, estado: n.estado, creado: n.creado, vence: n.vence, dias: n.dias, plan: n.plan, personas: n.personas, precio: n.precio,
       reservas30: e ? e.ultimos30 : null, previas30: e ? e.previos30 : null, proximas: e ? e.proximas : null,
       clientes: e ? e.clientes : null, ultimaReserva: e ? e.ultimaSolicitud : '', porMes: e ? e.porMes.slice(-6) : [],
       error: error,
@@ -4851,6 +4899,9 @@ function equipoGuardar_(ss, tenant, lista) {
   sheet.getRange(1, 1, 1, EQUIPO_HEADERS.length).setValues([EQUIPO_HEADERS]);
   sheet.getRange('A:I').setNumberFormat('@');
   cfgReemplazar_(sheet, EQUIPO_HEADERS.length, filas);
+  actualizarIndiceEquipo_(tenant.slug, filas.map(function (f) {
+    return { id: f[0], nombre: f[1], email: f[2], activo: f[8] !== 'no' };
+  }));
   return filas.length;
 }
 
@@ -4880,4 +4931,172 @@ function equipoValidar_(datos) {
     errores.push('Para activar el equipo agrega al menos una persona activa.');
   }
   return errores;
+}
+
+// ---------- bookeaa team: quién entra a Mi negocio y qué ve ----------
+
+// Pestaña del archivo maestro con todas las personas de todos los equipos (la llena
+// equipoGuardar_). Sirve para saber, al entrar con Google, de qué negocio es cada correo
+// sin abrir la hoja de cada negocio.
+const EQUIPO_INDICE_HEADERS = ['Email', 'Slug', 'Persona_ID', 'Nombre', 'Activo'];
+let equipoIndiceMemo_ = null;
+
+function hojaEquipoIndice_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Equipo_Indice');
+  if (!sheet) {
+    sheet = ss.insertSheet('Equipo_Indice');
+    sheet.getRange(1, 1, 1, EQUIPO_INDICE_HEADERS.length).setValues([EQUIPO_INDICE_HEADERS]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/** [{email, slug, id, nombre, activo}] de todos los equipos (10 min en caché). */
+function equipoIndice_() {
+  if (equipoIndiceMemo_) return equipoIndiceMemo_;
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('equipo_indice');
+  if (hit) {
+    try { return (equipoIndiceMemo_ = JSON.parse(hit)); } catch (_) { /* se relee */ }
+  }
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Equipo_Indice');
+  const filas = !sheet || sheet.getLastRow() < 2 ? [] : sheet.getRange(2, 1, sheet.getLastRow() - 1, EQUIPO_INDICE_HEADERS.length).getDisplayValues();
+  equipoIndiceMemo_ = filas.map(function (r) {
+    return { email: String(r[0]).trim().toLowerCase(), slug: String(r[1]).trim(), id: String(r[2]).trim(), nombre: String(r[3]).trim(), activo: !/^no$/i.test(String(r[4]).trim()) };
+  }).filter(function (x) { return x.email && x.slug && x.id; });
+  try { cache.put('equipo_indice', JSON.stringify(equipoIndiceMemo_), 600); } catch (_) { /* muy grande */ }
+  return equipoIndiceMemo_;
+}
+
+/** Reemplaza las filas de un negocio en el índice. */
+function actualizarIndiceEquipo_(slug, personas) {
+  const sheet = hojaEquipoIndice_();
+  const resto = sheet.getLastRow() < 2 ? [] : sheet.getRange(2, 1, sheet.getLastRow() - 1, EQUIPO_INDICE_HEADERS.length).getValues()
+    .filter(function (r) { return String(r[1]).trim() && normKey_(r[1]) !== normKey_(slug); });
+  const nuevas = personas.filter(function (p) { return p.email; }).map(function (p) { return [p.email, slug, p.id, p.nombre, p.activo ? 'si' : 'no']; });
+  const filas = resto.concat(nuevas);
+  if (sheet.getLastRow() > 1) sheet.getRange(2, 1, sheet.getLastRow() - 1, EQUIPO_INDICE_HEADERS.length).clearContent();
+  if (filas.length) sheet.getRange(2, 1, filas.length, EQUIPO_INDICE_HEADERS.length).setValues(filas);
+  equipoIndiceMemo_ = null;
+  try { CacheService.getScriptCache().remove('equipo_indice'); } catch (_) { /* nada */ }
+}
+
+/** Cuántas personas activas tiene el equipo de un negocio (para el precio de bookeaa team). */
+function personasActivas_(slug) {
+  return equipoIndice_().filter(function (x) { return x.activo && normKey_(x.slug) === normKey_(slug); }).length;
+}
+
+/**
+ * A qué negocios entra un correo y con qué rol: 'admin' (el correo del negocio o un
+ * administrador de bookeaa) o 'equipo' (una persona del equipo: ve solo lo suyo).
+ */
+function accesosDe_(email, tenants) {
+  const out = negociosDe_(email, tenants).map(function (t) { return { tenant: t, rol: 'admin', persona: null }; });
+  equipoIndice_().forEach(function (x) {
+    if (!x.activo || x.email !== email) return;
+    if (out.some(function (a) { return a.tenant.slug === x.slug; })) return; // el admin ve todo
+    const t = tenants.filter(function (y) { return y.slug === x.slug && tenantActivo_(y); })[0];
+    if (t) out.push({ tenant: t, rol: 'equipo', persona: { id: x.id, nombre: x.nombre } });
+  });
+  return out;
+}
+
+/** Calendario de una persona del equipo (por id), o null. */
+function calendarioDeEquipo_(libro, personaId) {
+  const p = equipoLeer_(libro).filter(function (x) { return x.id === personaId; })[0];
+  return p ? calendarioPersona_(p) : null;
+}
+
+/** Bloqueos de una persona: eventos de su calendario marcados por bookeaa. */
+function bloqueosPersona_(cal, ahoraMs) {
+  const desde = new Date(ahoraMs - 86400000);
+  const hasta = new Date(ahoraMs + 120 * 86400000);
+  return cal.getEvents(desde, hasta).filter(function (ev) { return ev.getTag('bookeaa') === 'bloqueo'; }).map(function (ev) {
+    const todoElDia = ev.isAllDayEvent();
+    return {
+      id: ev.getId(), fecha: Utilities.formatDate(ev.getStartTime(), ZONA, 'yyyy-MM-dd'),
+      inicio: todoElDia ? '' : Utilities.formatDate(ev.getStartTime(), ZONA, 'HH:mm'),
+      fin: todoElDia ? '' : Utilities.formatDate(ev.getEndTime(), ZONA, 'HH:mm'),
+      motivo: String(ev.getTitle()).replace(/^🚫\s*/, ''), todoElDia: todoElDia,
+    };
+  });
+}
+
+/** Crea un bloqueo en el calendario de una persona: todo el día o de inicio a fin. */
+function bloquearPersona_(cal, data) {
+  const fecha = String(data.fecha || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { error: 'datos_invalidos', mensaje: 'Elige el día.' };
+  const motivo = limpiarTexto_(data.motivo || '', 80) || 'No disponible';
+  let ev;
+  if (data.inicio || data.fin) {
+    const a = toMinutes_(data.inicio), b = toMinutes_(data.fin);
+    if (isNaN(a) || isNaN(b) || b <= a) return { error: 'datos_invalidos', mensaje: 'La hora de fin va después de la de inicio.' };
+    ev = cal.createEvent('🚫 ' + motivo, Utilities.parseDate(fecha + ' ' + hhmm_(a), ZONA, 'yyyy-MM-dd HH:mm'), Utilities.parseDate(fecha + ' ' + hhmm_(b), ZONA, 'yyyy-MM-dd HH:mm'));
+  } else {
+    ev = cal.createAllDayEvent('🚫 ' + motivo, Utilities.parseDate(fecha + ' 12:00', ZONA, 'yyyy-MM-dd HH:mm'));
+  }
+  ev.setTag('bookeaa', 'bloqueo');
+  return { ok: true, id: ev.getId() };
+}
+
+/**
+ * Lo que puede hacer una persona del equipo en Mi negocio: ver sus citas, confirmar el
+ * pago de las suyas, bloquear sus horas y sus avisos. Nada de precios ni de la página.
+ */
+function atenderEquipo_(op, data, acceso, email, ahoraMs) {
+  const tenant = acceso.tenant;
+  const persona = acceso.persona;
+  if (op === 'citas') {
+    const desde = /^\d{4}-\d{2}-\d{2}$/.test(String(data.desde || '')) ? String(data.desde) : Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+    const dias = Math.max(1, Math.min(62, Math.floor(Number(data.dias) || 14)));
+    const libro = openTenant_(tenant);
+    const config = getConfig_(libro);
+    return {
+      negocio: { slug: tenant.slug, nombre: config.marca || config.nombre_negocio || tenant.nombre, moneda: normalizarMoneda_(config.moneda) },
+      hoy: Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd'),
+      citas: citasEntre_(getSheetData_(libro, 'Reservaciones'), desde, sumarDias_(desde, dias - 1))
+        .filter(function (c) { return c.profesionalId === persona.id; }),
+    };
+  }
+  if (op === 'confirmar_pago') {
+    const libro = openTenant_(tenant);
+    const cita = getSheetData_(libro, 'Reservaciones').filter(function (r) { return String(r.ID) === String(data.id || ''); })[0];
+    if (!cita || String(cita.Profesional_ID || '') !== persona.id) return { error: 'no_existe', mensaje: 'No encontramos esa reserva entre las tuyas.' };
+    if (String(cita.Estado) !== ESTADO_POR_VERIFICAR) return { ok: true, estado: String(cita.Estado) };
+    actualizarReserva_(libro, cita.ID, { Estado: 'Confirmada' });
+    return { ok: true, estado: 'Confirmada' };
+  }
+  if (op === 'bloqueos' || op === 'bloquear' || op === 'desbloquear') return atenderBloqueos_(op, data, openTenant_(tenant), tenant, persona.id, ahoraMs);
+  if (op === 'vapid') return { vapid: claveVapid_(), servidor: /^https:/.test(urlWorker_()) };
+  if (op === 'probar_avisos') {
+    const r = llamarWorkerDetalle_('/push/evento', { tipo: 'prueba', slug: tenant.slug, persona: persona.id });
+    if (r.error) return { error: 'servidor', mensaje: r.error };
+    return { ok: true, equipos: r.json.equipos || 0, enviadas: r.json.enviadas || 0, fallos: r.json.fallos || [] };
+  }
+  if (op === 'avisos') {
+    const s = data.suscripcion || {};
+    if (!/^https:/.test(String(s.endpoint || ''))) return { error: 'datos_invalidos', mensaje: 'Suscripción inválida.' };
+    const r = llamarWorkerDetalle_(data.quitar ? '/push/quitar' : '/push/suscribir', { slug: tenant.slug, email: email, persona: persona.id, suscripcion: s });
+    return r.json && r.json.ok ? { ok: true } : { error: 'servidor', mensaje: 'No se pudieron activar los avisos. ' + (r.error || 'Intenta de nuevo.') };
+  }
+  return { error: 'no_autorizado', mensaje: 'Eso lo hace el administrador del negocio.' };
+}
+
+/** Ver, crear y quitar bloqueos del calendario de una persona (ella misma o el administrador). */
+function atenderBloqueos_(op, data, libro, tenant, personaId, ahoraMs) {
+  const cal = calendarioDeEquipo_(libro, personaId);
+  if (!cal) return { error: 'no_existe', mensaje: 'Esa persona no tiene calendario todavía.' };
+  if (op === 'bloquear') {
+    const r = bloquearPersona_(cal, data);
+    if (r.error) return r;
+    limpiarCacheCatalogo_(tenant.slug);
+  }
+  if (op === 'desbloquear') {
+    const ev = cal.getEventById(String(data.id || ''));
+    if (!ev || ev.getTag('bookeaa') !== 'bloqueo') return { error: 'no_existe', mensaje: 'Ese bloqueo ya no está.' };
+    ev.deleteEvent();
+    limpiarCacheCatalogo_(tenant.slug);
+  }
+  return { ok: true, bloqueos: bloqueosPersona_(cal, ahoraMs) };
 }

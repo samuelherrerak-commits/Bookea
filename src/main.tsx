@@ -31,6 +31,17 @@ if (/^\/central\/?$/.test(window.location.pathname)) {
       </StrictMode>,
     )
   })
+} else if (/^\/team\/?$/.test(window.location.pathname)) {
+  // /team: la página de venta de bookeaa team (negocios con equipo).
+  void import('./landing/Team').then(({ default: Team }) => {
+    root.render(
+      <StrictMode>
+        <MotionConfig reducedMotion="user">
+          <Team />
+        </MotionConfig>
+      </StrictMode>,
+    )
+  })
 } else if (/^\/conectar\/?$/.test(window.location.pathname)) {
   // /conectar: el administrador autoriza el conector de Claude (OAuth del Worker del bot).
   void import('./conectar/ConectarApp').then(({ default: ConectarApp }) => {

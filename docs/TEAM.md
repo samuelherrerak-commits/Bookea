@@ -25,31 +25,59 @@ El negocio elige el modo (`equipo_modo`):
 - **Qué servicios hace:** la columna `Servicios`, con los IDs separados por coma. Vacía = hace todos.
 - **Lo que ocupa a todos:** los **bloqueos** (días libres) y los eventos del **calendario del negocio**. Sirve para cerrar el local un día.
 
+## Mi negocio con equipo
+- **El administrador**, con el correo del negocio, ve todo lo de siempre y además:
+  - **Configurar → Equipo**: prende o apaga las reservas por persona, elige el modo y "Cualquiera disponible", y agrega personas con su nombre, Gmail, cargo, foto, servicios y horario propio. También puede copiar el link de cada persona y ver sus bloqueos.
+  - En **Hoy** y **Próximas**, cada cita dice "con Carla", y hay botones para ver las de una sola persona.
+  - Activar el equipo pide el plan **team**. Si el negocio es individual, la sección muestra la oferta con un botón a WhatsApp.
+- **Cada persona del equipo** entra a `bookeaa.com/negocio` con su Gmail y ve:
+  - **Hoy** y **Próximas**: solo sus citas. Puede confirmar el Pago Móvil de las suyas.
+  - **Bloqueos**: bloquea un día completo o unas horas. Cada bloqueo es un evento 🚫 en su calendario, así que también lo ve en Google Calendar.
+  - **Avisos**: le llegan las reservas y los recordatorios de sus citas, y su propio resumen de la mañana.
+  - No ve precios, configuración ni el plan.
+- **Si un correo es de dos negocios**, por ejemplo dueño de uno y del equipo de otro, Mi negocio deja cambiar entre ellos en Avisos.
+
+Cómo funciona por dentro:
+- **Equipo_Indice:** una pestaña del archivo maestro (`Email, Slug, Persona_ID, Nombre, Activo`) que dice de qué negocio es cada correo, sin abrir todas las hojas. Se llena sola al guardar el equipo.
+- **Avisos:** el Worker guarda de quién es cada teléfono (migración `0004_equipo.sql`, columna `persona`). El administrador recibe todo; cada persona, lo suyo. Los avisos de cobro solo le llegan al administrador.
+
+## Plan y precio (central)
+- **Individual:** $10 al mes.
+- **bookeaa team:** $25 al mes hasta 5 personas activas, y $5 por cada persona más. Se calcula solo con la columna `Plan` de Tenants y las personas activas del índice.
+- **Lo que paga cada negocio se usa en:**
+  - el ingreso mensual de la central;
+  - Mi plan y pagos (el monto en bolívares);
+  - los avisos de corte;
+  - el monto sugerido al registrar un pago.
+- **En la central:**
+  - "Nuevo negocio" elige el plan;
+  - el detalle tiene **"Pasar a bookeaa team"** (o a individual);
+  - la lista marca "team · N".
+- **En "Ver a fondo"**, la tarjeta **Por persona del equipo** muestra las citas y la facturación de cada una en los últimos 12 meses.
+- **El conector de Claude** también maneja el plan (`crear_negocio` y `editar_negocio`).
+
+## Página de venta
+`bookeaa.com/team` explica:
+- los tres modos de reservar;
+- las funciones;
+- el precio, con una calculadora por personas;
+- las preguntas frecuentes.
+
+Tiene un botón de WhatsApp a bookeaa y otro para verlo funcionando en el demo. La landing la enlaza en el menú (**Team**).
+
 ## Activarlo en un negocio
-Hasta que esté la sección Equipo en Mi negocio (ronda 2), se activa con el **conector de Claude** (`guardar_configuracion`, sección `equipo`). Por ejemplo:
+1. **En la central:** "Pasar a bookeaa team".
+2. **El dueño, en Mi negocio → Configurar → Equipo:** agrega a su gente con su Gmail y prende "Reservas por persona". A cada una le llega una invitación al calendario "Citas <nombre> · <negocio>".
+3. **Cada persona** entra a bookeaa.com/negocio con su Gmail y activa sus avisos.
 
-> En spa-sol activa el equipo en modo servicio con "Cualquiera". Agrega a Carla Méndez (carla@gmail.com, directora, hace todo) y a Andrea Rojas (andrea@gmail.com, especialista, solo faciales y cejas, de martes a sábado de 9 a 5).
+También se puede hacer desde el conector de Claude (`guardar_configuracion`, sección `equipo`).
 
-O a mano, en la hoja del negocio:
-1. **Actualizar el negocio** (menú) para que aparezca la pestaña **Equipo**.
-2. Llenar las personas. El calendario de cada una lo crea bookeaa al guardar desde Mi negocio o el conector. A mano hay que pegar el ID de un calendario.
-3. En **Configuracion**, poner:
-   - `equipo_activo = si`;
-   - `equipo_modo`;
-   - `equipo_cualquiera`.
-
-Cuando una persona sale de la lista, queda **inactiva**: su calendario y sus citas no se borran.
-
-## Precio
-$25 al mes hasta 5 personas, y $5 por cada persona extra. Se cobra desde la central en la ronda 3.
-
-## Lo que viene
-- **Ronda 2 (Mi negocio):**
-  - la sección Equipo para el administrador;
-  - cada persona entra con su Gmail y ve solo sus citas;
-  - cada persona puede bloquear sus horas;
-  - avisos de sus reservas en su teléfono.
-- **Ronda 3:** el plan Team en la central, métricas por persona y la página de venta.
+Cuando una persona sale de la lista, queda **inactiva**: su calendario y sus citas no se borran y deja de contar para el precio.
 
 ## Probarlo sin hoja (modo demo)
-`/u/demo?equipo=servicio&rubro=estetica`. También con `equipo=persona` o `equipo=ambos`, y `&con=sofia` para entrar por el link de Sofía.
+- **Página:** `/u/demo?equipo=servicio&rubro=estetica`. También con `equipo=persona` o `equipo=ambos`, y `&con=sofia`.
+- **Mi negocio:** `/negocio`, botón "Entrar (demo)".
+  - Barbería Norte es el administrador.
+  - En Avisos se cambia a Spa Sol, donde eres Carla, del equipo.
+- **Central:** `/central`. Spa Sol es team, con 6 personas.
+- **Venta:** `/team`.

@@ -3,6 +3,9 @@
  *  - Nueva reserva (y "Pago por verificar" si fue con Pago Móvil): apenas el Apps Script avisa.
  *  - Recordatorio unos 30 minutos antes de cada cita (cron cada 5 minutos).
  *  - Resumen de la mañana a las 7:00 con las citas del día (el Apps Script manda la agenda).
+ *
+ * bookeaa team: cada teléfono guarda de quién es (persona). El administrador (persona '')
+ * recibe todo; cada persona del equipo, solo lo de sus citas y su propio resumen.
  */
 import { diaCorto, enCaracas, horaLegible, msDeCita } from './tiempo'
 import { crearClavesVapid, enviarPush, type ClavesVapid, type Suscripcion } from './webpush'
@@ -20,7 +23,17 @@ export interface CitaAviso {
   fecha: string
   hora: string
   estado?: string
+  /** bookeaa team: id de quien atiende ('' = sin equipo). */
+  profesionalId?: string
 }
+
+/**
+ * A quién va un aviso:
+ *  - null: a todos los teléfonos del negocio;
+ *  - { persona }: al administrador y a esa persona (una cita suya);
+ *  - { persona, exacto: true }: solo a esa persona ('' = solo al administrador).
+ */
+export type Alcance = { persona: string; exacto?: boolean } | null
 
 export interface Notificacion {
   titulo: string
@@ -82,12 +95,12 @@ export async function clavesVapid(db: D1Database): Promise<ClavesVapid> {
   return JSON.parse(guardada!.valor) as ClavesVapid
 }
 
-export async function suscribir(db: D1Database, slug: string, email: string, s: { endpoint?: string; keys?: { p256dh?: string; auth?: string } }, ahora: number) {
+export async function suscribir(db: D1Database, slug: string, email: string, s: { endpoint?: string; keys?: { p256dh?: string; auth?: string } }, ahora: number, persona = '') {
   if (!s.endpoint || !/^https:\/\//.test(s.endpoint) || !s.keys?.p256dh || !s.keys?.auth) throw new Error('Suscripción inválida')
   await db.prepare(
-    `INSERT INTO push_suscripciones (endpoint, slug, email, p256dh, auth, creado) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-     ON CONFLICT (endpoint) DO UPDATE SET slug = ?2, email = ?3, p256dh = ?4, auth = ?5`,
-  ).bind(s.endpoint, slug, email, s.keys.p256dh, s.keys.auth, ahora).run()
+    `INSERT INTO push_suscripciones (endpoint, slug, email, p256dh, auth, creado, persona) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+     ON CONFLICT (endpoint) DO UPDATE SET slug = ?2, email = ?3, p256dh = ?4, auth = ?5, persona = ?7`,
+  ).bind(s.endpoint, slug, email, s.keys.p256dh, s.keys.auth, ahora, persona).run()
 }
 
 export async function quitar(db: D1Database, endpoint: string) {
@@ -97,10 +110,10 @@ export async function quitar(db: D1Database, endpoint: string) {
 async function guardarCita(db: D1Database, slug: string, c: CitaAviso) {
   if (!c.id || !/^\d{4}-\d{2}-\d{2}$/.test(c.fecha) || !/^\d{2}:\d{2}$/.test(c.hora)) return
   await db.prepare(
-    `INSERT INTO push_citas (slug, id, inicio, cliente, servicios) VALUES (?1, ?2, ?3, ?4, ?5)
+    `INSERT INTO push_citas (slug, id, inicio, cliente, servicios, persona) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
      ON CONFLICT (slug, id) DO UPDATE SET recordada = CASE WHEN inicio = ?3 THEN recordada ELSE 0 END,
-       inicio = ?3, cliente = ?4, servicios = ?5`,
-  ).bind(slug, c.id, msDeCita(c.fecha, c.hora), c.cliente.slice(0, 80), c.servicios.slice(0, 200)).run()
+       inicio = ?3, cliente = ?4, servicios = ?5, persona = ?6`,
+  ).bind(slug, c.id, msDeCita(c.fecha, c.hora), c.cliente.slice(0, 80), c.servicios.slice(0, 200), c.profesionalId || '').run()
 }
 
 /** Manda una notificación a todos los equipos de un negocio y borra los que ya no existen. */
@@ -111,8 +124,13 @@ export interface Envio {
   fallos: string[]
 }
 
-export async function avisar(db: D1Database, slug: string, n: Notificacion): Promise<Envio> {
-  const { results } = await db.prepare('SELECT endpoint, p256dh, auth FROM push_suscripciones WHERE slug = ?').bind(slug).all<Suscripcion>()
+export async function avisar(db: D1Database, slug: string, n: Notificacion, alcance: Alcance = null): Promise<Envio> {
+  const consulta = !alcance
+    ? db.prepare('SELECT endpoint, p256dh, auth FROM push_suscripciones WHERE slug = ?').bind(slug)
+    : alcance.exacto
+      ? db.prepare('SELECT endpoint, p256dh, auth FROM push_suscripciones WHERE slug = ? AND persona = ?').bind(slug, alcance.persona)
+      : db.prepare("SELECT endpoint, p256dh, auth FROM push_suscripciones WHERE slug = ? AND (persona = '' OR persona = ?)").bind(slug, alcance.persona)
+  const { results } = await consulta.all<Suscripcion>()
   const envio: Envio = { equipos: results.length, enviadas: 0, fallos: [] }
   if (!results.length) return envio
   const claves = await clavesVapid(db)
@@ -143,18 +161,18 @@ export const avisoPrueba = (slug: string): Notificacion => ({
 /** Una reserva nueva que avisa el Apps Script. */
 export async function nuevaReserva(db: D1Database, slug: string, c: CitaAviso) {
   await guardarCita(db, slug, c)
-  await avisar(db, slug, avisoReserva(slug, c))
+  await avisar(db, slug, avisoReserva(slug, c), c.profesionalId ? { persona: c.profesionalId } : null)
 }
 
 /** Lo que corre el cron cada 5 minutos. */
 export async function repasar(env: EnvAvisos, ahora: number) {
   // Recordatorios: citas que empiezan en los próximos 30 minutos y no se avisaron.
   const { results: proximas } = await env.DB.prepare(
-    'SELECT slug, id, cliente, servicios, inicio FROM push_citas WHERE recordada = 0 AND inicio > ?1 AND inicio <= ?2',
-  ).bind(ahora, ahora + MINUTOS_RECORDATORIO * 60000 + 60000).all<{ slug: string; id: string; cliente: string; servicios: string; inicio: number }>()
+    'SELECT slug, id, cliente, servicios, inicio, persona FROM push_citas WHERE recordada = 0 AND inicio > ?1 AND inicio <= ?2',
+  ).bind(ahora, ahora + MINUTOS_RECORDATORIO * 60000 + 60000).all<{ slug: string; id: string; cliente: string; servicios: string; inicio: number; persona: string }>()
   for (const c of proximas) {
     await env.DB.prepare('UPDATE push_citas SET recordada = 1 WHERE slug = ? AND id = ?').bind(c.slug, c.id).run()
-    await avisar(env.DB, c.slug, avisoRecordatorio(c.slug, c, ahora))
+    await avisar(env.DB, c.slug, avisoRecordatorio(c.slug, c, ahora), c.persona ? { persona: c.persona } : null)
   }
 
   // Resumen de la mañana: desde las 7:00 hasta el mediodía, una vez por día y negocio.
@@ -181,8 +199,15 @@ async function resumenDelDia(env: EnvAvisos, ahora: number) {
     await env.DB.prepare('DELETE FROM push_citas WHERE slug = ?1 AND inicio >= ?2 AND inicio < ?3')
       .bind(slug, msDeCita(hoy, '00:00'), msDeCita(hoy, '00:00') + 86400_000).run()
     for (const c of citas) await guardarCita(env.DB, slug, c)
-    const n = avisoResumen(slug, citas.filter((c) => msDeCita(c.fecha, c.hora) > ahora))
-    if (n) await avisar(env.DB, slug, n)
+    const pendientes = citas.filter((c) => msDeCita(c.fecha, c.hora) > ahora)
+    // El administrador ve el día completo; cada persona del equipo, el suyo.
+    const n = avisoResumen(slug, pendientes)
+    if (n) await avisar(env.DB, slug, n, { persona: '', exacto: true })
+    const { results: personas } = await env.DB.prepare("SELECT DISTINCT persona FROM push_suscripciones WHERE slug = ? AND persona != ''").bind(slug).all<{ persona: string }>()
+    for (const { persona } of personas) {
+      const suyo = avisoResumen(slug, pendientes.filter((c) => c.profesionalId === persona))
+      if (suyo) await avisar(env.DB, slug, suyo, { persona, exacto: true })
+    }
   }
 }
 

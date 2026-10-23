@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { formatTime12 } from '../lib/format'
 import { LUGAR_TIPOS } from '../lib/lugar'
 import { ESTILO_DEF, ESTILOS, PALETAS } from '../lib/theme'
+import { BOOKEAA_WHATSAPP } from '../config'
 import * as api from './api'
 import { MiPlan } from './MiPlan'
+import { MisBloqueos } from './MisBloqueos'
 import { MENSAJE_VISTA, VISTA_LISTA, type Borrador } from '../lib/vistaPrevia'
 import { dibujarQr, linkDelNegocio, MODOS_QR, PLANTILLAS_QR, type ModoQr, type PlantillaQr } from './qr'
 
@@ -12,11 +14,12 @@ import { dibujarQr, linkDelNegocio, MODOS_QR, PLANTILLAS_QR, type ModoQr, type P
  * Cada sección guarda en la hoja del negocio y la página lo muestra en la próxima carga.
  */
 
-export type Id = 'plan' | 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'qr' | 'pagina' | 'lugar' | 'pagos' | 'mensaje' | 'ticket'
+export type Id = 'plan' | 'equipo' | 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'qr' | 'pagina' | 'lugar' | 'pagos' | 'mensaje' | 'ticket'
 
 const SECCIONES: { id: Id; titulo: string; detalle: string; icono: string }[] = [
   { id: 'plan', titulo: 'Mi plan y pagos', detalle: 'Tu fecha de corte y pagar por Pago Móvil', icono: '💳' },
   { id: 'servicios', titulo: 'Servicios', detalle: 'Nombre, precio y duración', icono: '✂️' },
+  { id: 'equipo', titulo: 'Equipo', detalle: 'Una agenda por persona (bookeaa team)', icono: '👥' },
   { id: 'horario', titulo: 'Horario', detalle: 'Días y horas de atención', icono: '🕘' },
   { id: 'bloqueos', titulo: 'Días libres', detalle: 'Vacaciones, feriados, permisos', icono: '🌴' },
   { id: 'cupones', titulo: 'Cupones', detalle: 'Códigos de descuento', icono: '🏷️' },
@@ -97,6 +100,7 @@ export function Configurar({ sesion, slug, alSalir, inicial = null }: Props) {
         <h2 className="mt-1 font-display text-[30px] leading-tight">{s.titulo}</h2>
         {abierta === 'plan' && <MiPlan sesion={sesion} slug={slug} alSalir={alSalir} />}
         {abierta === 'servicios' && <Servicios {...props} />}
+        {abierta === 'equipo' && <EquipoSec {...props} sesion={sesion} alSalir={alSalir} />}
         {abierta === 'horario' && <HorarioSec {...props} />}
         {abierta === 'bloqueos' && <Bloqueos {...props} />}
         {abierta === 'pagina' && <Pagina {...props} />}
@@ -949,6 +953,180 @@ function Ticket({ datos, guardar }: SecProps) {
         </Tarjeta>
       )}
       <Guardar cambios={cambios} alGuardar={() => guardar('comprobantes', { config: c })} />
+    </>
+  )
+}
+
+// ---------- Equipo (bookeaa team) ----------
+
+const DIAS_DOMINGO = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+const nombreDia = (d: string | number) => (typeof d === 'number' ? DIAS_DOMINGO[d] ?? String(d) : d)
+const MODOS: [api.EquipoConfig['modo'], string, string][] = [
+  ['servicio', 'Primero el servicio', 'Eligen qué se van a hacer y luego con quién.'],
+  ['persona', 'Primero la persona', 'Tu página abre con el equipo; cada quien muestra sus servicios.'],
+  ['ambos', 'Los dos', 'El equipo arriba (opcional) y los servicios abajo.'],
+]
+
+function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesion: string; alSalir: () => void }) {
+  const original = datos.equipo ?? { plan: 'individual' as const, activo: false, modo: 'servicio' as const, cualquiera: true, personas: [] }
+  const [eq, setEq, cambios] = useBorrador<api.EquipoConfig>({
+    ...original,
+    personas: original.personas.map((p) => ({ ...p, horarios: p.horarios.map((h) => ({ ...h, dia: nombreDia(h.dia) })) })),
+  })
+  const [abiertos, setAbiertos] = useState<number | null>(eq.personas.length ? null : 0)
+  const [bloqueosDe, setBloqueosDe] = useState<string | null>(null)
+  const [copiado, setCopiado] = useState('')
+  const editar = (i: number, c: Partial<api.PersonaEquipo>) => setEq({ ...eq, personas: eq.personas.map((p, j) => (j === i ? { ...p, ...c } : p)) })
+  const servicios = datos.servicios.filter((s) => s.nombre)
+  const activas = eq.personas.filter((p) => p.activo).length
+  const precio = 25 + Math.max(0, activas - 5) * 5
+  const link = (id: string) => `${location.origin}/u/${slug}?con=${id}`
+
+  if (bloqueosDe) {
+    const p = eq.personas.find((x) => x.id === bloqueosDe)
+    return (
+      <>
+        <button type="button" onClick={() => setBloqueosDe(null)} className="mt-2 text-[14px] text-muted underline underline-offset-4">← Volver al equipo</button>
+        <p className="mt-3 text-[15px] font-semibold">{p?.nombre}</p>
+        <MisBloqueos sesion={sesion} slug={slug} persona={bloqueosDe} alSalir={alSalir} />
+      </>
+    )
+  }
+
+  return (
+    <>
+      {eq.plan !== 'team' && (
+        <div className="mt-3 rounded-3xl bg-ink p-5 text-bg">
+          <p className="text-[13px] uppercase tracking-[0.12em] opacity-70">bookeaa team</p>
+          <p className="mt-1 font-display text-[26px] leading-tight">Una agenda para cada persona de tu equipo</p>
+          <p className="mt-2 text-[14px] opacity-85">Tus clientes eligen con quién; cada quien ve sus citas y recibe sus avisos. $25 al mes hasta 5 personas y $5 por cada persona más.</p>
+          <a href={`https://wa.me/${BOOKEAA_WHATSAPP}?text=${encodeURIComponent('Hola, quiero pasar mi negocio a bookeaa team.')}`} target="_blank" rel="noopener noreferrer"
+            className="mt-4 inline-block rounded-full bg-bg px-5 py-3 text-[15px] font-semibold text-ink">Quiero bookeaa team</a>
+        </div>
+      )}
+
+      <Tarjeta className="mt-4">
+        <Interruptor activo={eq.activo} onChange={(v) => setEq({ ...eq, activo: v })}>
+          <b>Reservas por persona</b>
+          <span className="block text-[13px] text-muted">Cada quien con su agenda. Apagado, tu página funciona con una sola agenda.</span>
+        </Interruptor>
+        <div className="space-y-2" role="radiogroup" aria-label="Cómo eligen">
+          {MODOS.map(([id, t, d]) => (
+            <button key={id} type="button" role="radio" aria-checked={eq.modo === id} onClick={() => setEq({ ...eq, modo: id })}
+              className={'block w-full rounded-2xl px-4 py-3 text-left ring-1 ' + (eq.modo === id ? 'bg-sand ring-ink' : 'ring-line')}>
+              <span className="block text-[15px] font-semibold">{t}</span>
+              <span className="block text-[13px] text-muted">{d}</span>
+            </button>
+          ))}
+        </div>
+        <Interruptor activo={eq.cualquiera} onChange={(v) => setEq({ ...eq, cualquiera: v })}>
+          Ofrecer “Cualquiera disponible”
+          <span className="block text-[13px] text-muted">Junta las horas de todos y asigna a quien esté libre.</span>
+        </Interruptor>
+      </Tarjeta>
+
+      <div className="mt-6 flex items-baseline justify-between">
+        <h3 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Personas ({activas})</h3>
+        {eq.plan === 'team' && <span className="text-[13px] text-muted">Tu plan: ${precio} al mes</span>}
+      </div>
+      <div className="mt-2 space-y-3">
+        {eq.personas.map((p, i) => {
+          const abierto = abiertos === i
+          const hace = (id: string) => p.servicios.includes(id)
+          return (
+            <Tarjeta key={p.id || `nueva-${i}`} className={p.activo ? '' : 'opacity-70'}>
+              <button type="button" onClick={() => setAbiertos(abierto ? null : i)} className="flex w-full items-center gap-3 text-left" aria-expanded={abierto}>
+                <span className="grid size-11 shrink-0 place-items-center rounded-full bg-sand text-[15px] font-semibold">
+                  {p.foto ? <img src={p.foto} alt="" className="size-11 rounded-full object-cover" /> : (p.nombre || '?').split(/\s+/).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('')}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[16px] font-semibold">{p.nombre || 'Persona nueva'}</span>
+                  <span className="block truncate text-[13px] text-muted">
+                    {p.activo ? '' : 'Inactiva · '}{p.cargo || p.email || 'Toca para completar'}{p.servicios.length ? ` · ${p.servicios.length} servicios` : ' · todos los servicios'}
+                  </span>
+                </span>
+                <svg viewBox="0 0 24 24" className={'size-5 text-muted transition-transform ' + (abierto ? 'rotate-90' : '')} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
+              </button>
+              {abierto && (
+                <>
+                  <Campo etiqueta="Nombre"><Texto value={p.nombre} placeholder="Carla Méndez" onChange={(e) => editar(i, { nombre: e.target.value })} /></Campo>
+                  <Campo etiqueta="Su Gmail" ayuda="Con este correo entra a Mi negocio y recibe su calendario de citas.">
+                    <Texto type="email" inputMode="email" value={p.email} placeholder="carla@gmail.com" onChange={(e) => editar(i, { email: e.target.value.trim() })} />
+                  </Campo>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Campo etiqueta="Cargo"><Texto value={p.cargo} placeholder="Estilista" onChange={(e) => editar(i, { cargo: e.target.value })} /></Campo>
+                    <Campo etiqueta="Foto (enlace)"><Texto value={p.foto} placeholder="https://…" onChange={(e) => editar(i, { foto: e.target.value.trim() })} /></Campo>
+                  </div>
+                  <div>
+                    <span className="mb-1.5 block text-[14px] font-semibold">Qué servicios hace</span>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" aria-pressed={!p.servicios.length} onClick={() => editar(i, { servicios: [] })}
+                        className={'rounded-full px-3.5 py-2 text-[14px] ring-1 ' + (!p.servicios.length ? 'bg-ink text-bg ring-ink' : 'ring-line')}>Todos</button>
+                      {servicios.map((s) => (
+                        <button key={s.id || s.nombre} type="button" aria-pressed={hace(s.id)}
+                          onClick={() => editar(i, { servicios: hace(s.id) ? p.servicios.filter((x) => x !== s.id) : [...p.servicios, s.id] })}
+                          className={'rounded-full px-3.5 py-2 text-[14px] ring-1 ' + (hace(s.id) ? 'bg-ink text-bg ring-ink' : 'ring-line')}>{s.nombre}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Interruptor activo={p.horarios.length > 0} onChange={(v) => editar(i, { horarios: v ? datos.horarios.filter((h) => h.inicio && h.fin).map((h) => ({ ...h })) : [] })}>
+                      Horario propio
+                      <span className="block text-[13px] text-muted">{p.horarios.length ? 'Solo atiende en estos días y horas.' : 'Usa el horario del negocio.'}</span>
+                    </Interruptor>
+                    {p.horarios.length > 0 && (
+                      <div className="mt-2 space-y-2">
+                        {DIAS.map((dia) => {
+                          const h = p.horarios.find((x) => x.dia === dia)
+                          return (
+                            <div key={dia} className="grid grid-cols-[46px_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5">
+                              <button type="button" aria-pressed={!!h} onClick={() => editar(i, { horarios: h ? p.horarios.filter((x) => x.dia !== dia) : [...p.horarios, { dia, inicio: '09:00', fin: '18:00' }] })}
+                                className={'rounded-full px-2 py-2 text-[13px] ring-1 ' + (h ? 'bg-ink text-bg ring-ink' : 'text-muted ring-line')}>{dia.slice(0, 3)}</button>
+                              {h ? (
+                                <>
+                                  <Hora etiqueta={`${dia}: desde`} valor={h.inicio} onChange={(v) => editar(i, { horarios: p.horarios.map((x) => (x === h ? { ...x, inicio: v } : x)) })} />
+                                  <span className="text-muted">a</span>
+                                  <Hora etiqueta={`${dia}: hasta`} valor={h.fin} onChange={(v) => editar(i, { horarios: p.horarios.map((x) => (x === h ? { ...x, fin: v } : x)) })} />
+                                </>
+                              ) : <span className="col-span-3 text-[13px] text-muted">No trabaja</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <Interruptor activo={p.activo} onChange={(v) => editar(i, { activo: v })}>Activa (recibe reservas)</Interruptor>
+                  {p.id && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={async () => { await navigator.clipboard?.writeText(link(p.id)).catch(() => {}); setCopiado(p.id); setTimeout(() => setCopiado(''), 1500) }}
+                        className="rounded-full px-3 py-2.5 text-[14px] font-semibold ring-1 ring-line">{copiado === p.id ? '✓ Copiado' : 'Copiar su link'}</button>
+                      <button type="button" disabled={cambios} onClick={() => setBloqueosDe(p.id)} title={cambios ? 'Guarda primero los cambios' : ''}
+                        className="rounded-full px-3 py-2.5 text-[14px] font-semibold ring-1 ring-line disabled:opacity-50">Sus bloqueos</button>
+                    </div>
+                  )}
+                  <button type="button" onClick={() => { setEq({ ...eq, personas: eq.personas.filter((_, j) => j !== i) }); setAbiertos(null) }} className="text-[14px] text-danger underline underline-offset-4">
+                    Quitar del equipo
+                  </button>
+                </>
+              )}
+            </Tarjeta>
+          )
+        })}
+      </div>
+      <button type="button" onClick={() => { setEq({ ...eq, personas: [...eq.personas, { id: '', nombre: '', email: '', foto: '', cargo: '', servicios: [], horarios: [], activo: true }] }); setAbiertos(eq.personas.length) }}
+        className="mt-3 w-full rounded-full px-5 py-3 text-[15px] font-semibold ring-1 ring-line">
+        + Agregar persona
+      </button>
+      <p className="mt-3 text-[13px] text-muted">A cada persona nueva le creamos su calendario de citas y se lo compartimos a su Gmail. Quien sale del equipo queda inactiva: su calendario y sus citas no se borran.</p>
+      <Guardar
+        cambios={cambios}
+        alGuardar={() =>
+          guardar('equipo', {
+            config: { equipo_activo: eq.activo ? 'si' : 'no', equipo_modo: eq.modo, equipo_cualquiera: eq.cualquiera ? 'si' : 'no' },
+            equipo: eq.personas,
+          })
+        }
+      />
     </>
   )
 }

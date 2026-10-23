@@ -21,6 +21,10 @@ export interface Negocio {
   /** Días hasta el vencimiento (negativo = vencido); null sin fecha. */
   dias: number | null
   hoja: string
+  /** bookeaa team: plan, personas activas del equipo y lo que paga al mes (USD). */
+  plan?: 'individual' | 'team'
+  personas?: number
+  precio?: number
 }
 
 export interface Pago {
@@ -48,7 +52,7 @@ export interface Prospecto {
 export interface Resumen {
   hoy: string
   precio: number
-  totales: { activos: number; prueba: number; pendientes: number; suspendidos: number; sinFecha: number; porVencer: number }
+  totales: { activos: number; prueba: number; pendientes: number; suspendidos: number; sinFecha: number; porVencer: number; team?: number; mrr?: number; mrrPrueba?: number }
   negocios: Negocio[]
   pagos: Pago[]
   prospectos: Prospecto[]
@@ -142,6 +146,9 @@ export interface NegocioMetricas {
   /** Reservas de los últimos 6 meses (el último es el mes en curso). */
   porMes: number[]
   error: string
+  plan?: 'individual' | 'team'
+  personas?: number
+  precio?: number
 }
 
 export interface Metricas {
@@ -186,6 +193,8 @@ export interface EstadisticasNegocio {
   modalidades: Ranking[]
   estados: Ranking[]
   horas: { desde: number; hasta: number; dias: string[]; mapa: number[][] }
+  /** bookeaa team: citas y facturación de cada persona. */
+  porPersona?: (Ranking & { ingresos: number })[]
 }
 
 export interface DetalleNegocio {
@@ -230,13 +239,13 @@ export const resumen = (sesion: string) => (DEMO_MODE ? demo.resumen() : llamar<
 export const registrarPago = (sesion: string, d: { slug: string; meses: number; monto: number; metodo: string; referencia: string }) =>
   DEMO_MODE ? demo.pago(d) : llamar<{ ok: boolean; vence: string }>({ op: 'pago', sesion, ...d })
 
-export const crear = (sesion: string, d: { nombre: string; slug: string; email: string; telefono: string; diasPrueba: number; notas: string }) =>
+export const crear = (sesion: string, d: { nombre: string; slug: string; email: string; telefono: string; diasPrueba: number; notas: string; plan?: 'individual' | 'team' }) =>
   DEMO_MODE ? demo.crear(d) : llamar<{ ok: boolean; slug: string; hoja: string }>({ op: 'crear', sesion, ...d })
 
 export const cambiarActivo = (sesion: string, slug: string, activo: boolean) =>
   DEMO_MODE ? demo.activo(slug, activo) : llamar<{ ok: boolean }>({ op: 'activo', sesion, slug, activo })
 
-export const editar = (sesion: string, slug: string, campos: Partial<Pick<Negocio, 'email' | 'telefono' | 'notas' | 'vence'>>) =>
+export const editar = (sesion: string, slug: string, campos: Partial<Pick<Negocio, 'email' | 'telefono' | 'notas' | 'vence' | 'plan'>>) =>
   DEMO_MODE ? demo.editar(slug, campos) : llamar<{ ok: boolean }>({ op: 'editar', sesion, slug, ...campos })
 
 export const metricas = (sesion: string, fresco = false) =>
@@ -268,6 +277,11 @@ export const ajustesCobro = (sesion: string, d: { pagoMovil?: Partial<PagoMovilD
 /** Pone la fecha de corte según el día del mes en que entró el negocio. */
 export const usarIngreso = (sesion: string, slug: string) =>
   DEMO_MODE ? demo.ingreso(slug) : llamar<{ ok: boolean; vence: string }>({ op: 'usar_ingreso', sesion, slug })
+
+/** Lo que paga un negocio al mes: $10 individual; team $25 hasta 5 personas + $5 por persona extra. */
+export function precioPlan(plan: Negocio['plan'], personas = 0): number {
+  return plan === 'team' ? 25 + Math.max(0, personas - 5) * 5 : 10
+}
 
 /** "Barbería El Corte" → "barberia-el-corte" (como lo valida crearTenant). */
 export function slugDe(nombre: string): string {
@@ -382,7 +396,7 @@ const demoTikTok = (() => {
 const demo = (() => {
   const negocios: Negocio[] = [
     { slug: 'barberia-norte', nombre: 'Barbería Norte', email: 'norte@gmail.com', telefono: '584121112233', creado: dias(-70), vence: dias(-3), ultimoPago: dias(-33), notas: '', activo: true, estado: 'pendiente', dias: -3, hoja: '' },
-    { slug: 'spa-sol', nombre: 'Spa Sol', email: 'spasol@gmail.com', telefono: '584142223344', creado: dias(-40), vence: dias(2), ultimoPago: dias(-28), notas: 'Paga por Zelle', activo: true, estado: 'activo', dias: 2, hoja: '' },
+    { slug: 'spa-sol', nombre: 'Spa Sol', email: 'spasol@gmail.com', telefono: '584142223344', creado: dias(-40), vence: dias(2), ultimoPago: dias(-28), notas: 'Paga por Zelle', activo: true, estado: 'activo', dias: 2, hoja: '', plan: 'team', personas: 6 },
     { slug: 'unas-mariana', nombre: 'Uñas Mariana', email: 'mariana@gmail.com', telefono: '584243334455', creado: dias(-10), vence: dias(20), ultimoPago: '', notas: '', activo: true, estado: 'prueba', dias: 20, hoja: '' },
     { slug: 'consultorio-diaz', nombre: 'Consultorio Díaz', email: 'diaz@gmail.com', telefono: '584165556677', creado: dias(-100), vence: dias(24), ultimoPago: dias(-6), notas: '', activo: true, estado: 'activo', dias: 24, hoja: '' },
     { slug: 'estudio-luz', nombre: 'Estudio Luz', email: 'luz@gmail.com', telefono: '', creado: dias(-120), vence: dias(-40), ultimoPago: dias(-70), notas: 'No respondió', activo: false, estado: 'suspendido', dias: -40, hoja: '' },
@@ -397,14 +411,24 @@ const demo = (() => {
   const recalcular = (): Resumen => {
     const h = hoy()
     for (const n of negocios) {
+      n.plan ??= 'individual'
+      n.personas ??= 0
+      n.precio = precioPlan(n.plan, n.personas)
       n.dias = n.vence ? Math.round((Date.parse(n.vence) - Date.parse(h)) / 86400_000) : null
       n.estado = !n.activo ? 'suspendido' : !n.vence ? 'sin_fecha' : n.vence < h ? (Math.round((Date.parse(h) - Date.parse(n.vence)) / 86400_000) <= 3 ? 'pendiente' : 'vencido') : n.ultimoPago ? 'activo' : 'prueba'
     }
     const c = (e: EstadoCobro) => negocios.filter((n) => n.estado === e).length
+    const suma = (l: Negocio[]) => l.reduce((a, n) => a + (n.precio ?? 10), 0)
     return {
       hoy: h,
       precio: 10,
-      totales: { activos: c('activo'), prueba: c('prueba'), pendientes: c('pendiente') + c('vencido'), suspendidos: c('suspendido'), sinFecha: c('sin_fecha'), porVencer: negocios.filter((n) => (n.estado === 'activo' || n.estado === 'prueba') && (n.dias ?? 99) <= 5).length },
+      totales: {
+        activos: c('activo'), prueba: c('prueba'), pendientes: c('pendiente') + c('vencido'), suspendidos: c('suspendido'), sinFecha: c('sin_fecha'),
+        porVencer: negocios.filter((n) => (n.estado === 'activo' || n.estado === 'prueba') && (n.dias ?? 99) <= 5).length,
+        team: negocios.filter((n) => n.plan === 'team').length,
+        mrr: suma(negocios.filter((n) => n.estado === 'activo' || n.estado === 'pendiente')),
+        mrrPrueba: suma(negocios.filter((n) => n.estado === 'prueba')),
+      },
       negocios: structuredClone(negocios),
       pagos: structuredClone(pagos),
       prospectos: structuredClone(prospectos),
@@ -463,6 +487,7 @@ const demo = (() => {
         slug: n.slug, nombre: n.nombre, estado: n.estado, creado: n.creado, vence: n.vence, dias: n.dias,
         reservas30: porMes[11] + Math.round(porMes[10] * 0.4), previas30: porMes[10], proximas: Math.round(porMes[11] * 0.6),
         clientes: Math.round(porMes.reduce((a, v) => a + v, 0) * 0.45), ultimaReserva: n.slug === 'estudio-luz' ? dias(-52) : dias(-1), porMes: porMes.slice(-6), error: '',
+        plan: n.plan, personas: n.personas, precio: n.precio,
       }
     })
     const reservas = meses.map((_, i) => negociosM.reduce((a, n) => a + (serie(negociosM.indexOf(n) + 3, ...(ritmo[n.slug] ?? [10, 0.5, 6]))[i] ?? 0), 0))
@@ -503,6 +528,9 @@ const demo = (() => {
         modalidades: [{ nombre: 'En la barbería', n: Math.round(total * 0.9) }, { nombre: 'A domicilio', n: Math.round(total * 0.1) }],
         estados: [{ nombre: 'Confirmada', n: Math.round(total * 0.88) }, { nombre: 'Cancelada', n: Math.round(total * 0.06) }, { nombre: 'Pago por verificar', n: Math.round(total * 0.06) }],
         horas: { desde: 9, hasta: 19, dias: ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'], mapa: horas },
+        porPersona: n.plan === 'team'
+          ? [['Carla Méndez', 0.34], ['Andrea Rojas', 0.24], ['Sofía Pérez', 0.18], ['Luisa Vera', 0.12], ['María Paz', 0.08], ['Elena Ruiz', 0.04]].map(([nombre, f]) => ({ nombre: nombre as string, n: Math.round(total * (f as number)), ingresos: Math.round(total * (f as number)) * 14 }))
+          : [],
       },
       recientes: ['Ana Pérez', 'Carlos Méndez', 'Luis Rojas', 'María Gómez', 'José Díaz', 'Eva Torres'].map((cliente, i) => ({
         cliente, servicios: ['Corte clásico', 'Corte y barba', 'Barba', 'Corte clásico', 'Cejas', 'Corte niño'][i], total: [10, 16, 7, 10, 5, 8][i],
@@ -587,8 +615,8 @@ const demo = (() => {
       pagos.unshift({ fecha: `${hoy()}T12:00`, slug: n.slug, negocio: n.nombre, monto: d.monto, meses: d.meses, metodo: d.metodo, referencia: d.referencia, venceNuevo: n.vence })
       return espera({ ok: true, vence: n.vence })
     },
-    crear: (d: { nombre: string; slug: string; email: string; telefono: string; diasPrueba: number; notas: string }) => {
-      negocios.unshift({ slug: d.slug, nombre: d.nombre, email: d.email, telefono: d.telefono, creado: hoy(), vence: dias(d.diasPrueba), ultimoPago: '', notas: d.notas, activo: true, estado: 'prueba', dias: d.diasPrueba, hoja: '' })
+    crear: (d: { nombre: string; slug: string; email: string; telefono: string; diasPrueba: number; notas: string; plan?: 'individual' | 'team' }) => {
+      negocios.unshift({ slug: d.slug, nombre: d.nombre, email: d.email, telefono: d.telefono, creado: hoy(), vence: dias(d.diasPrueba), ultimoPago: '', notas: d.notas, activo: true, estado: 'prueba', dias: d.diasPrueba, hoja: '', plan: d.plan ?? 'individual', personas: 0 })
       return espera({ ok: true, slug: d.slug, hoja: '' })
     },
     activo: (slug: string, activo: boolean) => {

@@ -18,6 +18,7 @@ const NAV = [
   { href: '#funciones', label: 'Funciones' },
   { href: '#plantillas', label: 'Plantillas' },
   { href: '#precio', label: 'Precio' },
+  { href: '/team', label: 'Team' },
   { href: '#preguntas', label: 'Preguntas' },
 ]
 
