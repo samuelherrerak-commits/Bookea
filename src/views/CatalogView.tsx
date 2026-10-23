@@ -228,7 +228,7 @@ function ServiceSection({
         {title}
       </h2>
       {subtitle && <p className="mt-0.5 text-[14px] text-muted">{subtitle}</p>}
-      <div className="mt-4 space-y-2.5">
+      <div className="mt-4 space-y-2.5 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
         {services.map((s) => (
           <ServiceCard key={s.id} service={s} selected={selected.includes(s.id)} onToggle={() => onToggle(s.id)} />
         ))}

@@ -159,6 +159,14 @@ export const HERRAMIENTAS: Herramienta[] = [
     pedido: (a) => ({ accion: 'dueno', op: 'citas', slug: a.slug, desde: a.desde, dias: a.dias || 14 }),
   },
   {
+    name: 'ver_panel',
+    title: 'Ver el panel de un negocio',
+    description: 'Lo que el negocio facturó según sus reservas en un período (hoy, semana, mes, mes_pasado, 30 días o 12m): total, ya atendido y agendado, por verificar, canceladas, ticket promedio, clientes, por persona del equipo, por servicio, por forma de pago y día a día, con el período anterior para comparar. En la moneda del negocio.',
+    inputSchema: obj({ slug, periodo: { type: 'string', enum: ['hoy', 'semana', 'mes', 'mes_pasado', '30', '12m'] } }, ['slug']),
+    annotations: lectura,
+    pedido: (a) => ({ accion: 'dueno', op: 'panel', slug: a.slug, periodo: a.periodo || 'mes' }),
+  },
+  {
     name: 'ver_configuracion',
     title: 'Ver la configuración de un negocio',
     description: 'Todo lo que el dueño ve en Mi negocio → Configurar: claves de config (marca, estilo, lugar, horario, pagos, mensaje, comprobantes), servicios, horarios, sedes, mensajes, bloqueos, cupones y el link público. Léela antes de guardar_configuracion.',

@@ -270,6 +270,87 @@ export function guardar(sesion: string, slug: string, seccion: Seccion, datos: D
   return llamar<Guardado>({ op: 'guardar', sesion, slug, seccion, datos })
 }
 
+// ---------- Panel de control (solo el administrador) ----------
+
+export type PeriodoPanel = 'hoy' | 'semana' | 'mes' | 'mes_pasado' | '30' | '12m'
+
+export interface Rubro {
+  nombre: string
+  n: number
+  ingresos: number
+}
+
+export interface ResumenPeriodo {
+  reservas: number
+  ingresos: number
+  /** Citas de hasta hoy (ya atendidas) y desde mañana (agendadas). */
+  atendidas: number
+  ingresosAtendidas: number
+  agendadas: number
+  ingresosAgendadas: number
+  porVerificar: number
+  ingresosPorVerificar: number
+  canceladas: number
+  ingresosCancelados: number
+  ticket: number
+  clientes: number
+  porPersona: Rubro[]
+  porServicio: Rubro[]
+  porMetodo: Rubro[]
+  /** Un punto por día (o por mes en 12 meses): clave 'yyyy-MM-dd' o 'yyyy-MM'. */
+  serie: { clave: string; n: number; ingresos: number }[]
+}
+
+export interface Panel {
+  periodo: PeriodoPanel
+  desde: string
+  hasta: string
+  hoy: string
+  porMes: boolean
+  moneda: 'EUR' | 'USD' | 'BS'
+  equipo: boolean
+  actual: ResumenPeriodo
+  anterior: { desde: string; hasta: string; reservas: number; ingresos: number; clientes: number; canceladas: number }
+}
+
+export function panel(sesion: string, slug: string, periodo: PeriodoPanel): Promise<Panel> {
+  if (DEMO_MODE) return espera(panelDemo(periodo))
+  return llamar<Panel>({ op: 'panel', sesion, slug, periodo })
+}
+
+/** Un panel de ejemplo con números estables (cambian con el período, no al recargar). */
+function panelDemo(periodo: PeriodoPanel): Panel {
+  const hoy = hoyCaracas()
+  const porMes = periodo === '12m'
+  const largo = { hoy: 1, semana: 7, mes: 31, mes_pasado: 30, '30': 30, '12m': 12 }[periodo]
+  let semilla = largo * 7919
+  const azar = () => ((semilla = (semilla * 16807) % 2147483647) / 2147483647)
+  const desde = porMes ? sumarDias(hoy, -330).slice(0, 8) + '01' : periodo === 'mes' ? hoy.slice(0, 8) + '01' : sumarDias(hoy, -(largo - 1))
+  const serie = Array.from({ length: largo }, (_, i) => {
+    const clave = porMes ? new Date(Date.UTC(Number(desde.slice(0, 4)), Number(desde.slice(5, 7)) - 1 + i, 1)).toISOString().slice(0, 7) : sumarDias(desde, i)
+    const n = porMes ? Math.round(60 + i * 6 + azar() * 25) : new Date(clave + 'T12:00:00Z').getUTCDay() === 0 ? 0 : Math.round(2 + azar() * 7)
+    return { clave, n, ingresos: Math.round(n * (12 + azar() * 6)) }
+  })
+  const reservas = serie.reduce((a, d) => a + d.n, 0)
+  const ingresos = serie.reduce((a, d) => a + d.ingresos, 0)
+  const atendidas = porMes ? reservas : serie.filter((d) => d.clave <= hoy).reduce((a, d) => a + d.n, 0)
+  const ingresosAtendidas = porMes ? ingresos : serie.filter((d) => d.clave <= hoy).reduce((a, d) => a + d.ingresos, 0)
+  const parte = (fr: number[], nombres: string[]) => nombres.map((nombre, i) => ({ nombre, n: Math.round(reservas * fr[i]), ingresos: Math.round(ingresos * fr[i]) }))
+  return {
+    periodo, desde, hasta: porMes ? hoy.slice(0, 8) + '28' : periodo === 'mes' ? sumarDias(desde, largo - 1) : hoy, hoy, porMes, moneda: 'USD', equipo: true,
+    actual: {
+      reservas, ingresos, atendidas, ingresosAtendidas, agendadas: reservas - atendidas, ingresosAgendadas: ingresos - ingresosAtendidas,
+      porVerificar: Math.round(reservas * 0.05), ingresosPorVerificar: Math.round(ingresos * 0.05), canceladas: Math.round(reservas * 0.06), ingresosCancelados: Math.round(ingresos * 0.06),
+      ticket: reservas ? Math.round((ingresos / reservas) * 100) / 100 : 0, clientes: Math.round(reservas * 0.7),
+      porPersona: parte([0.42, 0.33, 0.25], ['Carla Méndez', 'Andrés Rojas', 'Sofía Pérez']),
+      porServicio: parte([0.38, 0.27, 0.18, 0.11, 0.06], ['Corte', 'Corte y barba', 'Barba', 'Corte niño', 'Lavado']),
+      porMetodo: parte([0.55, 0.45], ['Pago en la cita', 'Bolívares (Pago Móvil)']),
+      serie,
+    },
+    anterior: { desde: '', hasta: '', reservas: Math.round(reservas * 0.86), ingresos: Math.round(ingresos * 0.82), clientes: Math.round(reservas * 0.62), canceladas: Math.round(reservas * 0.08) },
+  }
+}
+
 // ---------- Mi plan y pagos ----------
 
 export type EstadoPlan = 'activo' | 'prueba' | 'pendiente' | 'vencido' | 'suspendido' | 'sin_fecha'

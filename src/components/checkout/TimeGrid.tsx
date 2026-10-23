@@ -30,7 +30,7 @@ export function TimeGrid({ slots, selected, onSelect }: TimeGridProps) {
       {groups.map((group) => (
         <div key={group.label}>
           <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-muted">{group.label}</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
             {group.items.map((slot) => {
               // Si la hora elegida aparece como ocupada es que alguien la confirmó
               // primero: se muestra tachada y la agenda suelta la selección.

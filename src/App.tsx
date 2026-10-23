@@ -213,7 +213,8 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto min-h-dvh max-w-lg overflow-x-clip">
+    // En computadora el catálogo se abre a dos columnas; agenda, pago y confirmación quedan al centro.
+    <div className={'mx-auto min-h-dvh max-w-lg overflow-x-clip ' + (view === 'catalogo' ? 'md:max-w-3xl lg:max-w-5xl' : 'md:max-w-2xl')}>
       <AnimatePresence mode="wait" initial={false} custom={direction}>
         <Page key={view} direction={direction} scrollTo={view === 'catalogo' ? catalogScroll.current : 0}>
           <Suspense fallback={null}>{page}</Suspense>

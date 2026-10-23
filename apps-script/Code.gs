@@ -2935,6 +2935,7 @@ function atenderDueno_(data, ahoraMs) {
   if (op === 'bloqueos' || op === 'bloquear' || op === 'desbloquear') {
     return atenderBloqueos_(op, data, openTenant_(tenant), tenant, String(data.persona || ''), ahoraMs);
   }
+  if (op === 'panel') return panelNegocio_(tenant, data, ahoraMs);
   if (op === 'guardar' && String(data.seccion || '') === 'equipo' && !esAdminDueno_(email)) {
     const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })[0] || {};
     const activar = data.datos && data.datos.config && String(data.datos.config.equipo_activo || '') === 'si';
@@ -5099,4 +5100,122 @@ function atenderBloqueos_(op, data, libro, tenant, personaId, ahoraMs) {
     limpiarCacheCatalogo_(tenant.slug);
   }
   return { ok: true, bloqueos: bloqueosPersona_(cal, ahoraMs) };
+}
+
+// ---------- Mi negocio: panel de control (cuánto hizo según sus reservas) ----------
+
+/** yyyy-MM-dd del último día del mes de `ymd`. */
+function finDeMes_(ymd) {
+  const p = ymd.split('-').map(Number);
+  return Utilities.formatDate(new Date(Date.UTC(p[0], p[1], 0, 12)), 'UTC', 'yyyy-MM-dd');
+}
+
+/** yyyy-MM-dd del primer día del mes `meses` atrás (0 = este mes). */
+function inicioDeMes_(ymd, meses) {
+  const p = ymd.split('-').map(Number);
+  return Utilities.formatDate(new Date(Date.UTC(p[0], p[1] - 1 - (meses || 0), 1, 12)), 'UTC', 'yyyy-MM-dd');
+}
+
+/**
+ * Rango de un período del panel y el anterior del mismo largo (para comparar):
+ * hoy | semana (lunes a domingo) | mes | mes_pasado | 30 | 12m.
+ */
+function periodoPanel_(periodo, hoy) {
+  const dif = function (a, b) { return Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000); };
+  let desde, hasta;
+  if (periodo === 'hoy') { desde = hoy; hasta = hoy; }
+  else if (periodo === 'semana') { desde = sumarDias_(hoy, -((diaSemana_(hoy) + 6) % 7)); hasta = sumarDias_(desde, 6); }
+  else if (periodo === 'mes_pasado') { desde = inicioDeMes_(hoy, 1); hasta = finDeMes_(desde); }
+  else if (periodo === '30') { desde = sumarDias_(hoy, -29); hasta = hoy; }
+  else if (periodo === '12m') { desde = inicioDeMes_(hoy, 11); hasta = finDeMes_(hoy); }
+  else { periodo = 'mes'; desde = inicioDeMes_(hoy, 0); hasta = finDeMes_(hoy); }
+  let anterior;
+  if (periodo === 'mes' || periodo === 'mes_pasado') {
+    const ini = inicioDeMes_(desde, 1);
+    anterior = { desde: ini, hasta: finDeMes_(ini) };
+  } else if (periodo === '12m') {
+    anterior = { desde: inicioDeMes_(desde, 12), hasta: sumarDias_(desde, -1) };
+  } else {
+    const largo = dif(desde, hasta) + 1;
+    anterior = { desde: sumarDias_(desde, -largo), hasta: sumarDias_(desde, -1) };
+  }
+  return { periodo: periodo, desde: desde, hasta: hasta, anterior: anterior, porMes: periodo === '12m' };
+}
+
+/**
+ * Lo que dejaron las reservas entre `desde` y `hasta`: atendidas (hasta hoy) y agendadas
+ * (desde mañana), por persona del equipo, servicio, forma de pago y día (o mes). Las
+ * canceladas se cuentan aparte. El dinero es el total de cada reserva en la moneda del negocio.
+ */
+function resumenPeriodo_(filas, desde, hasta, hoy, porMes) {
+  const r = {
+    reservas: 0, ingresos: 0, atendidas: 0, ingresosAtendidas: 0, agendadas: 0, ingresosAgendadas: 0,
+    porVerificar: 0, ingresosPorVerificar: 0, canceladas: 0, ingresosCancelados: 0,
+  };
+  const personas = {}, servicios = {}, metodos = {}, tramos = {}, clientes = {};
+  const sumar = function (obj, clave, monto) {
+    const k = String(clave || '').trim() || '—';
+    if (!obj[k]) obj[k] = { nombre: k, n: 0, ingresos: 0 };
+    obj[k].n++;
+    obj[k].ingresos += monto;
+  };
+  filas.forEach(function (f) {
+    const fecha = ymd_(f.Fecha_Cita);
+    if (!fecha || fecha < desde || fecha > hasta) return;
+    const monto = toNumber_(f.Total) || 0;
+    if (/cancel/i.test(String(f.Estado || ''))) { r.canceladas++; r.ingresosCancelados += monto; return; }
+    r.reservas++;
+    r.ingresos += monto;
+    if (fecha <= hoy) { r.atendidas++; r.ingresosAtendidas += monto; } else { r.agendadas++; r.ingresosAgendadas += monto; }
+    if (String(f.Estado || '') === ESTADO_POR_VERIFICAR) { r.porVerificar++; r.ingresosPorVerificar += monto; }
+    if (String(f.Profesional || '').trim()) sumar(personas, f.Profesional, monto);
+    const lineas = String(f.Servicios || '').split(/\s*,\s*/).filter(String);
+    lineas.forEach(function (s) { sumar(servicios, s, lineas.length ? monto / lineas.length : 0); });
+    sumar(metodos, f.Metodo_Pago, monto);
+    sumar(tramos, porMes ? fecha.slice(0, 7) : fecha, monto);
+    const cliente = String(f.Telefono || '').replace(/\D/g, '').slice(-10) || String(f.Cliente || '').trim().toLowerCase();
+    if (cliente) clientes[cliente] = true;
+  });
+  const lista = function (obj, max) {
+    return Object.keys(obj).map(function (k) { return { nombre: k, n: obj[k].n, ingresos: round2_(obj[k].ingresos) }; })
+      .sort(function (a, b) { return b.ingresos - a.ingresos || b.n - a.n; }).slice(0, max);
+  };
+  // Todos los días (o meses) del rango, también los vacíos, para dibujar la serie completa.
+  const serie = [];
+  if (porMes) {
+    for (let m = desde.slice(0, 7), i = 0; m <= hasta.slice(0, 7) && i < 24; i++) {
+      serie.push({ clave: m, n: tramos[m] ? tramos[m].n : 0, ingresos: tramos[m] ? round2_(tramos[m].ingresos) : 0 });
+      m = inicioDeMes_(m + '-01', -1).slice(0, 7);
+    }
+  } else {
+    for (let d = desde, i = 0; d <= hasta && i < 400; i++, d = sumarDias_(d, 1)) {
+      serie.push({ clave: d, n: tramos[d] ? tramos[d].n : 0, ingresos: tramos[d] ? round2_(tramos[d].ingresos) : 0 });
+    }
+  }
+  Object.keys(r).forEach(function (k) { if (/^ingresos/.test(k)) r[k] = round2_(r[k]); });
+  r.ticket = r.reservas ? round2_(r.ingresos / r.reservas) : 0;
+  r.clientes = Object.keys(clientes).length;
+  r.porPersona = lista(personas, 30);
+  r.porServicio = lista(servicios, 12);
+  r.porMetodo = lista(metodos, 8);
+  r.serie = serie;
+  return r;
+}
+
+/** Panel de Mi negocio (solo el administrador). */
+function panelNegocio_(tenant, data, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const p = periodoPanel_(String(data.periodo || 'mes'), hoy);
+  const libro = openTenant_(tenant);
+  const config = getConfig_(libro);
+  const filas = getSheetData_(libro, 'Reservaciones');
+  const actual = resumenPeriodo_(filas, p.desde, p.hasta, hoy, p.porMes);
+  const previo = resumenPeriodo_(filas, p.anterior.desde, p.anterior.hasta, hoy, p.porMes);
+  return {
+    periodo: p.periodo, desde: p.desde, hasta: p.hasta, hoy: hoy, porMes: p.porMes,
+    moneda: normalizarMoneda_(config.moneda),
+    equipo: String(config.equipo_activo || '').toLowerCase() === 'si',
+    actual: actual,
+    anterior: { desde: p.anterior.desde, hasta: p.anterior.hasta, reservas: previo.reservas, ingresos: previo.ingresos, clientes: previo.clientes, canceladas: previo.canceladas },
+  };
 }

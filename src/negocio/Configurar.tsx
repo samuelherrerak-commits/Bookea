@@ -196,7 +196,7 @@ function Guardar({ alGuardar, cambios }: { alGuardar: () => Promise<string[]>; c
   }, [cambios, estado])
   return (
     // Fijo abajo solo cuando hay algo que guardar; si no, queda al final sin tapar nada.
-    <div className={(cambios || estado !== 'listo' || errores.length ? 'sticky bottom-[84px] z-[5] ' : '') + 'mt-6 space-y-2'}>
+    <div className={(cambios || estado !== 'listo' || errores.length ? 'sticky bottom-[84px] z-[5] lg:bottom-4 ' : '') + 'mt-6 space-y-2'}>
       {errores.length > 0 && (
         <ul role="alert" className="space-y-1 rounded-2xl bg-danger/10 px-4 py-3 text-[14px] text-danger">
           {errores.map((e) => <li key={e}>{e}</li>)}
