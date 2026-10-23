@@ -55,6 +55,17 @@ export function avisoReserva(slug: string, c: CitaAviso): Notificacion {
   }
 }
 
+/** Una cita movida desde Mi negocio: la hora nueva (y la de antes). */
+export function avisoReagendada(slug: string, c: CitaAviso & { antes?: { fecha?: string; hora?: string } }): Notificacion {
+  const antes = c.antes?.fecha && c.antes?.hora ? `\nAntes: ${diaCorto(c.antes.fecha)} · ${horaLegible(c.antes.hora)}` : ''
+  return {
+    titulo: '🔁 Cita reagendada',
+    cuerpo: `${c.cliente} · ${c.servicios}\nAhora: ${diaCorto(c.fecha)} · ${horaLegible(c.hora)}${antes}`,
+    tag: `reserva-${c.id}`,
+    url: urlNegocio(slug),
+  }
+}
+
 export function avisoRecordatorio(slug: string, c: { id: string; cliente: string; servicios: string; inicio: number }, ahora: number): Notificacion {
   const min = Math.max(1, Math.round((c.inicio - ahora) / 60000))
   const { minutos } = enCaracas(c.inicio)
@@ -162,6 +173,12 @@ export const avisoPrueba = (slug: string): Notificacion => ({
 export async function nuevaReserva(db: D1Database, slug: string, c: CitaAviso) {
   await guardarCita(db, slug, c)
   await avisar(db, slug, avisoReserva(slug, c), c.profesionalId ? { persona: c.profesionalId } : null)
+}
+
+/** Cita movida: el recordatorio pasa a la hora nueva y avisa a quien la atiende (y al administrador). */
+export async function citaReagendada(db: D1Database, slug: string, c: CitaAviso & { antes?: { fecha?: string; hora?: string } }) {
+  await guardarCita(db, slug, c)
+  await avisar(db, slug, avisoReagendada(slug, c), c.profesionalId ? { persona: c.profesionalId } : null)
 }
 
 /** Lo que corre el cron cada 5 minutos. */

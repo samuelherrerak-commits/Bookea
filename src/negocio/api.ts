@@ -39,6 +39,8 @@ export interface Cita {
   /** bookeaa team: quién atiende ('' sin equipo). */
   profesional?: string
   profesionalId?: string
+  /** "2026-10-24 10:00": la fecha y hora de antes, si se reagendó desde Mi negocio. */
+  reagendada?: string
 }
 
 export interface Agenda {
@@ -88,6 +90,51 @@ export function citas(sesion: string, slug: string, desde: string, dias: number)
 export function confirmarPago(sesion: string, slug: string, id: string): Promise<{ ok: boolean; estado: string }> {
   if (DEMO_MODE) return Promise.resolve({ ok: true, estado: 'Confirmada' })
   return llamar({ op: 'confirmar_pago', sesion, slug, id })
+}
+
+export interface HorasReagendar {
+  /** Minutos que dura la cita (los de su evento). */
+  duracion: number
+  /** Horas libres de ese día ("HH:mm"). */
+  horas: string[]
+  /** false = ese día no se trabaja (para esa persona). */
+  trabaja: boolean
+  /** bookeaa team: con quién quedaría y a quién se puede pasar. */
+  persona: string
+  personas: { id: string; nombre: string }[]
+}
+
+/** Las horas libres de un día para mover una cita (persona: otra del equipo; sin ella, la misma). */
+export function horasReagendar(sesion: string, slug: string, id: string, fecha: string, persona?: string): Promise<HorasReagendar> {
+  if (DEMO_MODE) {
+    const dia = new Date(fecha + 'T12:00:00Z').getUTCDay()
+    const horas = dia === 0 ? [] : ['09:00', '09:30', '10:00', '11:30', '12:00', '14:00', '14:30', '15:00', '16:30', '17:00'].filter((h) => fecha !== hoyCaracas() || h > '15:00')
+    return new Promise((ok) => setTimeout(() => ok({
+      duracion: 45, horas, trabaja: dia !== 0, persona: persona ?? 'carla',
+      personas: [{ id: 'carla', nombre: 'Carla Méndez' }, { id: 'andres', nombre: 'Andrés Rojas' }],
+    }), 300))
+  }
+  return llamar<HorasReagendar>({ op: 'horas_reagendar', sesion, slug, id, fecha, ...(persona !== undefined ? { persona } : {}) })
+}
+
+export interface Reagendado {
+  ok: boolean
+  cita?: Pick<Cita, 'id' | 'fecha' | 'hora' | 'profesional' | 'profesionalId'> & { antes: { fecha: string; hora: string } }
+  /** Si no se movió: pasada (no se puede), ocupada o fuera del horario (se puede forzar). */
+  motivo?: 'pasada' | 'ocupada' | 'fuera'
+  mensaje?: string
+  puedeForzar?: boolean
+}
+
+export function reagendar(sesion: string, slug: string, p: { id: string; fecha: string; hora: string; persona?: string; forzar?: boolean }): Promise<Reagendado> {
+  if (DEMO_MODE) {
+    // En la demo, las 13:00 chocan con otra cita para ver el aviso.
+    const r: Reagendado = p.hora === '13:00' && !p.forzar
+      ? { ok: false, motivo: 'ocupada', puedeForzar: true, mensaje: 'A esa hora ya hay algo en la agenda: Cita: Luis Rojas - Barba.' }
+      : { ok: true, cita: { id: p.id, fecha: p.fecha, hora: p.hora, profesional: p.persona === 'andres' ? 'Andrés Rojas' : p.persona === 'carla' ? 'Carla Méndez' : undefined, profesionalId: p.persona, antes: { fecha: '', hora: '' } } }
+    return new Promise((ok) => setTimeout(() => ok(r), 400))
+  }
+  return llamar<Reagendado>({ op: 'reagendar', sesion, slug, ...p })
 }
 
 /** La clave de avisos al día (la de la sesión pudo quedar vacía) y si el servidor de avisos está configurado. */

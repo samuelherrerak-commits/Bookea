@@ -7,6 +7,12 @@
   - cuál es la próxima;
   - los pagos por verificar, con el capture y el botón **Pago recibido**, que cambia el estado a *Confirmada* en la hoja.
 - **Próximas:** las citas de los próximos 14 días, por día.
+- **Reagendar** (botón en cada cita de Hoy y Próximas; solo el administrador): para cuando el cliente no puede ir.
+  - Se elige el día (45 días a la vista) y una de las **horas libres**. Salen según el horario, lo que dura la cita (la de su evento), las otras citas del calendario y los días libres.
+  - Con equipo se puede **pasar a otra persona**: se ven sus horas libres y la cita pasa a su calendario.
+  - **Otra hora** permite poner cualquier hora. Si choca con otra cita o queda fuera del horario, avisa y se puede **mover igual**. Una hora que ya pasó no se acepta.
+  - Al moverla se mueve su evento en el calendario y se actualiza la fila (`Fecha_Cita`, `Hora_Cita` y, con equipo, `Profesional`). La columna `Reagendada` guarda la fecha y hora de antes, y la cita muestra 🔁 *Reagendada*.
+  - Después ofrece **Avisarle por WhatsApp** al cliente con el mensaje listo ("Tu cita de … quedó para el …").
 - **Configurar:** lo mismo que la ventana de la hoja ("Configurar mi página"), desde el teléfono. Se guarda en la hoja del negocio y la página lo muestra en la próxima carga:
   - **Servicios:** nombre, precio, minutos, categoría y adicionales (pestaña Servicios);
   - **Horario:** días con uno o varios tramos, cada cuántos minutos, días a mostrar, aviso mínimo y alertas del calendario;
@@ -27,6 +33,7 @@
 Los avisos son:
 - 📅 cada reserva nueva;
 - 💸 cada Pago Móvil por verificar;
+- 🔁 cada cita reagendada, con la hora nueva y la de antes (el recordatorio pasa a la hora nueva);
 - ⏰ 30 minutos antes de cada cita;
 - ☀️ a las 7:00 a. m., las citas del día.
 

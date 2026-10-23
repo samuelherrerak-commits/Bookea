@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { hoyCaracas } from './api'
 import { telefonoWa } from './NegocioApp'
+import { mensajeReagendada } from './Reagendar'
 
 describe('Mi negocio', () => {
   it('teléfono venezolano a formato de wa.me', () => {
@@ -23,5 +24,14 @@ describe('QR del negocio', () => {
     const c = coloresQr({ color_principal: '#F6E6E9', color_fondo: '', paleta: '' }, 'marca')
     expect(c.tarjeta).toBe('#FFFFFF')
     expect(c.modulos).not.toBe('#F6E6E9')
+  })
+})
+
+describe('reagendar: el mensaje para el cliente', () => {
+  it('con su nombre, el día, la hora y con quién', () => {
+    expect(mensajeReagendada({ cliente: 'Pedro Silva', negocio: 'Barbería Norte', servicios: 'Corte', fecha: '2026-10-24', hora: '13:00', persona: 'Andrés Rojas' }))
+      .toBe('Hola Pedro, te escribimos de Barbería Norte. Tu cita de Corte quedó para el sábado 24 de octubre a las 1:00 p. m. con Andrés. ¿Te queda bien?')
+    expect(mensajeReagendada({ cliente: '', negocio: 'Spa', servicios: 'Masaje', fecha: '2026-10-26', hora: '09:00' }))
+      .toBe('Hola, te escribimos de Spa. Tu cita de Masaje quedó para el lunes 26 de octubre a las 9:00 a. m. ¿Te queda bien?')
   })
 })

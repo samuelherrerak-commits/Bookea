@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { avisar, avisoPrueba, nuevaReserva, repasar, suscribir } from './avisos'
+import { avisar, avisoPrueba, citaReagendada, nuevaReserva, repasar, suscribir } from './avisos'
 import { msDeCita } from './tiempo'
 
 /** D1 sobre SQLite en memoria, con las migraciones reales. */
@@ -69,6 +69,20 @@ describe('avisos de bookeaa team', () => {
     await nuevaReserva(db, 'spa-sol', { ...cita, profesionalId: 'andrea' })
     enviados = []
     await repasar({ DB: db, APPS_SCRIPT_URL: 'https://script', BOT_TOKEN: 't' }, inicio - 20 * 60000)
+    expect(enviados.sort()).toEqual(['andrea', 'duena'])
+  })
+
+  it('cita reagendada: el recordatorio pasa a la hora nueva y le llega a quien la atiende ahora', async () => {
+    await nuevaReserva(db, 'spa-sol', { ...cita, profesionalId: 'carla' })
+    await repasar({ DB: db, APPS_SCRIPT_URL: 'https://script', BOT_TOKEN: 't' }, msDeCita('2026-10-23', '10:00') - 20 * 60000) // ya se recordó
+    enviados = []
+    await citaReagendada(db, 'spa-sol', { ...cita, fecha: '2026-10-24', hora: '15:00', profesionalId: 'andrea', antes: { fecha: '2026-10-23', hora: '10:00' } })
+    expect(enviados.sort()).toEqual(['andrea', 'duena'])
+    enviados = []
+    // A la hora vieja ya no hay recordatorio; a la nueva sí, otra vez.
+    await repasar({ DB: db, APPS_SCRIPT_URL: 'https://script', BOT_TOKEN: 't' }, msDeCita('2026-10-23', '10:00') - 20 * 60000)
+    expect(enviados).toEqual([])
+    await repasar({ DB: db, APPS_SCRIPT_URL: 'https://script', BOT_TOKEN: 't' }, msDeCita('2026-10-24', '15:00') - 20 * 60000)
     expect(enviados.sort()).toEqual(['andrea', 'duena'])
   })
 

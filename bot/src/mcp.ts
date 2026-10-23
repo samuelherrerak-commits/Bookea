@@ -159,6 +159,22 @@ export const HERRAMIENTAS: Herramienta[] = [
     pedido: (a) => ({ accion: 'dueno', op: 'citas', slug: a.slug, desde: a.desde, dias: a.dias || 14 }),
   },
   {
+    name: 'ver_horas_para_reagendar',
+    title: 'Horas libres para mover una cita',
+    description: 'Las horas libres de un día para mover una cita (id de ver_citas), con lo que dura la cita. Con equipo, persona = id de otra persona para ver sus horas (sin persona, la misma que la atiende).',
+    inputSchema: obj({ slug, id: { type: 'string' }, fecha: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' }, persona: { type: 'string' } }, ['slug', 'id', 'fecha']),
+    annotations: lectura,
+    pedido: (a) => ({ accion: 'dueno', op: 'horas_reagendar', slug: a.slug, id: a.id, fecha: a.fecha, ...(a.persona !== undefined ? { persona: a.persona } : {}) }),
+  },
+  {
+    name: 'reagendar_cita',
+    title: 'Reagendar una cita',
+    description: 'Mueve una cita de un negocio a otro día y hora (hora "HH:mm", Caracas): mueve su evento del calendario, actualiza la reserva y avisa en Mi negocio. Con equipo, persona = id de otra persona para pasársela. Si choca con otra cita o queda fuera del horario responde ok:false con el motivo; con forzar:true se mueve igual (confírmalo antes con el usuario). Nunca a una hora que ya pasó. Al cliente no se le avisa solo: sugiere escribirle por WhatsApp.',
+    inputSchema: obj({ slug, id: { type: 'string' }, fecha: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' }, hora: { type: 'string', pattern: '^\\d{2}:\\d{2}$' }, persona: { type: 'string' }, forzar: { type: 'boolean' } }, ['slug', 'id', 'fecha', 'hora']),
+    annotations: escritura,
+    pedido: (a) => ({ accion: 'dueno', op: 'reagendar', slug: a.slug, id: a.id, fecha: a.fecha, hora: a.hora, forzar: !!a.forzar, ...(a.persona !== undefined ? { persona: a.persona } : {}) }),
+  },
+  {
     name: 'ver_panel',
     title: 'Ver el panel de un negocio',
     description: 'Lo que el negocio facturó según sus reservas en un período (hoy, semana, mes, mes_pasado, 30 días o 12m): total, ya atendido y agendado, por verificar, canceladas, ticket promedio, clientes, por persona del equipo, por servicio, por forma de pago y día a día, con el período anterior para comparar. En la moneda del negocio.',

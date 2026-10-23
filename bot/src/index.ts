@@ -8,7 +8,7 @@
  *   cron            recordatorios y resumen de la mañana (cada 5 minutos)
  */
 import { serviciosAppsScript, type EnvApps } from './apps'
-import { avisar, avisoPrueba, clavesVapid, nuevaReserva, quitar, repasar, suscribir } from './avisos'
+import { avisar, avisoPrueba, citaReagendada, clavesVapid, nuevaReserva, quitar, repasar, suscribir } from './avisos'
 import { manejarBandeja } from './bandeja'
 import { guardarConversacion, guardarMensaje, leerConversacion, nueva, sumarUso } from './db'
 import { firmaMetaValida } from './firma'
@@ -78,6 +78,7 @@ export async function manejarPush(req: Request, ruta: string, env: Env): Promise
     if (ruta === '/push/suscribir') await suscribir(env.DB, slug, String(cuerpo.email || ''), cuerpo.suscripcion || {}, Date.now(), String(cuerpo.persona || '').slice(0, 60))
     else if (ruta === '/push/quitar') await quitar(env.DB, String(cuerpo.suscripcion?.endpoint || ''))
     else if (ruta === '/push/evento' && cuerpo.tipo === 'reserva') await nuevaReserva(env.DB, slug, cuerpo.cita || {})
+    else if (ruta === '/push/evento' && cuerpo.tipo === 'reagendada') await citaReagendada(env.DB, slug, cuerpo.cita || {})
     // El aviso de prueba va solo a los teléfonos de quien lo pidió (el administrador o una persona del equipo).
     else if (ruta === '/push/evento' && cuerpo.tipo === 'prueba') return json({ ok: true, ...(await avisar(env.DB, slug, avisoPrueba(slug), { persona: String(cuerpo.persona || ''), exacto: true })) })
     else if (ruta === '/push/evento' && cuerpo.tipo === 'aviso') {

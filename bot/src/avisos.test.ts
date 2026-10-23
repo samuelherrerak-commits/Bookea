@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { avisoRecordatorio, avisoReserva, avisoResumen, fechaCaracas } from './avisos'
+import { avisoReagendada, avisoRecordatorio, avisoReserva, avisoResumen, fechaCaracas } from './avisos'
 import { manejarPush } from './index'
 import { msDeCita } from './tiempo'
 
@@ -16,6 +16,15 @@ describe('avisos de Mi negocio', () => {
     const pm = avisoReserva('barberia', { ...cita, estado: 'Pago por verificar' })
     expect(pm.titulo).toBe('💸 Pago por verificar')
     expect(pm.cuerpo).toContain('capture')
+  })
+
+  it('cita reagendada: la hora nueva y la de antes', () => {
+    expect(avisoReagendada('barberia', { ...cita, fecha: '2026-10-16', hora: '09:30', antes: { fecha: '2026-10-15', hora: '14:00' } })).toEqual({
+      titulo: '🔁 Cita reagendada',
+      cuerpo: 'Carlos · Corte y barba\nAhora: Vie 16 oct · 9:30 a. m.\nAntes: Jue 15 oct · 2:00 p. m.',
+      tag: 'reserva-r1',
+      url: '/negocio?n=barberia',
+    })
   })
 
   it('recordatorio con los minutos que faltan', () => {
