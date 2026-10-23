@@ -24,6 +24,8 @@ export const VARIABLES_MENSAJE = [
   'comprobante',
   'calendario',
   'reserva',
+  // bookeaa team: con quién es la cita. Si la plantilla no la usa, va debajo de la hora.
+  'profesional',
 ] as const
 
 export type VariableMensaje = (typeof VARIABLES_MENSAJE)[number]

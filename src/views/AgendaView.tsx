@@ -9,9 +9,11 @@ import { IconArrowRight, IconClock } from '../components/ui/icons'
 import { capitalize, formatDuration, formatLongDate, formatTime12 } from '../lib/format'
 import { spring } from '../lib/motion'
 import type { OrderSummary } from '../lib/pricing'
-import { buildAgenda } from '../lib/slots'
+import { EquipoPicker } from '../components/EquipoPicker'
+import { agendaDe, aptos, serviciosDelCarrito } from '../lib/equipo'
 import { useOrder } from '../state/order'
 import type { Catalog } from '../types'
+import { CUALQUIERA } from '../types'
 
 interface AgendaViewProps {
   catalog: Catalog
@@ -23,9 +25,22 @@ interface AgendaViewProps {
 
 export function AgendaView({ catalog, summary, onBack, onSelectSlot, onContinue }: AgendaViewProps) {
   const { state, dispatch } = useOrder()
+  // bookeaa team: primero con quién; cada persona tiene su agenda.
+  const equipo = catalog.equipo ?? null
+  const ids = useMemo(() => serviciosDelCarrito(state.cart, catalog), [state.cart, catalog])
+  const personas = useMemo(() => (equipo ? aptos(equipo, ids) : []), [equipo, ids])
+  const conQuien = equipo ? state.profesional : null
+  const elegida = equipo?.personas.find((p) => p.id === conQuien) ?? null
+
+  // Con una sola persona posible (y sin "Cualquiera"), se elige sola.
+  useEffect(() => {
+    if (!equipo || state.profesional || personas.length !== 1) return
+    dispatch({ type: 'setProfesional', profesional: personas[0].id })
+  }, [equipo, personas, state.profesional, dispatch])
+
   const days = useMemo(
-    () => buildAgenda(catalog.config, catalog.citas, summary.duracionMin),
-    [catalog.config, catalog.citas, summary.duracionMin],
+    () => (equipo && !conQuien ? [] : agendaDe(catalog, conQuien, ids, summary.duracionMin)),
+    [catalog, equipo, conQuien, ids, summary.duracionMin],
   )
 
   const firstOpen = days.find((d) => d.libres > 0)?.fecha ?? null
@@ -67,7 +82,37 @@ export function AgendaView({ catalog, summary, onBack, onSelectSlot, onContinue 
           {summary.count} {summary.count === 1 ? 'servicio' : 'servicios'} · {formatDuration(summary.duracionMin)}
         </p>
 
-        <h2 className="mt-6 text-[13px] font-medium uppercase tracking-[0.08em] text-muted">Día</h2>
+        {equipo && (
+          <>
+            <h2 className="mt-6 text-[13px] font-medium uppercase tracking-[0.08em] text-muted">¿Con quién?</h2>
+            <div className="mt-2">
+              {personas.length > 0 ? (
+                <EquipoPicker
+                  personas={personas}
+                  cualquiera={equipo.cualquiera}
+                  selected={conQuien}
+                  onSelect={(id) => dispatch({ type: 'setProfesional', profesional: id })}
+                />
+              ) : (
+                <p className="rounded-2xl bg-sand/60 p-4 text-[14px] text-muted">
+                  Nadie del equipo hace todos estos servicios juntos. Quita alguno o escríbenos por WhatsApp.
+                </p>
+              )}
+            </div>
+          </>
+        )}
+
+        {equipo && !conQuien ? (
+          personas.length > 0 && (
+            <p className="mt-6 rounded-2xl bg-sand/60 p-5 text-center text-[14px] text-muted">
+              Elige con quién quieres tu cita para ver sus días y horas.
+            </p>
+          )
+        ) : (
+        <>
+        <h2 className="mt-6 text-[13px] font-medium uppercase tracking-[0.08em] text-muted">
+          {elegida ? `Días de ${elegida.nombre.split(/\s+/)[0]}` : 'Día'}
+        </h2>
         <div className="mt-2">
           {days.length > 0 ? (
             <DateStrip days={days} selected={fecha} onSelect={setFecha} />
@@ -104,6 +149,8 @@ export function AgendaView({ catalog, summary, onBack, onSelectSlot, onContinue 
             )}
           </AnimatePresence>
         </div>
+        </>
+        )}
       </div>
 
       <BottomBar>
@@ -118,6 +165,7 @@ export function AgendaView({ catalog, summary, onBack, onSelectSlot, onContinue 
             >
               {capitalize(formatLongDate(state.schedule.fecha))} ·{' '}
               <b className="font-semibold">{formatTime12(state.schedule.hora)}</b>
+              {elegida ? ` · con ${elegida.nombre.split(/\s+/)[0]}` : conQuien === CUALQUIERA ? ' · con quien esté libre' : ''}
             </motion.p>
           )}
         </AnimatePresence>
