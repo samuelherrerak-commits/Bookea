@@ -24,7 +24,7 @@ function cargar(eventos: Record<string, Array<[string, string]>> = {}) {
     'parsearHorarioEquipo_', 'horarioEquipoTexto_', 'haceServicios_', 'idPersona_', 'equipoValidar_', 'asignarPersona_', 'calendarioPersona_',
     'parseDia_', 'toMinutes_', 'hhmm_', 'normKey_', 'slug_',
   ], {
-    DIAS_CORTOS_EQUIPO: constanteGs(gs, 'DIAS_CORTOS_EQUIPO'), MAX_EQUIPO: 30, ZONA: 'America/Caracas',
+    DIAS_CORTOS_EQUIPO: constanteGs(gs, 'DIAS_CORTOS_EQUIPO'), MAX_EQUIPO: 30, MAX_FOTO_EQUIPO: 400000, ZONA: 'America/Caracas',
     CalendarApp: calendarios(eventos), Utilities,
   })
 }
@@ -68,10 +68,14 @@ describe('Code.gs · bookeaa team', () => {
       'Ana: ese correo ya está en el equipo.',
       'Luis: escribe su Gmail.',
       'Cada persona necesita su nombre.',
-      'Eva: la foto tiene que ser un enlace https://',
+      'Eva: la foto tiene que ser una imagen o un enlace https://',
       'Eva: revisa su horario (lunes).',
     ])
     expect(f.equipoValidar_({ config: { equipo_activo: 'si' }, equipo: [{ ...ok, activo: false }] })).toContain('Para activar el equipo agrega al menos una persona activa.')
+    // La foto subida desde Mi negocio llega como imagen (data URL).
+    expect(f.equipoValidar_({ equipo: [{ ...ok, foto: 'data:image/jpeg;base64,/9j/AAA=' }] })).toEqual([])
+    expect(f.equipoValidar_({ equipo: [{ ...ok, foto: 'data:text/html;base64,AAA=' }] })).toEqual(['Carla: la foto tiene que ser una imagen o un enlace https://'])
+    expect(f.equipoValidar_({ equipo: [{ ...ok, foto: 'data:image/png;base64,' + 'A'.repeat(400001) }] })).toEqual(['Carla: la foto pesa mucho, prueba con otra.'])
   })
 
   describe('a quién se le agenda la cita', () => {
@@ -171,5 +175,120 @@ describe('Code.gs · métricas por persona', () => {
     })
     const e = g.estadisticasReservas_([fila('2026-10-01', 'Carla', 20), fila('2026-10-02', 'Carla', 10), fila('2026-10-03', 'Andrea', 15), fila('2026-10-04', 'Andrea', 99, 'Cancelada'), fila('2026-10-05', '', 5)], '2026-10-14', true)
     expect(e.porPersona).toEqual([{ nombre: 'Carla', n: 2, ingresos: 30 }, { nombre: 'Andrea', n: 1, ingresos: 15 }])
+  })
+})
+
+describe('Code.gs · calendario y foto de cada persona del equipo', () => {
+  type Llamada = { url: string; regla: any }
+  function cargarGuardar(opts: { previas?: any[]; falla?: (email: string) => string | null; crearFalla?: boolean } = {}) {
+    const acl: Llamada[] = []
+    const creados: string[] = []
+    const archivos: any[] = []
+    let filas: any[][] = []
+    let indice: any[] = []
+    const rango = { setValues: () => rango, setNumberFormat: () => rango }
+    const f = funcionesGs<Record<string, Fn>>(gs, [
+      'equipoGuardar_', 'compartirCalendario_', 'guardarFotoEquipo_', 'estadoCalendarioEquipo_', 'idPersona_', 'horarioEquipoTexto_',
+      'parseDia_', 'toMinutes_', 'hhmm_', 'normKey_', 'slug_',
+    ], {
+      EQUIPO_HEADERS: constanteGs(gs, 'EQUIPO_HEADERS'), DIAS_CORTOS_EQUIPO: constanteGs(gs, 'DIAS_CORTOS_EQUIPO'), ZONA: 'America/Caracas',
+      cfgHoja_: () => ({ getRange: () => rango, getMaxRows: () => 100 }),
+      equipoLeer_: () => opts.previas ?? [],
+      getConfig_: () => ({ marca: 'Spa Sol' }),
+      limpiarTexto_: (v: unknown, n: number) => String(v ?? '').trim().slice(0, n),
+      paraCelda_: (v: unknown) => v,
+      cfgReemplazar_: (_s: unknown, _n: number, f: any[][]) => { filas = f },
+      actualizarIndiceEquipo_: (_slug: string, l: any[]) => { indice = l },
+      CalendarApp: {
+        createCalendar: (nombre: string) => {
+          if (opts.crearFalla) throw new Error('Se alcanzó el límite de calendarios')
+          creados.push(nombre)
+          return { getId: () => `cal${creados.length}@group.calendar.google.com` }
+        },
+      },
+      // Sin el servicio avanzado "Calendar": comparte por la API con el token del script.
+      ScriptApp: { getOAuthToken: () => 'tok' },
+      UrlFetchApp: {
+        fetch: (url: string, o: any) => {
+          const regla = JSON.parse(o.payload)
+          acl.push({ url, regla })
+          const error = opts.falla?.(regla.scope.value) ?? null
+          return { getResponseCode: () => (error ? 403 : 200), getContentText: () => JSON.stringify(error ? { error: { message: error } } : {}) }
+        },
+      },
+      Utilities: { newBlob: (b: unknown, mime: string, nombre: string) => ({ b, mime, nombre }), base64Decode: (x: string) => x },
+      DriveApp: {
+        Access: { ANYONE_WITH_LINK: 'link' }, Permission: { VIEW: 'view' },
+        getFolderById: (id: string) => ({
+          createFile: (blob: any) => {
+            const a = { id: `foto${archivos.length + 1}`, carpeta: id, blob, compartido: '', getId: () => a.id, setSharing: (x: string) => { a.compartido = x } }
+            archivos.push(a)
+            return a
+          },
+        }),
+      },
+      console: { warn: () => {} },
+    })
+    return { f, acl, creados, archivos, filas: () => filas, indice: () => indice }
+  }
+  const tenant = { slug: 'spa-sol', nombre: 'Spa Sol', email: 'Dueña@gmail.com', carpetaId: 'carpeta-spa' }
+  const carla = { nombre: 'Carla', email: 'Carla@Gmail.com', servicios: [], horarios: [], activo: true }
+
+  it('a la persona nueva le crea su calendario y se lo comparte a ella y a la dueña', () => {
+    const g = cargarGuardar()
+    expect(g.f.equipoGuardar_({}, tenant, [carla])).toBe(1)
+    expect(g.creados).toEqual(['Citas Carla · Spa Sol'])
+    expect(g.acl.map((a) => [a.regla.role, a.regla.scope.value])).toEqual([['writer', 'carla@gmail.com'], ['writer', 'dueña@gmail.com']])
+    expect(g.acl[0].url).toBe('https://www.googleapis.com/calendar/v3/calendars/cal1%40group.calendar.google.com/acl?sendNotifications=true')
+    const fila = g.filas()[0]
+    expect(fila[3]).toBe('cal1@group.calendar.google.com')
+    expect(fila[9]).toBe('carla@gmail.com') // Compartido
+    expect(g.indice()).toEqual([{ id: 'carla', nombre: 'Carla', email: 'carla@gmail.com', activo: true }])
+  })
+
+  it('si Google no deja compartir, lo anota y lo reintenta al guardar de nuevo', () => {
+    const g = cargarGuardar({ falla: (e) => (e === 'carla@gmail.com' ? 'Invalid scope value.' : null) })
+    g.f.equipoGuardar_({}, tenant, [carla])
+    const fila = g.filas()[0]
+    expect(fila[9]).toBe('error: Invalid scope value.')
+    const previa = { id: 'carla', nombre: 'Carla', email: 'carla@gmail.com', calendarioId: fila[3], compartido: fila[9], foto: '', cargo: '', servicios: [], horario: [] }
+    expect(g.f.estadoCalendarioEquipo_(previa)).toEqual({ estado: 'error', error: 'Invalid scope value.' })
+
+    const otra = cargarGuardar({ previas: [previa] })
+    otra.f.equipoGuardar_({}, tenant, [{ ...carla, id: 'carla' }])
+    expect(otra.creados).toEqual([]) // usa el mismo calendario
+    expect(otra.acl.map((a) => a.regla.scope.value)).toEqual(['carla@gmail.com', 'dueña@gmail.com'])
+    expect(otra.filas()[0][9]).toBe('carla@gmail.com')
+    expect(otra.f.estadoCalendarioEquipo_({ ...previa, compartido: 'carla@gmail.com' }).estado).toBe('compartido')
+  })
+
+  it('ya compartido con su correo: no lo vuelve a compartir; si cambia el correo, sí', () => {
+    const previa = { id: 'carla', nombre: 'Carla', email: 'carla@gmail.com', calendarioId: 'c@g', compartido: 'carla@gmail.com', foto: '', cargo: '', servicios: [], horario: [] }
+    const g = cargarGuardar({ previas: [previa] })
+    g.f.equipoGuardar_({}, tenant, [{ ...carla, id: 'carla' }])
+    expect(g.acl).toEqual([])
+    g.f.equipoGuardar_({}, tenant, [{ ...carla, id: 'carla', email: 'carla.nueva@gmail.com' }])
+    expect(g.acl.map((a) => a.regla.scope.value)).toEqual(['carla.nueva@gmail.com', 'dueña@gmail.com'])
+    expect(g.f.estadoCalendarioEquipo_({ ...previa, compartido: '' }).estado).toBe('pendiente')
+    expect(g.f.estadoCalendarioEquipo_({ ...previa, calendarioId: '' }).estado).toBe('sin_crear')
+  })
+
+  it('si no se puede crear el calendario, guarda a la persona y anota el error', () => {
+    const g = cargarGuardar({ crearFalla: true })
+    g.f.equipoGuardar_({}, tenant, [carla])
+    expect(g.filas()[0][3]).toBe('')
+    expect(g.filas()[0][9]).toMatch(/^error: No se pudo crear su calendario/)
+    expect(g.acl).toEqual([])
+  })
+
+  it('la foto subida queda en la carpeta del negocio en Drive, visible con el enlace', () => {
+    const g = cargarGuardar()
+    g.f.equipoGuardar_({}, tenant, [{ ...carla, foto: 'data:image/jpeg;base64,/9j/AAA=' }])
+    expect(g.archivos).toHaveLength(1)
+    expect(g.archivos[0]).toMatchObject({ carpeta: 'carpeta-spa', compartido: 'link', blob: { mime: 'image/jpeg', nombre: 'Foto Carla.jpg' } })
+    expect(g.filas()[0][4]).toBe('https://lh3.googleusercontent.com/d/foto1=w400')
+    // Un enlace https se guarda tal cual; cualquier otra cosa no.
+    g.f.equipoGuardar_({}, tenant, [{ ...carla, foto: 'https://x.com/a.jpg' }, { nombre: 'Ana', email: 'ana@gmail.com', foto: 'javascript:alert(1)' }])
+    expect(g.filas().map((r) => r[4])).toEqual(['https://x.com/a.jpg', ''])
   })
 })

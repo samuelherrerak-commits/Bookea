@@ -182,6 +182,11 @@ export interface PersonaEquipo {
   activo: boolean
   /** Ya tiene su calendario de bookeaa. */
   calendario?: boolean
+  /** ID del calendario (para el enlace "Agregar a Google Calendar"). */
+  calendarioId?: string
+  /** compartido: Google lo confirmó con su Gmail actual; pendiente: se comparte al guardar; error: ver calendarioError. */
+  calendarioEstado?: 'sin_crear' | 'pendiente' | 'compartido' | 'error'
+  calendarioError?: string
 }
 
 export interface EquipoConfig {
@@ -262,7 +267,9 @@ export function guardar(sesion: string, slug: string, seccion: Seccion, datos: D
         activo: cfg.equipo_activo ? cfg.equipo_activo === 'si' : c.equipo.activo,
         modo: (cfg.equipo_modo as EquipoConfig['modo']) || c.equipo.modo,
         cualquiera: cfg.equipo_cualquiera ? cfg.equipo_cualquiera !== 'no' : c.equipo.cualquiera,
-        personas: (datos.equipo ?? c.equipo.personas).map((p) => ({ ...p, id: p.id || p.nombre.toLowerCase().split(/\s+/)[0], calendario: true })),
+        personas: (datos.equipo ?? c.equipo.personas).map((p) => ({ ...p, id: p.id || p.nombre.toLowerCase().split(/\s+/)[0], calendario: true,
+          calendarioId: p.calendarioId || `${p.nombre.toLowerCase().split(/\s+/)[0] || 'persona'}@group.calendar.google.com`, calendarioEstado: 'compartido' as const, calendarioError: '',
+        })),
       }
     }
     return new Promise((ok) => setTimeout(() => ok({ ok: true, errores: [], datos: structuredClone(c) }), 400))
@@ -444,10 +451,10 @@ const DEMO = {
     },
     paginaUrl: '/u/demo',
     servicios: [
-      { id: 'corte', nombre: 'Corte', precio: 10, duracion: 30, categoria: 'Cabello', adicional: false },
-      { id: 'corte-y-barba', nombre: 'Corte y barba', precio: 16, duracion: 45, categoria: 'Cabello', adicional: false },
-      { id: 'barba', nombre: 'Barba', precio: 8, duracion: 20, categoria: 'Barba', adicional: false },
-      { id: 'lavado', nombre: 'Lavado', precio: 3, duracion: 10, categoria: '', adicional: true },
+      { id: '', nombre: 'Corte', precio: 10, duracion: 30, categoria: 'Cabello', adicional: false },
+      { id: '', nombre: 'Corte y barba', precio: 16, duracion: 45, categoria: 'Cabello', adicional: false },
+      { id: '', nombre: 'Barba', precio: 8, duracion: 20, categoria: 'Barba', adicional: false },
+      { id: '', nombre: 'Lavado', precio: 3, duracion: 10, categoria: '', adicional: true },
     ],
     horarios: DIAS.flatMap((dia, i) => (i < 5 ? [{ dia, inicio: '09:00', fin: '13:00' }, { dia, inicio: '14:00', fin: '18:00' }] : i === 5 ? [{ dia, inicio: '09:00', fin: '14:00' }] : [{ dia, inicio: '', fin: '' }])),
     sedes: [{ nombre: 'Sede Centro', direccion: 'Av. Libertador, local 12', mapsUrl: '', activa: true }],
@@ -461,8 +468,8 @@ const DEMO = {
       modo: 'servicio',
       cualquiera: true,
       personas: [
-        { id: 'carla', nombre: 'Carla Méndez', email: 'carla@gmail.com', foto: '', cargo: 'Barbera principal', servicios: [], horarios: [], activo: true, calendario: true },
-        { id: 'andres', nombre: 'Andrés Rojas', email: 'andres@gmail.com', foto: '', cargo: 'Barbero', servicios: ['corte', 'barba'], horarios: [2, 3, 4, 5, 6].map((d) => ({ dia: d, inicio: '12:00', fin: '20:00' })), activo: true, calendario: true },
+        { id: 'carla', nombre: 'Carla Méndez', email: 'carla@gmail.com', foto: '', cargo: 'Barbera principal', servicios: [], horarios: [], activo: true, calendario: true, calendarioId: 'carla@group.calendar.google.com', calendarioEstado: 'compartido' },
+        { id: 'andres', nombre: 'Andrés Rojas', email: 'andres@gmail.com', foto: '', cargo: 'Barbero', servicios: ['corte', 'barba'], horarios: [2, 3, 4, 5, 6].map((d) => ({ dia: d, inicio: '12:00', fin: '20:00' })), activo: true, calendario: true, calendarioId: 'andres@group.calendar.google.com', calendarioEstado: 'error', calendarioError: 'Google no dejó compartirlo: revisa que el correo sea una cuenta de Google.' },
       ],
     },
   } as Configuracion,

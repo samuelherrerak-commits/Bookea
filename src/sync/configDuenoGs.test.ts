@@ -39,7 +39,7 @@ function negocio() {
 
 const AHORA = Date.UTC(2026, 9, 9, 15)
 const NOMBRES = ['duenoGuardar_', 'duenoValidar_', 'duenoLeerConfig_', 'cfgFilas_', 'cfgHora_', 'cfgActiva_', 'cfgAlertas_', 'cfgReemplazar_', 'cfgHoja_',
-  'setConfigKey_', 'normKey_', 'limpiarTexto_', 'paraCelda_', 'round2_', 'toNumber_', 'toMinutes_', 'ymd_', 'getConfig_']
+  'setConfigKey_', 'normKey_', 'limpiarTexto_', 'paraCelda_', 'round2_', 'toNumber_', 'toMinutes_', 'ymd_', 'getConfig_', 'idsComoLaPagina_', 'assignIds_', 'slug_']
 const cargar = (extra: Record<string, unknown> = {}) => {
   let limpiado = ''
   const f = funcionesGs<Record<string, Fn>>(gs, NOMBRES, {
