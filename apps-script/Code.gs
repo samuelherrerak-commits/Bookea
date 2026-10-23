@@ -2840,6 +2840,8 @@ function citasEntre_(filas, desde, hasta) {
         // bookeaa team: quién atiende.
         profesional: String(r.Profesional || ''),
         profesionalId: String(r.Profesional_ID || ''),
+        // "2026-10-24 10:00" si se movió desde Mi negocio.
+        reagendada: String(r.Reagendada || ''),
       };
     })
     .filter(function (c) { return c.id && c.fecha && c.fecha >= desde && c.fecha <= hasta; })
@@ -2943,6 +2945,8 @@ function atenderDueno_(data, ahoraMs) {
     return atenderBloqueos_(op, data, openTenant_(tenant), tenant, String(data.persona || ''), ahoraMs);
   }
   if (op === 'panel') return panelNegocio_(tenant, data, ahoraMs);
+  if (op === 'horas_reagendar') return horasReagendar_(openTenant_(tenant), tenant, data, ahoraMs);
+  if (op === 'reagendar') return reagendarCita_(openTenant_(tenant), tenant, data, ahoraMs);
   if (op === 'guardar' && String(data.seccion || '') === 'equipo' && !esAdminDueno_(email)) {
     const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })[0] || {};
     const activar = data.datos && data.datos.config && String(data.datos.config.equipo_activo || '') === 'si';
@@ -2999,6 +3003,190 @@ function atenderDueno_(data, ahoraMs) {
     return r.json && r.json.ok ? { ok: true } : { error: 'servidor', mensaje: 'No se pudieron activar los avisos. ' + (r.error || 'Intenta de nuevo.') };
   }
   return { error: 'op_desconocida' };
+}
+
+// ---------- Reagendar una cita desde Mi negocio ----------
+// El dueño mueve una cita (el cliente no puede ir): otro día, otra hora y, con equipo, otra
+// persona. Se mueve el evento del calendario, se actualiza la fila y se avisa en el teléfono.
+// Si la hora choca con otra cita o queda fuera del horario, se avisa y el dueño puede
+// moverla igual (es su agenda); una hora que ya pasó no se acepta nunca.
+
+/** La cita (fila), su evento en el calendario (si lo encuentra) y cuánto dura. */
+function citaParaMover_(libro, tenant, id) {
+  const fila = getSheetData_(libro, 'Reservaciones').filter(function (r) { return String(r.ID) === String(id || ''); })[0];
+  if (!fila) return { error: 'no_existe', mensaje: 'No encontramos esa reserva.' };
+  if (/cancel/i.test(String(fila.Estado || ''))) return { error: 'datos_invalidos', mensaje: 'Esa cita está cancelada.' };
+  const fecha = ymd_(fila.Fecha_Cita) || '';
+  const hora = horaTexto_(fila.Hora_Cita) || '12:00';
+  const equipo = equipoLeer_(libro);
+  const persona = equipo.filter(function (p) { return p.id && p.id === String(fila.Profesional_ID || ''); })[0] || null;
+  const calendarios = [];
+  const suyo = persona ? calendarioPersona_(persona) : null;
+  if (suyo) calendarios.push(suyo);
+  const delNegocio = getCalendarioTenant_(tenant);
+  if (delNegocio) calendarios.push(delNegocio);
+  let cal = null, evento = null;
+  if (fecha) {
+    const centro = Utilities.parseDate(fecha + ' ' + hora, ZONA, 'yyyy-MM-dd HH:mm').getTime();
+    for (let i = 0; i < calendarios.length && !evento; i++) {
+      evento = calendarios[i].getEvents(new Date(centro - 2 * 86400000), new Date(centro + 2 * 86400000)).filter(function (ev) {
+        return String(ev.getDescription() || '').indexOf('ID: ' + fila.ID) !== -1;
+      })[0] || null;
+      if (evento) cal = calendarios[i];
+    }
+  }
+  const duracion = evento ? Math.max(5, Math.round((evento.getEndTime().getTime() - evento.getStartTime().getTime()) / 60000)) : 60;
+  return { fila: fila, fecha: fecha, hora: hora, equipo: equipo, persona: persona, cal: cal, evento: evento, duracion: duracion };
+}
+
+/** Lo ocupado de un día en esos calendarios (sin la cita que se mueve) y los bloqueos. */
+function ocupadoParaMover_(calendarios, fecha, excluirId, bloqueos) {
+  const ini = Utilities.parseDate(fecha + ' 00:00', ZONA, 'yyyy-MM-dd HH:mm');
+  const fin = new Date(ini.getTime() + 86400000);
+  const out = [];
+  calendarios.forEach(function (cal) {
+    if (!cal) return;
+    cal.getEvents(ini, fin).forEach(function (ev) {
+      if (excluirId && ev.getId() === excluirId) return;
+      out.push({ inicio: ev.getStartTime().getTime(), fin: ev.getEndTime().getTime(), titulo: String(ev.getTitle() || '') });
+    });
+  });
+  (bloqueos || []).forEach(function (b) { out.push({ inicio: b.inicio.getTime(), fin: b.fin.getTime(), titulo: 'Bloqueado' }); });
+  return out;
+}
+
+/** '' si la hora sirve; si no, por qué: pasada (no se puede), ocupada o fuera (se puede forzar). */
+function problemaHora_(ocupado, tramos, inicioMs, finMs, minIni, minFin, ahoraMs) {
+  if (inicioMs < ahoraMs) return 'pasada';
+  if (ocupado.some(function (o) { return o.inicio < finMs && o.fin > inicioMs; })) return 'ocupada';
+  if (!tramos.some(function (t) { return minIni >= toMinutes_(t.inicio) && minFin <= toMinutes_(t.fin); })) return 'fuera';
+  return '';
+}
+
+/** Dónde quedaría la cita: la persona elegida (o la misma) y su calendario, o el del negocio. */
+function destinoReagendar_(ctx, tenant, personaPedida) {
+  let persona = ctx.persona;
+  if (personaPedida !== undefined && personaPedida !== null && String(personaPedida) !== (persona ? persona.id : '')) {
+    persona = ctx.equipo.filter(function (p) { return p.activo && p.id === String(personaPedida); })[0] || null;
+    if (!persona) return { error: 'datos_invalidos', mensaje: 'Esa persona no está activa en el equipo.' };
+  }
+  const cal = persona ? calendarioPersona_(persona) : getCalendarioTenant_(tenant);
+  if (!cal) return { error: 'servidor', mensaje: 'No encontramos el calendario de ' + (persona ? persona.nombre : 'tu negocio') + '.' };
+  return { persona: persona, cal: cal };
+}
+
+function contextoHoras_(libro, tenant, data) {
+  const ctx = citaParaMover_(libro, tenant, data.id);
+  if (ctx.error) return ctx;
+  const destino = destinoReagendar_(ctx, tenant, data.persona);
+  if (destino.error) return destino;
+  const config = getConfig_(libro);
+  const negocio = getCalendarioTenant_(tenant);
+  // El calendario del negocio ocupa a todos (con equipo, sus eventos son cierres del local).
+  const calendarios = [destino.cal].concat(negocio && negocio.getId() !== destino.cal.getId() ? [negocio] : []);
+  return { ctx: ctx, destino: destino, config: config, calendarios: calendarios, horarios: getHorarios_(libro, config), bloqueos: getBloqueos_(libro, 400) };
+}
+
+function tramosDe_(persona, horarios, dia) {
+  return (persona && persona.horario.length ? persona.horario : horarios).filter(function (t) { return t.dia === dia; });
+}
+
+/** Las horas libres de un día para mover una cita (op 'horas_reagendar'). */
+function horasReagendar_(libro, tenant, data, ahoraMs) {
+  const fecha = String(data.fecha || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { error: 'datos_invalidos', mensaje: 'Elige un día.' };
+  const h = contextoHoras_(libro, tenant, data);
+  if (h.error) return h;
+  const ctx = h.ctx;
+  const excluir = ctx.evento ? ctx.evento.getId() : '';
+  const ocupado = ocupadoParaMover_(h.calendarios, fecha, excluir, h.bloqueos);
+  const dia = Number(Utilities.formatDate(Utilities.parseDate(fecha + ' 12:00', ZONA, 'yyyy-MM-dd HH:mm'), ZONA, 'u')) % 7;
+  const tramos = tramosDe_(h.destino.persona, h.horarios, dia);
+  const paso = Math.max(5, Math.floor(toNumber_(h.config.intervalo_min) || 30));
+  const horas = [];
+  tramos.forEach(function (t) {
+    for (let m = toMinutes_(t.inicio); m + ctx.duracion <= toMinutes_(t.fin); m += paso) {
+      const inicio = Utilities.parseDate(fecha + ' ' + hhmm_(m), ZONA, 'yyyy-MM-dd HH:mm').getTime();
+      if (!problemaHora_(ocupado, tramos, inicio, inicio + ctx.duracion * 60000, m, m + ctx.duracion, ahoraMs) && horas.indexOf(hhmm_(m)) === -1) horas.push(hhmm_(m));
+    }
+  });
+  return {
+    duracion: ctx.duracion, horas: horas.sort(), trabaja: tramos.length > 0,
+    persona: h.destino.persona ? h.destino.persona.id : '',
+    personas: ctx.equipo.filter(function (p) { return p.activo && p.calendarioId; }).map(function (p) { return { id: p.id, nombre: p.nombre }; }),
+  };
+}
+
+/** Mueve la cita (op 'reagendar'): {id, fecha, hora, persona?, forzar?}. */
+function reagendarCita_(libro, tenant, data, ahoraMs) {
+  const fecha = String(data.fecha || ''), hora = String(data.hora || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !/^\d{2}:\d{2}$/.test(hora) || isNaN(toMinutes_(hora))) return { error: 'datos_invalidos', mensaje: 'Elige el día y la hora.' };
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { error: 'servidor', mensaje: 'Intenta de nuevo en un momento.' };
+  try {
+    const h = contextoHoras_(libro, tenant, data);
+    if (h.error) return h;
+    const ctx = h.ctx, destino = h.destino;
+    const inicio = Utilities.parseDate(fecha + ' ' + hora, ZONA, 'yyyy-MM-dd HH:mm');
+    const fin = new Date(inicio.getTime() + ctx.duracion * 60000);
+    const minIni = toMinutes_(hora);
+    const ocupado = ocupadoParaMover_(h.calendarios, fecha, ctx.evento ? ctx.evento.getId() : '', h.bloqueos);
+    const dia = Number(Utilities.formatDate(inicio, ZONA, 'u')) % 7;
+    const problema = problemaHora_(ocupado, tramosDe_(destino.persona, h.horarios, dia), inicio.getTime(), fin.getTime(), minIni, minIni + ctx.duracion, ahoraMs);
+    if (problema === 'pasada') return { ok: false, motivo: 'pasada', mensaje: 'Esa hora ya pasó. Elige otra.' };
+    if (problema && !data.forzar) {
+      const choque = problema === 'ocupada' ? ocupado.filter(function (o) { return o.inicio < fin.getTime() && o.fin > inicio.getTime(); })[0] : null;
+      return {
+        ok: false, motivo: problema, puedeForzar: true,
+        mensaje: problema === 'ocupada'
+          ? 'A esa hora ya hay algo en la agenda' + (choque && choque.titulo ? ': ' + choque.titulo.slice(0, 80) : '') + '.'
+          : 'Esa hora queda fuera del horario' + (destino.persona ? ' de ' + destino.persona.nombre : '') + '.',
+      };
+    }
+
+    const f = ctx.fila;
+    const antes = ctx.fecha + ' ' + ctx.hora;
+    const conLinea = destino.persona ? 'Con: ' + destino.persona.nombre : '';
+    let descripcion = String(ctx.evento ? ctx.evento.getDescription() || '' : 'Teléfono: ' + f.Telefono + '\nID: ' + f.ID)
+      .split('\n').filter(function (l) { return !/^(Con|Reagendada): /.test(l); }).join('\n');
+    descripcion = (conLinea ? conLinea + '\n' : '') + descripcion + '\nReagendada: antes ' + antes;
+    const mismoCalendario = ctx.evento && ctx.cal && ctx.cal.getId() === destino.cal.getId();
+    if (mismoCalendario) {
+      ctx.evento.setTime(inicio, fin);
+      ctx.evento.setDescription(descripcion);
+    } else {
+      // Otro calendario (otra persona) o el evento no estaba: se crea el nuevo y se borra el viejo.
+      const titulo = ctx.evento ? ctx.evento.getTitle() : 'Cita: ' + f.Cliente + ' - ' + f.Servicios;
+      const nuevo = destino.cal.createEvent(titulo, inicio, fin, { location: ctx.evento ? ctx.evento.getLocation() : '', description: descripcion });
+      try { ponerAlertas_(nuevo, recordatoriosDe_(h.config)); } catch (err) { console.warn('No se pudo poner la alerta: ' + err); }
+      if (ctx.evento) {
+        try { ctx.evento.deleteEvent(); } catch (err) { console.warn('No se pudo borrar el evento viejo: ' + err); }
+      }
+    }
+
+    const hoja = libro.getSheetByName('Reservaciones');
+    asegurarColumnas_(hoja, destino.persona ? ['Reagendada', 'Profesional', 'Profesional_ID'] : ['Reagendada']);
+    const campos = { Fecha_Cita: fecha, Hora_Cita: hora, Reagendada: "'" + antes };
+    if (destino.persona) { campos.Profesional = destino.persona.nombre; campos.Profesional_ID = destino.persona.id; }
+    actualizarReserva_(libro, f.ID, campos);
+    limpiarCacheCatalogo_(tenant.slug);
+    const cita = {
+      id: String(f.ID), cliente: String(f.Cliente || ''), servicios: String(f.Servicios || ''), fecha: fecha, hora: hora,
+      profesional: destino.persona ? destino.persona.nombre : String(f.Profesional || ''),
+      profesionalId: destino.persona ? destino.persona.id : String(f.Profesional_ID || ''), antes: { fecha: ctx.fecha, hora: ctx.hora },
+    };
+    try {
+      llamarWorker_('/push/evento', { tipo: 'reagendada', slug: tenant.slug, cita: cita });
+    } catch (err) {
+      console.warn('No se pudo avisar el cambio: ' + err);
+    }
+    return { ok: true, cita: cita, forzada: !!problema };
+  } catch (err) {
+    console.error('reagendarCita_: ' + err);
+    return { error: 'servidor', mensaje: 'No se pudo mover la cita. ' + String(err && err.message || err).slice(0, 200) };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /** Para el Worker (accion 'bot', op 'agenda'): las citas de un día de varios negocios. */

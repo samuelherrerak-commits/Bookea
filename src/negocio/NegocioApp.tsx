@@ -8,6 +8,7 @@ import { resumenPlan } from './MiPlan'
 import { Configurar } from './Configurar'
 import { MisBloqueos } from './MisBloqueos'
 import { PanelNegocio } from './PanelNegocio'
+import { Reagendar } from './Reagendar'
 import { botonGoogle } from './google'
 import { activarAvisos, apagarAvisos, esIOS, estadoAvisos, instalada, type EstadoAvisos } from './push'
 
@@ -167,6 +168,7 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
   const actual = sesion.negocios.find((n) => n.slug === slug)
   const esEquipo = actual?.rol === 'equipo'
   const [filtroPersona, setFiltroPersona] = useState('')
+  const [moviendo, setMoviendo] = useState<api.Cita | null>(null)
 
   const cargar = useCallback(async () => {
     if (!slug) return
@@ -234,6 +236,18 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
       setError((e as Error).message)
     }
   }
+
+  // Cita reagendada: se mueve en la lista al día y la hora nuevos.
+  const movida = (m: NonNullable<api.Reagendado['cita']>) =>
+    setAgenda((a) => {
+      if (!a) return a
+      const citas = a.citas.map((c) => (c.id === m.id ? {
+        ...c, fecha: m.fecha, hora: m.hora, reagendada: `${c.fecha} ${c.hora}`,
+        ...(m.profesionalId !== undefined ? { profesional: m.profesional ?? '', profesionalId: m.profesionalId } : {}),
+      } : c))
+      return { ...a, citas: citas.sort((x, y) => (x.fecha + x.hora).localeCompare(y.fecha + y.hora)) }
+    })
+  const reagendar = esEquipo ? undefined : setMoviendo
 
   const nombre = agenda?.negocio.nombre || sesion.negocios.find((n) => n.slug === slug)?.nombre || ''
 
@@ -307,8 +321,12 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
             ))}
           </div>
         )}
-        {pestana === 'hoy' && <Hoy agenda={vista} onConfirmar={confirmar} />}
-        {pestana === 'proximas' && <Proximas agenda={vista} onConfirmar={confirmar} />}
+        {pestana === 'hoy' && <Hoy agenda={vista} onConfirmar={confirmar} onReagendar={reagendar} />}
+        {pestana === 'proximas' && <Proximas agenda={vista} onConfirmar={confirmar} onReagendar={reagendar} />}
+        {!esEquipo && agenda && (
+          <Reagendar cita={moviendo} hoy={agenda.hoy} negocio={nombre} sesion={sesion.sesion} slug={slug} whatsapp={moviendo ? telefonoWa(moviendo.telefono) : ''}
+            onCerrar={() => setMoviendo(null)} onMovida={movida} alSalir={alSalir} />
+        )}
         {pestana === 'panel' && !esEquipo && <PanelNegocio sesion={sesion.sesion} slug={slug} alSalir={alSalir} />}
         {pestana === 'bloqueos' && <MisBloqueos sesion={sesion.sesion} slug={slug} alSalir={alSalir} />}
         {pestana === 'configurar' && <Configurar key={`${slug}-${seccion.n}`} sesion={sesion.sesion} slug={slug} alSalir={alSalir} inicial={seccion.id} />}
@@ -362,7 +380,7 @@ function AvisoPlan({ plan, onAbrir }: { plan: api.Plan; onAbrir: () => void }) {
   )
 }
 
-function Hoy({ agenda, onConfirmar }: { agenda: api.Agenda | null; onConfirmar: (id: string) => void }) {
+function Hoy({ agenda, onConfirmar, onReagendar }: { agenda: api.Agenda | null; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void }) {
   if (!agenda) return <Cargando />
   const hoy = agenda.citas.filter((c) => c.fecha === agenda.hoy && activa(c))
   const manana = agenda.citas.filter((c) => c.fecha > agenda.hoy && activa(c))
@@ -392,21 +410,21 @@ function Hoy({ agenda, onConfirmar }: { agenda: api.Agenda | null; onConfirmar: 
         )}
       </section>
 
-      <ListaCitas citas={hoy} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} ahora={ahora} vacio="Hoy no tienes citas agendadas." />
+      <ListaCitas citas={hoy} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} onReagendar={onReagendar} ahora={ahora} vacio="Hoy no tienes citas agendadas." />
 
       {manana.length > 0 && (
         <>
           <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
             {capitalize(formatLongDate(manana[0].fecha))}
           </h2>
-          <ListaCitas citas={manana.filter((c) => c.fecha === manana[0].fecha)} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} />
+          <ListaCitas citas={manana.filter((c) => c.fecha === manana[0].fecha)} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} onReagendar={onReagendar} />
         </>
       )}
     </>
   )
 }
 
-function Proximas({ agenda, onConfirmar }: { agenda: api.Agenda | null; onConfirmar: (id: string) => void }) {
+function Proximas({ agenda, onConfirmar, onReagendar }: { agenda: api.Agenda | null; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void }) {
   const dias = useMemo(() => {
     const m = new Map<string, api.Cita[]>()
     for (const c of agenda?.citas ?? []) if (activa(c)) m.set(c.fecha, [...(m.get(c.fecha) ?? []), c])
@@ -422,25 +440,25 @@ function Proximas({ agenda, onConfirmar }: { agenda: api.Agenda | null; onConfir
             <span>{fecha === agenda.hoy ? 'Hoy' : capitalize(formatLongDate(fecha))}</span>
             <span className="font-normal normal-case tracking-normal">{citas.length === 1 ? '1 cita' : `${citas.length} citas`}</span>
           </h2>
-          <ListaCitas citas={citas} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} ahora={fecha === agenda.hoy ? minutosAhora() : undefined} />
+          <ListaCitas citas={citas} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} onReagendar={onReagendar} ahora={fecha === agenda.hoy ? minutosAhora() : undefined} />
         </section>
       ))}
     </>
   )
 }
 
-function ListaCitas({ citas, moneda, onConfirmar, ahora, vacio }: { citas: api.Cita[]; moneda: api.Agenda['negocio']['moneda']; onConfirmar: (id: string) => void; ahora?: number; vacio?: string }) {
+function ListaCitas({ citas, moneda, onConfirmar, onReagendar, ahora, vacio }: { citas: api.Cita[]; moneda: api.Agenda['negocio']['moneda']; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void; ahora?: number; vacio?: string }) {
   if (!citas.length) return vacio ? <p className="mt-6 text-center text-[15px] text-muted">{vacio}</p> : null
   return (
     <ul className="mt-3 space-y-3">
       {citas.map((c) => (
-        <TarjetaCita key={c.id} c={c} moneda={moneda} pasada={ahora !== undefined && minutos(c.hora) + 30 < ahora} onConfirmar={onConfirmar} />
+        <TarjetaCita key={c.id} c={c} moneda={moneda} pasada={ahora !== undefined && minutos(c.hora) + 30 < ahora} onConfirmar={onConfirmar} onReagendar={onReagendar} />
       ))}
     </ul>
   )
 }
 
-function TarjetaCita({ c, moneda, pasada, onConfirmar }: { c: api.Cita; moneda: api.Agenda['negocio']['moneda']; pasada: boolean; onConfirmar: (id: string) => void }) {
+function TarjetaCita({ c, moneda, pasada, onConfirmar, onReagendar }: { c: api.Cita; moneda: api.Agenda['negocio']['moneda']; pasada: boolean; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void }) {
   const porVerificar = /verificar/i.test(c.estado)
   const [confirmando, setConfirmando] = useState(false)
   const texto = formatTime12(c.hora)
@@ -459,6 +477,12 @@ function TarjetaCita({ c, moneda, pasada, onConfirmar }: { c: api.Cita; moneda: 
           {c.lugar ? ` · ${c.lugar}` : ''}
           {c.profesional ? ` · con ${c.profesional.split(/\s+/)[0]}` : ''}
         </p>
+        {c.reagendada && <p className="mt-0.5 text-[13px] text-muted">🔁 Reagendada</p>}
+        {onReagendar && (
+          <button type="button" onClick={() => onReagendar(c)} className="mt-2 rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 ring-line">
+            Reagendar
+          </button>
+        )}
         {porVerificar && (
           <div className="mt-3 rounded-2xl bg-sand px-3 py-2 text-[13px]">
             <p className="font-semibold">💸 Pago Móvil por verificar{c.totalBs ? ` · ${formatMonto(c.totalBs, 'BS')}` : ''}</p>
