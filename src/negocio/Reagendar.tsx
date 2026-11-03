@@ -227,3 +227,93 @@ export function Reagendar({ cita, hoy, negocio, sesion, slug, whatsapp, onCerrar
     </BottomSheet>
   )
 }
+
+/** El mensaje para el cliente cuando el negocio cancela su cita. */
+export function mensajeCancelada(p: { cliente: string; negocio: string; servicios: string; fecha: string; hora: string; link: string }) {
+  const nombre = p.cliente.trim().split(/\s+/)[0] || ''
+  return `Hola${nombre ? ' ' + nombre : ''}, te escribimos de ${p.negocio}. Tu cita de ${p.servicios} del ${formatLongDate(p.fecha)} a las ${formatTime12(p.hora)} quedó cancelada. Cuando quieras, puedes reservar otra aquí: ${p.link}`
+}
+
+/** Cancelar una cita: confirma, la cancela y ofrece avisarle al cliente (o mejor reagendarla). */
+export function CancelarCita({ cita, negocio, sesion, slug, whatsapp, link, onCerrar, onCancelada, onReagendar, alSalir }: {
+  cita: api.Cita | null
+  negocio: string
+  sesion: string
+  slug: string
+  whatsapp: string
+  /** Su página de reservas, para que el cliente reserve otra. */
+  link: string
+  onCerrar: () => void
+  onCancelada: (id: string) => void
+  onReagendar: (c: api.Cita) => void
+  alSalir: () => void
+}) {
+  const [motivo, setMotivo] = useState('')
+  const [estado, setEstado] = useState<'pregunta' | 'cancelando' | 'lista'>('pregunta')
+  const [error, setError] = useState('')
+  useEffect(() => {
+    setMotivo('')
+    setEstado('pregunta')
+    setError('')
+  }, [cita])
+
+  const texto = cita ? mensajeCancelada({ cliente: cita.cliente, negocio, servicios: cita.servicios, fecha: cita.fecha, hora: cita.hora, link }) : ''
+  const confirmar = async () => {
+    if (!cita) return
+    setEstado('cancelando')
+    setError('')
+    try {
+      await api.cancelar(sesion, slug, cita.id, motivo.trim())
+      onCancelada(cita.id)
+      setEstado('lista')
+    } catch (e) {
+      if (e instanceof api.ErrorNegocio && e.codigo === 'sesion') return alSalir()
+      setError((e as Error).message)
+      setEstado('pregunta')
+    }
+  }
+
+  return (
+    <BottomSheet open={!!cita} onClose={onCerrar} title={estado === 'lista' ? 'Cita cancelada' : 'Cancelar cita'}>
+      {cita && (
+        <div className="space-y-4 pb-6">
+          <div className="rounded-2xl bg-sand px-4 py-3 text-[14px]">
+            <p className="font-semibold">{cita.cliente} · {cita.servicios}</p>
+            <p className="text-muted">
+              {formatLongDate(cita.fecha)} · {formatTime12(cita.hora)}{cita.profesional ? ` · con ${cita.profesional.split(/\s+/)[0]}` : ''}
+            </p>
+          </div>
+          {estado === 'lista' ? (
+            <>
+              <p className="text-[15px]">✓ Se quitó del calendario y la hora quedó libre en tu página.</p>
+              {whatsapp && (
+                <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer"
+                  className="block w-full rounded-full bg-ink px-5 py-3.5 text-center text-[16px] font-semibold text-bg">
+                  Avisarle por WhatsApp
+                </a>
+              )}
+              <p className="text-[13px] text-muted">“{texto}”</p>
+              <button type="button" onClick={onCerrar} className="w-full rounded-full px-5 py-3 text-[15px] font-semibold ring-1 ring-line">Listo</button>
+            </>
+          ) : (
+            <>
+              <label className="block">
+                <span className="mb-1.5 block text-[14px] font-semibold">Motivo (opcional, solo lo ves tú)</span>
+                <input value={motivo} maxLength={200} onChange={(e) => setMotivo(e.target.value)} placeholder="El cliente no puede venir"
+                  className="w-full rounded-2xl bg-surface px-3.5 py-3 text-[16px] ring-1 ring-line outline-none focus:ring-2 focus:ring-ink" />
+              </label>
+              {error && <p role="alert" className="rounded-2xl bg-danger/10 px-4 py-3 text-[14px] text-danger">{error}</p>}
+              <button type="button" disabled={estado === 'cancelando'} onClick={() => void confirmar()}
+                className="w-full rounded-full bg-danger px-5 py-3.5 text-[16px] font-semibold text-white disabled:opacity-60">
+                {estado === 'cancelando' ? 'Cancelando…' : 'Sí, cancelar la cita'}
+              </button>
+              <button type="button" onClick={() => onReagendar(cita)} className="w-full rounded-full px-5 py-3 text-[15px] font-semibold ring-1 ring-line">
+                Mejor reagendarla
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </BottomSheet>
+  )
+}

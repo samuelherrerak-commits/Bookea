@@ -1,3 +1,9 @@
+import '@fontsource/barlow/400.css'
+import '@fontsource/barlow/500.css'
+import '@fontsource/barlow/600.css'
+import '@fontsource/barlow-condensed/600.css'
+import '@fontsource/barlow-condensed/700.css'
+import '@fontsource/barlow-condensed/800.css'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { DEMO_MODE, GOOGLE_CLIENT_ID } from '../config'
 import { capitalize, formatLongDate, formatTime12 } from '../lib/format'
@@ -8,7 +14,8 @@ import { resumenPlan } from './MiPlan'
 import { Configurar } from './Configurar'
 import { MisBloqueos } from './MisBloqueos'
 import { PanelNegocio } from './PanelNegocio'
-import { Reagendar } from './Reagendar'
+import { Brackets } from '../landing/ui'
+import { CancelarCita, Reagendar } from './Reagendar'
 import { botonGoogle } from './google'
 import { activarAvisos, apagarAvisos, esIOS, estadoAvisos, instalada, type EstadoAvisos } from './push'
 
@@ -52,7 +59,10 @@ export default function NegocioApp() {
 
   useEffect(() => {
     document.title = 'Mi negocio · bookeaa'
-    prepararApp({ nombre: 'Mi negocio', ruta: '/negocio', color: '#FDFBF7' })
+    // El diseño de bookeaa.com (ver html.mi-negocio en index.css).
+    document.documentElement.classList.add('mi-negocio')
+    prepararApp({ nombre: 'Mi negocio', ruta: '/negocio', color: '#ffffff' })
+    return () => document.documentElement.classList.remove('mi-negocio')
   }, [])
 
   const salir = useCallback(() => {
@@ -113,8 +123,11 @@ export function Entrar({
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-6 pb-safe text-center">
       <Logo className="size-16" />
-      <h1 className="mt-6 font-display text-[36px] leading-tight">{titulo}</h1>
-      <p className="mt-2 max-w-[30ch] text-[15px] text-muted">{bajada}</p>
+      <p className="mt-8 text-[14px] font-semibold uppercase tracking-[0.16em] text-muted">bookeaa</p>
+      <h1 className="mt-3 font-display text-[clamp(44px,13vw,64px)] leading-none">
+        <Brackets>{titulo}</Brackets>
+      </h1>
+      <p className="mt-5 max-w-[30ch] text-[16px] text-muted">{bajada}</p>
       <div className="mt-10 grid min-h-11 place-items-center">
         {DEMO_MODE ? (
           <button type="button" className="rounded-full bg-ink px-6 py-3 text-[15px] font-semibold text-bg" onClick={() => void conCredencial('demo')}>
@@ -169,6 +182,7 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
   const esEquipo = actual?.rol === 'equipo'
   const [filtroPersona, setFiltroPersona] = useState('')
   const [moviendo, setMoviendo] = useState<api.Cita | null>(null)
+  const [cancelando, setCancelando] = useState<api.Cita | null>(null)
 
   const cargar = useCallback(async () => {
     if (!slug) return
@@ -248,6 +262,8 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
       return { ...a, citas: citas.sort((x, y) => (x.fecha + x.hora).localeCompare(y.fecha + y.hora)) }
     })
   const reagendar = esEquipo ? undefined : setMoviendo
+  const cancelar = esEquipo ? undefined : setCancelando
+  const cancelada = (id: string) => setAgenda((a) => (a ? { ...a, citas: a.citas.map((c) => (c.id === id ? { ...c, estado: 'Cancelada' } : c)) } : a))
 
   const nombre = agenda?.negocio.nombre || sesion.negocios.find((n) => n.slug === slug)?.nombre || ''
 
@@ -264,14 +280,14 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
         <div className="flex items-center gap-2.5 px-2">
           <Logo className="size-9 shrink-0" />
           <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold leading-tight">{nombre || 'Mi negocio'}</p>
+            <p className="truncate font-condensed text-[19px] font-bold uppercase leading-tight tracking-[0.02em]">{nombre || 'Mi negocio'}</p>
             <p className="truncate text-[12px] text-muted">{esEquipo && actual?.persona ? actual.persona.nombre : 'Mi negocio'}</p>
           </div>
         </div>
         <nav className="mt-8 space-y-1" aria-label="Secciones">
           {pestanas.map(([id, t, icono]) => (
             <button key={id} type="button" onClick={() => setPestana(id)} aria-current={pestana === id ? 'page' : undefined}
-              className={'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-[15px] ' + (pestana === id ? 'bg-ink font-semibold text-bg' : 'text-ink hover:bg-sand')}>
+              className={'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left font-condensed text-[17px] font-semibold uppercase tracking-[0.07em] ' + (pestana === id ? 'bg-ink text-bg' : 'text-ink hover:bg-sand')}>
               <svg viewBox="0 0 24 24" className="size-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={ICONOS[icono]} /></svg>
               {t}
             </button>
@@ -284,7 +300,7 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
       <header className="sticky top-0 z-10 flex items-center gap-3 bg-bg/90 px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur lg:px-8 lg:pt-5">
         <Logo className="size-9 shrink-0 lg:hidden" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[17px] font-semibold leading-tight lg:hidden">{nombre || 'Mi negocio'}</p>
+          <p className="truncate font-condensed text-[21px] font-bold uppercase leading-tight tracking-[0.02em] lg:hidden">{nombre || 'Mi negocio'}</p>
           <p className="hidden font-display text-[30px] leading-tight lg:block">{titulo}</p>
           <p className="text-[13px] text-muted">
             {esEquipo && actual?.persona ? `Tu agenda · ${actual.persona.nombre.split(/\s+/)[0]}` : agenda ? capitalize(formatLongDate(agenda.hoy)) : ' '}
@@ -321,11 +337,16 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
             ))}
           </div>
         )}
-        {pestana === 'hoy' && <Hoy agenda={vista} onConfirmar={confirmar} onReagendar={reagendar} />}
-        {pestana === 'proximas' && <Proximas agenda={vista} onConfirmar={confirmar} onReagendar={reagendar} />}
+        {pestana === 'hoy' && <Hoy agenda={vista} onConfirmar={confirmar} onReagendar={reagendar} onCancelar={cancelar} />}
+        {pestana === 'proximas' && <Proximas agenda={vista} onConfirmar={confirmar} onReagendar={reagendar} onCancelar={cancelar} />}
         {!esEquipo && agenda && (
           <Reagendar cita={moviendo} hoy={agenda.hoy} negocio={nombre} sesion={sesion.sesion} slug={slug} whatsapp={moviendo ? telefonoWa(moviendo.telefono) : ''}
             onCerrar={() => setMoviendo(null)} onMovida={movida} alSalir={alSalir} />
+        )}
+        {!esEquipo && agenda && (
+          <CancelarCita cita={cancelando} negocio={nombre} sesion={sesion.sesion} slug={slug} whatsapp={cancelando ? telefonoWa(cancelando.telefono) : ''}
+            link={`${location.origin}/u/${slug}`} onCerrar={() => setCancelando(null)} onCancelada={cancelada} alSalir={alSalir}
+            onReagendar={(c) => { setCancelando(null); setMoviendo(c) }} />
         )}
         {pestana === 'panel' && !esEquipo && <PanelNegocio sesion={sesion.sesion} slug={slug} alSalir={alSalir} />}
         {pestana === 'bloqueos' && <MisBloqueos sesion={sesion.sesion} slug={slug} alSalir={alSalir} />}
@@ -351,7 +372,7 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
 function BotonPestana({ activa, onClick, icono, children }: { activa: boolean; onClick: () => void; icono: Icono; children: ReactNode }) {
   const d = ICONOS[icono]
   return (
-    <button type="button" onClick={onClick} aria-current={activa ? 'page' : undefined} className={'flex flex-col items-center gap-1 py-2 text-[12px] ' + (activa ? 'font-semibold text-ink' : 'text-muted')}>
+    <button type="button" onClick={onClick} aria-current={activa ? 'page' : undefined} className={'flex flex-col items-center gap-1 py-2 font-condensed text-[13px] font-semibold uppercase tracking-[0.06em] ' + (activa ? 'text-ink' : 'text-muted')}>
       <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={activa ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d={d} />
       </svg>
@@ -380,7 +401,7 @@ function AvisoPlan({ plan, onAbrir }: { plan: api.Plan; onAbrir: () => void }) {
   )
 }
 
-function Hoy({ agenda, onConfirmar, onReagendar }: { agenda: api.Agenda | null; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void }) {
+function Hoy({ agenda, onConfirmar, onReagendar, onCancelar }: { agenda: api.Agenda | null; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void; onCancelar?: (c: api.Cita) => void }) {
   if (!agenda) return <Cargando />
   const hoy = agenda.citas.filter((c) => c.fecha === agenda.hoy && activa(c))
   const manana = agenda.citas.filter((c) => c.fecha > agenda.hoy && activa(c))
@@ -393,8 +414,8 @@ function Hoy({ agenda, onConfirmar, onReagendar }: { agenda: api.Agenda | null; 
     <>
       <section className="mt-2 rounded-3xl bg-ink px-5 py-5 text-bg">
         <p className="text-[13px] uppercase tracking-[0.12em] opacity-70">Hoy</p>
-        <p className="mt-1 font-display text-[40px] leading-none">
-          {hoy.length === 0 ? 'Sin citas' : hoy.length === 1 ? '1 cita' : `${hoy.length} citas`}
+        <p className="mt-3 font-display text-[52px] leading-none">
+          <Brackets tone="light">{hoy.length === 0 ? 'Sin citas' : hoy.length === 1 ? '1 cita' : `${hoy.length} citas`}</Brackets>
         </p>
         {siguiente ? (
           <p className="mt-3 text-[15px] opacity-90">
@@ -410,21 +431,21 @@ function Hoy({ agenda, onConfirmar, onReagendar }: { agenda: api.Agenda | null; 
         )}
       </section>
 
-      <ListaCitas citas={hoy} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} onReagendar={onReagendar} ahora={ahora} vacio="Hoy no tienes citas agendadas." />
+      <ListaCitas citas={hoy} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} onReagendar={onReagendar} onCancelar={onCancelar} ahora={ahora} vacio="Hoy no tienes citas agendadas." />
 
       {manana.length > 0 && (
         <>
           <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
             {capitalize(formatLongDate(manana[0].fecha))}
           </h2>
-          <ListaCitas citas={manana.filter((c) => c.fecha === manana[0].fecha)} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} onReagendar={onReagendar} />
+          <ListaCitas citas={manana.filter((c) => c.fecha === manana[0].fecha)} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} onReagendar={onReagendar} onCancelar={onCancelar} />
         </>
       )}
     </>
   )
 }
 
-function Proximas({ agenda, onConfirmar, onReagendar }: { agenda: api.Agenda | null; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void }) {
+function Proximas({ agenda, onConfirmar, onReagendar, onCancelar }: { agenda: api.Agenda | null; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void; onCancelar?: (c: api.Cita) => void }) {
   const dias = useMemo(() => {
     const m = new Map<string, api.Cita[]>()
     for (const c of agenda?.citas ?? []) if (activa(c)) m.set(c.fecha, [...(m.get(c.fecha) ?? []), c])
@@ -440,25 +461,25 @@ function Proximas({ agenda, onConfirmar, onReagendar }: { agenda: api.Agenda | n
             <span>{fecha === agenda.hoy ? 'Hoy' : capitalize(formatLongDate(fecha))}</span>
             <span className="font-normal normal-case tracking-normal">{citas.length === 1 ? '1 cita' : `${citas.length} citas`}</span>
           </h2>
-          <ListaCitas citas={citas} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} onReagendar={onReagendar} ahora={fecha === agenda.hoy ? minutosAhora() : undefined} />
+          <ListaCitas citas={citas} moneda={agenda.negocio.moneda} onConfirmar={onConfirmar} onReagendar={onReagendar} onCancelar={onCancelar} ahora={fecha === agenda.hoy ? minutosAhora() : undefined} />
         </section>
       ))}
     </>
   )
 }
 
-function ListaCitas({ citas, moneda, onConfirmar, onReagendar, ahora, vacio }: { citas: api.Cita[]; moneda: api.Agenda['negocio']['moneda']; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void; ahora?: number; vacio?: string }) {
+function ListaCitas({ citas, moneda, onConfirmar, onReagendar, onCancelar, ahora, vacio }: { citas: api.Cita[]; moneda: api.Agenda['negocio']['moneda']; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void; onCancelar?: (c: api.Cita) => void; ahora?: number; vacio?: string }) {
   if (!citas.length) return vacio ? <p className="mt-6 text-center text-[15px] text-muted">{vacio}</p> : null
   return (
     <ul className="mt-3 space-y-3">
       {citas.map((c) => (
-        <TarjetaCita key={c.id} c={c} moneda={moneda} pasada={ahora !== undefined && minutos(c.hora) + 30 < ahora} onConfirmar={onConfirmar} onReagendar={onReagendar} />
+        <TarjetaCita key={c.id} c={c} moneda={moneda} pasada={ahora !== undefined && minutos(c.hora) + 30 < ahora} onConfirmar={onConfirmar} onReagendar={onReagendar} onCancelar={onCancelar} />
       ))}
     </ul>
   )
 }
 
-function TarjetaCita({ c, moneda, pasada, onConfirmar, onReagendar }: { c: api.Cita; moneda: api.Agenda['negocio']['moneda']; pasada: boolean; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void }) {
+function TarjetaCita({ c, moneda, pasada, onConfirmar, onReagendar, onCancelar }: { c: api.Cita; moneda: api.Agenda['negocio']['moneda']; pasada: boolean; onConfirmar: (id: string) => void; onReagendar?: (c: api.Cita) => void; onCancelar?: (c: api.Cita) => void }) {
   const porVerificar = /verificar/i.test(c.estado)
   const [confirmando, setConfirmando] = useState(false)
   const texto = formatTime12(c.hora)
@@ -478,10 +499,19 @@ function TarjetaCita({ c, moneda, pasada, onConfirmar, onReagendar }: { c: api.C
           {c.profesional ? ` · con ${c.profesional.split(/\s+/)[0]}` : ''}
         </p>
         {c.reagendada && <p className="mt-0.5 text-[13px] text-muted">🔁 Reagendada</p>}
-        {onReagendar && (
-          <button type="button" onClick={() => onReagendar(c)} className="mt-2 rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 ring-line">
-            Reagendar
-          </button>
+        {(onReagendar || onCancelar) && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {onReagendar && (
+              <button type="button" onClick={() => onReagendar(c)} className="rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 ring-line">
+                Reagendar
+              </button>
+            )}
+            {onCancelar && (
+              <button type="button" onClick={() => onCancelar(c)} className="rounded-full px-3 py-1.5 text-[13px] font-semibold text-danger ring-1 ring-line">
+                Cancelar
+              </button>
+            )}
+          </div>
         )}
         {porVerificar && (
           <div className="mt-3 rounded-2xl bg-sand px-3 py-2 text-[13px]">

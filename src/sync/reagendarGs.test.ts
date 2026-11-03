@@ -56,7 +56,7 @@ function montar(opts: { equipo?: boolean } = {}) {
   const cambios: Record<string, unknown>[] = []
   const avisos: any[] = []
   const f = funcionesGs<Record<string, Fn>>(gs, [
-    'citaParaMover_', 'ocupadoParaMover_', 'problemaHora_', 'destinoReagendar_', 'contextoHoras_', 'tramosDe_', 'horasReagendar_', 'reagendarCita_',
+    'citaParaMover_', 'ocupadoParaMover_', 'problemaHora_', 'destinoReagendar_', 'contextoHoras_', 'tramosDe_', 'horasReagendar_', 'reagendarCita_', 'cancelarCita_',
     'ymd_', 'horaTexto_', 'toMinutes_', 'hhmm_', 'toNumber_',
   ], {
     ZONA: 'America/Caracas', Utilities,
@@ -71,6 +71,7 @@ function montar(opts: { equipo?: boolean } = {}) {
     asegurarColumnas_: () => {},
     actualizarReserva_: (_l: unknown, id: string, c: Record<string, unknown>) => { cambios.push({ id, ...c }) },
     limpiarCacheCatalogo_: () => {},
+    limpiarTexto_: (v: unknown, n: number) => String(v ?? '').trim().slice(0, n),
     ponerAlertas_: () => {},
     recordatoriosDe_: () => [60],
     llamarWorker_: (ruta: string, d: unknown) => { avisos.push({ ruta, d }) },
@@ -82,6 +83,7 @@ function montar(opts: { equipo?: boolean } = {}) {
     negocio, carla, andres, cambios, avisos, reserva,
     horas: (d: Record<string, unknown>) => f.horasReagendar_(libro, tenant, { id: 'r1', ...d }, AHORA),
     mover: (d: Record<string, unknown>) => f.reagendarCita_(libro, tenant, { id: 'r1', ...d }, AHORA),
+    cancelar: (d: Record<string, unknown> = {}) => f.cancelarCita_(libro, tenant, { id: 'r1', ...d }),
   }
 }
 
@@ -133,5 +135,19 @@ describe('Code.gs · reagendar una cita desde Mi negocio', () => {
     expect(nuevo.desc).toBe('Con: Andrés\nID: r1\nReagendada: antes 2026-10-24 11:00')
     expect(m.cambios[0]).toMatchObject({ Profesional: 'Andrés', Profesional_ID: 'andres' })
     expect(m.mover({ fecha: '2026-10-24', hora: '13:00', persona: 'nadie' })).toEqual({ error: 'datos_invalidos', mensaje: 'Esa persona no está activa en el equipo.' })
+  })
+
+  it('cancelar: borra el evento (la hora queda libre), marca la fila y avisa', () => {
+    const m = montar({ equipo: true })
+    expect(m.cancelar({ motivo: 'No puede venir' })).toMatchObject({ ok: true, cita: { id: 'r1', fecha: '2026-10-24', hora: '11:00', profesionalId: 'carla' } })
+    expect(m.carla.eventos[0].borrado).toBe(true)
+    expect(m.cambios).toEqual([{ id: 'r1', Estado: 'Cancelada', Motivo_Cancelacion: "'No puede venir" }])
+    expect(m.avisos).toEqual([{ ruta: '/push/evento', d: expect.objectContaining({ tipo: 'cancelada', slug: 'barberia' }) }])
+    // Sin motivo queda anotado de dónde se canceló; una cancelada no se cancela otra vez.
+    const otra = montar()
+    otra.cancelar()
+    expect(otra.cambios[0]).toMatchObject({ Motivo_Cancelacion: 'Desde Mi negocio' })
+    otra.reserva.Estado = 'Cancelada'
+    expect(otra.cancelar()).toEqual({ error: 'datos_invalidos', mensaje: 'Esa cita está cancelada.' })
   })
 })

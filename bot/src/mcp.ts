@@ -175,6 +175,14 @@ export const HERRAMIENTAS: Herramienta[] = [
     pedido: (a) => ({ accion: 'dueno', op: 'reagendar', slug: a.slug, id: a.id, fecha: a.fecha, hora: a.hora, forzar: !!a.forzar, ...(a.persona !== undefined ? { persona: a.persona } : {}) }),
   },
   {
+    name: 'cancelar_cita',
+    title: 'Cancelar una cita',
+    description: 'Cancela una cita de un negocio (id de ver_citas): borra su evento del calendario (la hora queda libre en la página), la reserva queda Cancelada con el motivo y se avisa en Mi negocio. No se puede deshacer: confírmalo antes con el usuario. Al cliente no se le avisa solo: sugiere escribirle por WhatsApp.',
+    inputSchema: obj({ slug, id: { type: 'string' }, motivo: { type: 'string', maxLength: 200 } }, ['slug', 'id']),
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+    pedido: (a) => ({ accion: 'dueno', op: 'cancelar', slug: a.slug, id: a.id, motivo: a.motivo || '' }),
+  },
+  {
     name: 'ver_panel',
     title: 'Ver el panel de un negocio',
     description: 'Lo que el negocio facturó según sus reservas en un período (hoy, semana, mes, mes_pasado, 30 días o 12m): total, ya atendido y agendado, por verificar, canceladas, ticket promedio, clientes, por persona del equipo, por servicio, por forma de pago y día a día, con el período anterior para comparar. En la moneda del negocio.',

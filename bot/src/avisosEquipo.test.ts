@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { avisar, avisoPrueba, citaReagendada, nuevaReserva, repasar, suscribir } from './avisos'
+import { avisar, avisoPrueba, citaCancelada, citaReagendada, nuevaReserva, repasar, suscribir } from './avisos'
 import { msDeCita } from './tiempo'
 
 /** D1 sobre SQLite en memoria, con las migraciones reales. */
@@ -84,6 +84,16 @@ describe('avisos de bookeaa team', () => {
     expect(enviados).toEqual([])
     await repasar({ DB: db, APPS_SCRIPT_URL: 'https://script', BOT_TOKEN: 't' }, msDeCita('2026-10-24', '15:00') - 20 * 60000)
     expect(enviados.sort()).toEqual(['andrea', 'duena'])
+  })
+
+  it('cita cancelada: avisa a quien la atendía y al administrador, y ya no hay recordatorio', async () => {
+    await nuevaReserva(db, 'spa-sol', { ...cita, profesionalId: 'carla' })
+    enviados = []
+    await citaCancelada(db, 'spa-sol', { ...cita, profesionalId: 'carla' })
+    expect(enviados.sort()).toEqual(['carla', 'duena'])
+    enviados = []
+    await repasar({ DB: db, APPS_SCRIPT_URL: 'https://script', BOT_TOKEN: 't' }, msDeCita('2026-10-23', '10:00') - 20 * 60000)
+    expect(enviados).toEqual([])
   })
 
   it('resumen de la mañana: el administrador ve el día completo y cada quien el suyo', async () => {

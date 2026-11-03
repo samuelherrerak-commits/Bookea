@@ -21,6 +21,7 @@ El negocio elige el modo (`equipo_modo`):
 
 ## Agendas
 - **Cada persona tiene su calendario** de Google: "Citas Carla · Spa Sol". Lo crea bookeaa en la cuenta maestra y se lo comparte a su Gmail (puede verlo y editarlo). Lo que ella agende ahí, por ejemplo una cita médica, también la ocupa.
+  - **Invitación por correo:** al guardar, a cada persona activa le llega un correo de bookeaa con tres cosas: cómo entrar a Mi negocio con su Gmail, el enlace de su calendario y su link `?con=`. Se manda una vez por correo; si cambia el correo, otra vez, y si falla se reintenta al guardar. La columna `Invitada` guarda a qué correo y cuándo se mandó (o `error: …`). En su tarjeta se ve el estado y se puede **Reenviar**.
   - Se comparte a su Gmail y al correo del dueño del negocio. A ella le llega un correo de Google con **"Agregar este calendario"**.
   - En Configurar → Equipo, cada persona muestra si su calendario ya quedó **compartido**, si está pendiente o el error de Google, con **Reintentar** (cada guardado reintenta los que falten) y un enlace para abrirlo o enviárselo.
   - Se comparte con el servicio avanzado Calendar si está activado en el proyecto, y si no por la misma API con el permiso de calendario del script. La columna `Compartido` de la pestaña Equipo guarda con qué correo quedó compartido (o `error: …`).
@@ -30,7 +31,7 @@ El negocio elige el modo (`equipo_modo`):
 
 ## Mi negocio con equipo
 - **El administrador**, con el correo del negocio, ve todo lo de siempre y además:
-  - **Configurar → Equipo**: prende o apaga las reservas por persona, elige el modo y "Cualquiera disponible", y agrega personas con su nombre, Gmail, cargo, foto (se sube desde el teléfono o la computadora; se recorta en cuadrado y queda en la carpeta del negocio en Drive), servicios y horario propio. Para los servicios, apaga **"Hace todos los servicios"** y marca uno por uno los que hace; no se puede guardar sin ninguno marcado. También puede copiar el link de cada persona y ver sus bloqueos.
+  - **Configurar → Equipo** (solo aparece con el plan team): prende o apaga las reservas por persona, elige el modo y "Cualquiera disponible", y agrega personas con su nombre, Gmail, cargo, foto (se sube desde el teléfono o la computadora; se recorta en cuadrado y queda en la carpeta del negocio en Drive), servicios y horario propio. Para los servicios, apaga **"Hace todos los servicios"** y marca uno por uno los que hace; no se puede guardar sin ninguno marcado. También puede copiar el link de cada persona y ver sus bloqueos.
   - En **Hoy** y **Próximas**, cada cita dice "con Carla", y hay botones para ver las de una sola persona.
   - Activar el equipo pide el plan **team**. Si el negocio es individual, la sección muestra la oferta con un botón a WhatsApp.
 - **Cada persona del equipo** entra a `bookeaa.com/negocio` con su Gmail y ve:
