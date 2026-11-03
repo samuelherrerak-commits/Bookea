@@ -1,0 +1,7 @@
+[serio] Antes de implementar una herramienta, piensa en quién la va a usar. [tranquilo] En bukéa tu equipo solo entra con su cuenta de Google, ve sus citas del día y recibe avisos en el teléfono. [con energía] La configuración la haces tú, o la hago yo contigo. [cálido] Escríbeme EQUIPO.
+
+[serio] Un ejemplo. [tranquilo] Un servicio de veinte dólares, a domicilio con un veinte por ciento de recargo, son veinticuatro. [con energía] Todo lo calcula la página, tú no tienes que explicarlo. Y el tiempo de traslado queda bloqueado en tu agenda. [cálido] Escríbeme EQUIPO.
+
+[serio] Dos cosas antes de que llegue diciembre. [tranquilo] Una: tu página de reservas lista. Dos: tus clientes habituales ya saben cómo reservar en ella. [con energía] Te ayudo con las dos. [cálido] Primer mes gratis. Escríbeme AGENDA.
+
+[serio] Mira tu calendario de diciembre. [tranquilo] ¿Cuántas horas ya están reservadas? ¿Cuántas siguen libres? [con energía] Si tus clientes pueden reservar en un link, esas horas libres se llenan solas. [cálido] Escríbeme AGENDA.

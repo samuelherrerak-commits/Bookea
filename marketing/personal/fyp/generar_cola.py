@@ -77,6 +77,19 @@ def main():
                 "media": " ".join(l if isinstance(l, str) else " ".join(l) for l in [links.get(ident, "")]), "estado": "borrador",
                 "notas": "Texto y piezas en bookeaa.com/campana" if t == "campana" else "",
             })
+    # Noviembre (técnica nueva: un nicho por semana y una palabra clave): lo genera noviembre/generar.py.
+    nov = os.path.join(AQUI, "..", "CALENDARIO-NOVIEMBRE.csv")
+    if os.path.exists(nov):
+        with open(nov, encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                ident = r["archivo / id"]
+                t = "carrusel" if ident.startswith("CARRUSEL-") else {"MG": "video-mg", "VOZ": "video-voz", "VOZ2": "video-voz"}[ident.rsplit("-", 1)[-1]]
+                m = links.get(ident, "")
+                filas.append({
+                    "id": ident, "fecha": r["fecha"], "hora": r["hora (Caracas)"], "tipo": t, "titulo": r["título"], "plataforma": r["plataforma"],
+                    "caption": r["caption"], "hashtags": r["hashtags"], "media": m if isinstance(m, str) else " ".join(m), "estado": "borrador",
+                    "notas": f"{r['semana · nicho']} · {r['día de la semana']} · palabra clave {r['palabra clave']}",
+                })
     # Tu video personal (CAM) pasa a ser el 4.º del día, opcional.
     for f in filas:
         if f["tipo"] == "video-cam":
