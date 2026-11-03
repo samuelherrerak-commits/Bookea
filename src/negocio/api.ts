@@ -137,6 +137,18 @@ export function reagendar(sesion: string, slug: string, p: { id: string; fecha: 
   return llamar<Reagendado>({ op: 'reagendar', sesion, slug, ...p })
 }
 
+/** Le vuelve a mandar a una persona del equipo el correo con cómo entrar a Mi negocio. */
+export function invitarEquipo(sesion: string, slug: string, persona: string): Promise<{ ok: boolean; invitada: string }> {
+  if (DEMO_MODE) return new Promise((ok) => setTimeout(() => ok({ ok: true, invitada: `${persona}@gmail.com ${hoyCaracas()}` }), 400))
+  return llamar({ op: 'invitar_equipo', sesion, slug, persona })
+}
+
+/** Cancela una cita: se borra su evento (la hora queda libre) y la reserva queda Cancelada. */
+export function cancelar(sesion: string, slug: string, id: string, motivo: string): Promise<{ ok: boolean }> {
+  if (DEMO_MODE) return new Promise((ok) => setTimeout(() => ok({ ok: true }), 400))
+  return llamar({ op: 'cancelar', sesion, slug, id, motivo })
+}
+
 /** La clave de avisos al día (la de la sesión pudo quedar vacía) y si el servidor de avisos está configurado. */
 export function claveAvisos(sesion: string, slug: string): Promise<{ vapid: string; servidor: boolean }> {
   if (DEMO_MODE) return Promise.resolve({ vapid: '', servidor: true })
@@ -234,6 +246,8 @@ export interface PersonaEquipo {
   /** compartido: Google lo confirmó con su Gmail actual; pendiente: se comparte al guardar; error: ver calendarioError. */
   calendarioEstado?: 'sin_crear' | 'pendiente' | 'compartido' | 'error'
   calendarioError?: string
+  /** "carla@gmail.com 2026-11-03": a qué correo y cuándo se le mandó la invitación (o "error: …"). */
+  invitada?: string
 }
 
 export interface EquipoConfig {
@@ -515,7 +529,7 @@ const DEMO = {
       modo: 'servicio',
       cualquiera: true,
       personas: [
-        { id: 'carla', nombre: 'Carla Méndez', email: 'carla@gmail.com', foto: '', cargo: 'Barbera principal', servicios: [], horarios: [], activo: true, calendario: true, calendarioId: 'carla@group.calendar.google.com', calendarioEstado: 'compartido' },
+        { id: 'carla', nombre: 'Carla Méndez', email: 'carla@gmail.com', foto: '', cargo: 'Barbera principal', servicios: [], horarios: [], activo: true, calendario: true, calendarioId: 'carla@group.calendar.google.com', calendarioEstado: 'compartido', invitada: `carla@gmail.com ${sumarDias(hoyCaracas(), -3)}` },
         { id: 'andres', nombre: 'Andrés Rojas', email: 'andres@gmail.com', foto: '', cargo: 'Barbero', servicios: ['corte', 'barba'], horarios: [2, 3, 4, 5, 6].map((d) => ({ dia: d, inicio: '12:00', fin: '20:00' })), activo: true, calendario: true, calendarioId: 'andres@group.calendar.google.com', calendarioEstado: 'error', calendarioError: 'Google no dejó compartirlo: revisa que el correo sea una cuenta de Google.' },
       ],
     },

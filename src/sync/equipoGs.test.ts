@@ -180,7 +180,8 @@ describe('Code.gs · métricas por persona', () => {
 
 describe('Code.gs · calendario y foto de cada persona del equipo', () => {
   type Llamada = { url: string; regla: any }
-  function cargarGuardar(opts: { previas?: any[]; falla?: (email: string) => string | null; crearFalla?: boolean } = {}) {
+  function cargarGuardar(opts: { previas?: any[]; falla?: (email: string) => string | null; crearFalla?: boolean; correoFalla?: boolean } = {}) {
+    const correos: any[] = []
     const acl: Llamada[] = []
     const creados: string[] = []
     const archivos: any[] = []
@@ -188,7 +189,7 @@ describe('Code.gs · calendario y foto de cada persona del equipo', () => {
     let indice: any[] = []
     const rango = { setValues: () => rango, setNumberFormat: () => rango }
     const f = funcionesGs<Record<string, Fn>>(gs, [
-      'equipoGuardar_', 'compartirCalendario_', 'guardarFotoEquipo_', 'estadoCalendarioEquipo_', 'idPersona_', 'horarioEquipoTexto_',
+      'equipoGuardar_', 'invitarPersona_', 'compartirCalendario_', 'guardarFotoEquipo_', 'estadoCalendarioEquipo_', 'idPersona_', 'horarioEquipoTexto_',
       'parseDia_', 'toMinutes_', 'hhmm_', 'normKey_', 'slug_',
     ], {
       EQUIPO_HEADERS: constanteGs(gs, 'EQUIPO_HEADERS'), DIAS_CORTOS_EQUIPO: constanteGs(gs, 'DIAS_CORTOS_EQUIPO'), ZONA: 'America/Caracas',
@@ -199,6 +200,8 @@ describe('Code.gs · calendario y foto de cada persona del equipo', () => {
       paraCelda_: (v: unknown) => v,
       cfgReemplazar_: (_s: unknown, _n: number, f: any[][]) => { filas = f },
       actualizarIndiceEquipo_: (_slug: string, l: any[]) => { indice = l },
+      SITIO: 'https://www.bookeaa.com',
+      MailApp: { sendEmail: (o: any) => { if (opts.correoFalla) throw new Error('Límite de correos'); correos.push(o) } },
       CalendarApp: {
         createCalendar: (nombre: string) => {
           if (opts.crearFalla) throw new Error('Se alcanzó el límite de calendarios')
@@ -216,7 +219,7 @@ describe('Code.gs · calendario y foto de cada persona del equipo', () => {
           return { getResponseCode: () => (error ? 403 : 200), getContentText: () => JSON.stringify(error ? { error: { message: error } } : {}) }
         },
       },
-      Utilities: { newBlob: (b: unknown, mime: string, nombre: string) => ({ b, mime, nombre }), base64Decode: (x: string) => x },
+      Utilities: { newBlob: (b: unknown, mime: string, nombre: string) => ({ b, mime, nombre }), base64Decode: (x: string) => x, formatDate: () => '2026-11-03' },
       DriveApp: {
         Access: { ANYONE_WITH_LINK: 'link' }, Permission: { VIEW: 'view' },
         getFolderById: (id: string) => ({
@@ -229,7 +232,7 @@ describe('Code.gs · calendario y foto de cada persona del equipo', () => {
       },
       console: { warn: () => {} },
     })
-    return { f, acl, creados, archivos, filas: () => filas, indice: () => indice }
+    return { f, acl, creados, archivos, correos, filas: () => filas, indice: () => indice }
   }
   const tenant = { slug: 'spa-sol', nombre: 'Spa Sol', email: 'Dueña@gmail.com', carpetaId: 'carpeta-spa' }
   const carla = { nombre: 'Carla', email: 'Carla@Gmail.com', servicios: [], horarios: [], activo: true }
@@ -290,5 +293,38 @@ describe('Code.gs · calendario y foto de cada persona del equipo', () => {
     // Un enlace https se guarda tal cual; cualquier otra cosa no.
     g.f.equipoGuardar_({}, tenant, [{ ...carla, foto: 'https://x.com/a.jpg' }, { nombre: 'Ana', email: 'ana@gmail.com', foto: 'javascript:alert(1)' }])
     expect(g.filas().map((r) => r[4])).toEqual(['https://x.com/a.jpg', ''])
+  })
+
+  it('invitación: a la persona nueva le llega cómo entrar a Mi negocio, su calendario y su link (una vez)', () => {
+    const g = cargarGuardar()
+    g.f.equipoGuardar_({}, tenant, [carla])
+    expect(g.correos).toHaveLength(1)
+    const c = g.correos[0]
+    expect(c).toMatchObject({ to: 'carla@gmail.com', subject: 'Spa Sol te agregó a su equipo en bookeaa', name: 'bookeaa' })
+    expect(c.body).toContain('Entra a Mi negocio con este Gmail (carla@gmail.com): https://www.bookeaa.com/negocio')
+    expect(c.body).toContain('https://calendar.google.com/calendar/render?cid=cal1%40group.calendar.google.com')
+    expect(c.body).toContain('https://www.bookeaa.com/u/spa-sol?con=carla')
+    expect(c.htmlBody).toContain('<a href="https://www.bookeaa.com/negocio">')
+    expect(g.filas()[0][10]).toBe('carla@gmail.com 2026-11-03') // Invitada
+
+    // Guardar otra vez no la vuelve a mandar; si cambia su correo, sí. Inactiva, no.
+    const previa = { id: 'carla', nombre: 'Carla', email: 'carla@gmail.com', calendarioId: 'c@g', compartido: 'carla@gmail.com', invitada: 'carla@gmail.com 2026-11-03', foto: '', cargo: '', servicios: [], horario: [] }
+    const otra = cargarGuardar({ previas: [previa] })
+    otra.f.equipoGuardar_({}, tenant, [{ ...carla, id: 'carla' }])
+    expect(otra.correos).toEqual([])
+    otra.f.equipoGuardar_({}, tenant, [{ ...carla, id: 'carla', activo: false, email: 'otra@gmail.com' }])
+    expect(otra.correos).toEqual([])
+    otra.f.equipoGuardar_({}, tenant, [{ ...carla, id: 'carla', email: 'carla.nueva@gmail.com' }])
+    expect(otra.correos.map((x) => x.to)).toEqual(['carla.nueva@gmail.com'])
+  })
+
+  it('invitación: si el correo falla queda anotado y se reintenta al guardar', () => {
+    const g = cargarGuardar({ correoFalla: true })
+    g.f.equipoGuardar_({}, tenant, [carla])
+    expect(g.filas()[0][10]).toBe('error: Límite de correos')
+    const previa = { id: 'carla', nombre: 'Carla', email: 'carla@gmail.com', calendarioId: 'c@g', compartido: 'carla@gmail.com', invitada: 'error: Límite de correos', foto: '', cargo: '', servicios: [], horario: [] }
+    const otra = cargarGuardar({ previas: [previa] })
+    otra.f.equipoGuardar_({}, tenant, [{ ...carla, id: 'carla' }])
+    expect(otra.correos).toHaveLength(1)
   })
 })

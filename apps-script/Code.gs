@@ -45,7 +45,8 @@ const PROPIEDAD_TEMPLATE = 'tenant_plantilla_id';
 
 // bookeaa team. Servicios = IDs separados por coma (vacío = hace todos). Horario = "lun 09:00-18:00, sáb 09:00-14:00"
 // (vacío = el horario del negocio). Calendario_Id lo crea bookeaa y lo comparte con su Gmail.
-const EQUIPO_HEADERS = ['ID', 'Nombre', 'Email', 'Calendario_Id', 'Foto_URL', 'Cargo', 'Servicios', 'Horario', 'Activo', 'Compartido'];
+const EQUIPO_HEADERS = ['ID', 'Nombre', 'Email', 'Calendario_Id', 'Foto_URL', 'Cargo', 'Servicios', 'Horario', 'Activo', 'Compartido', 'Invitada'];
+const SITIO = 'https://www.bookeaa.com';
 const MAX_EQUIPO = 30;
 const MAX_FOTO_EQUIPO = 400000; // caracteres de la foto subida (data URL); Mi negocio la manda en ~30 KB
 
@@ -2947,6 +2948,8 @@ function atenderDueno_(data, ahoraMs) {
   if (op === 'panel') return panelNegocio_(tenant, data, ahoraMs);
   if (op === 'horas_reagendar') return horasReagendar_(openTenant_(tenant), tenant, data, ahoraMs);
   if (op === 'reagendar') return reagendarCita_(openTenant_(tenant), tenant, data, ahoraMs);
+  if (op === 'cancelar') return cancelarCita_(openTenant_(tenant), tenant, data);
+  if (op === 'invitar_equipo') return reenviarInvitacion_(openTenant_(tenant), tenant, data.persona);
   if (op === 'guardar' && String(data.seccion || '') === 'equipo' && !esAdminDueno_(email)) {
     const fila = filasTenants_().filter(function (o) { return normKey_(o.Slug) === normKey_(tenant.slug); })[0] || {};
     const activar = data.datos && data.datos.config && String(data.datos.config.equipo_activo || '') === 'si';
@@ -3189,6 +3192,42 @@ function reagendarCita_(libro, tenant, data, ahoraMs) {
   }
 }
 
+/**
+ * Cancela una cita desde Mi negocio (op 'cancelar'): borra su evento (la hora queda libre en la
+ * página), marca la fila como Cancelada con el motivo y avisa en los teléfonos.
+ */
+function cancelarCita_(libro, tenant, data) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { error: 'servidor', mensaje: 'Intenta de nuevo en un momento.' };
+  try {
+    const ctx = citaParaMover_(libro, tenant, data.id);
+    if (ctx.error) return ctx;
+    if (ctx.evento) {
+      try { ctx.evento.deleteEvent(); } catch (err) { console.warn('No se pudo borrar el evento: ' + err); }
+    }
+    const motivo = limpiarTexto_(data.motivo || '', 200);
+    const hoja = libro.getSheetByName('Reservaciones');
+    asegurarColumnas_(hoja, ['Motivo_Cancelacion']);
+    actualizarReserva_(libro, ctx.fila.ID, { Estado: 'Cancelada', Motivo_Cancelacion: motivo ? "'" + motivo : 'Desde Mi negocio' });
+    limpiarCacheCatalogo_(tenant.slug);
+    const cita = {
+      id: String(ctx.fila.ID), cliente: String(ctx.fila.Cliente || ''), servicios: String(ctx.fila.Servicios || ''),
+      fecha: ctx.fecha, hora: ctx.hora, profesionalId: String(ctx.fila.Profesional_ID || ''),
+    };
+    try {
+      llamarWorker_('/push/evento', { tipo: 'cancelada', slug: tenant.slug, cita: cita });
+    } catch (err) {
+      console.warn('No se pudo avisar la cancelación: ' + err);
+    }
+    return { ok: true, cita: cita };
+  } catch (err) {
+    console.error('cancelarCita_: ' + err);
+    return { error: 'servidor', mensaje: 'No se pudo cancelar la cita. ' + String(err && err.message || err).slice(0, 200) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /** Para el Worker (accion 'bot', op 'agenda'): las citas de un día de varios negocios. */
 function agendaParaWorker_(data, ahoraMs) {
   const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(data.fecha || '')) ? String(data.fecha) : Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
@@ -3329,6 +3368,7 @@ function duenoLeerConfig_(ss, tenant, ahoraMs) {
         return {
           id: p.id, nombre: p.nombre, email: p.email, foto: p.foto, cargo: p.cargo, servicios: p.servicios, horarios: p.horario, activo: p.activo,
           calendario: !!p.calendarioId, calendarioId: p.calendarioId, calendarioEstado: cal.estado, calendarioError: cal.error,
+          invitada: p.invitada,
         };
       }),
     },
@@ -4946,6 +4986,8 @@ function equipoLeer_(ss) {
       servicios: v('Servicios').split(/[,;]+/).map(function (x) { return x.trim(); }).filter(Boolean),
       horario: parsearHorarioEquipo_(v('Horario')) || [], activo: !/^(no|false|0)$/i.test(v('Activo')),
       compartido: v('Compartido'),
+      // "carla@gmail.com 2026-11-03": a qué correo y cuándo se mandó la invitación (o "error: …").
+      invitada: v('Invitada'),
     };
   }).filter(function (p) { return p.id && p.nombre; });
 }
@@ -5105,6 +5147,56 @@ function guardarFotoEquipo_(dataUrl, nombre, carpetaId) {
   }
 }
 
+/**
+ * Le escribe a una persona del equipo cómo entrar a Mi negocio, su calendario y su link.
+ * Devuelve lo que va en la columna Invitada: "correo fecha" o "error: …". Nunca lanza.
+ */
+function invitarPersona_(p, tenant, negocio) {
+  const nombre = String(p.nombre || '').split(/\s+/)[0];
+  const entrar = SITIO + '/negocio';
+  const link = SITIO + '/u/' + tenant.slug + '?con=' + encodeURIComponent(p.id);
+  const calendario = p.calendarioId ? 'https://calendar.google.com/calendar/render?cid=' + encodeURIComponent(p.calendarioId) : '';
+  const lineas = [
+    'Hola' + (nombre ? ' ' + nombre : '') + ',',
+    '',
+    negocio + ' te agregó a su equipo en bookeaa. Tus clientes ya pueden reservar contigo.',
+    '',
+    '1. Entra a Mi negocio con este Gmail (' + p.email + '): ' + entrar,
+    '   Ahí ves tus citas, bloqueas las horas en que no puedes atender y activas los avisos en tu teléfono.',
+    '',
+    calendario ? '2. Tu calendario de citas ("Citas ' + p.nombre + ' · ' + negocio + '"): Google te mandó otro correo para agregarlo, o ábrelo aquí: ' + calendario : '',
+    calendario ? '' : '',
+    (calendario ? '3' : '2') + '. Tu link para compartir (abre tu agenda directo): ' + link,
+    '',
+    'bookeaa',
+  ].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; });
+  const html = lineas.map(function (l) {
+    const seguro = String(l).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return seguro.replace(/(https:\/\/[^\s)]+)/g, '<a href="$1">$1</a>');
+  }).join('<br>');
+  try {
+    MailApp.sendEmail({ to: p.email, subject: negocio + ' te agregó a su equipo en bookeaa', body: lineas.join('\n'), htmlBody: html, name: 'bookeaa' });
+    return p.email + ' ' + Utilities.formatDate(new Date(), ZONA, 'yyyy-MM-dd');
+  } catch (err) {
+    console.warn('No se pudo mandar la invitación a ' + p.email + ': ' + err);
+    return 'error: ' + String(err && err.message || err).slice(0, 150);
+  }
+}
+
+/** Reenvía la invitación a una persona (op 'invitar_equipo' de Mi negocio). */
+function reenviarInvitacion_(libro, tenant, personaId) {
+  const p = equipoLeer_(libro).filter(function (x) { return x.id === String(personaId || ''); })[0];
+  if (!p) return { error: 'no_existe', mensaje: 'Esa persona no está en el equipo.' };
+  if (!p.activo) return { error: 'datos_invalidos', mensaje: 'Actívala primero.' };
+  const config = getConfig_(libro);
+  const invitada = invitarPersona_(p, tenant, config.marca || config.nombre_negocio || tenant.nombre);
+  const sheet = libro.getSheetByName('Equipo');
+  asegurarColumnas_(sheet, ['Invitada']);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  sheet.getRange(p.fila, headers.indexOf('Invitada') + 1).setNumberFormat('@').setValue(invitada);
+  return /^error:/.test(invitada) ? { error: 'servidor', mensaje: 'No se pudo mandar el correo. ' + invitada.replace(/^error:\s*/, '') } : { ok: true, invitada: invitada };
+}
+
 /** Cómo va el calendario de una persona, para Mi negocio. */
 function estadoCalendarioEquipo_(p) {
   if (!p.calendarioId) return { estado: 'sin_crear', error: '' };
@@ -5149,17 +5241,22 @@ function equipoGuardar_(ss, tenant, lista) {
       compartido = r.ok ? email : 'error: ' + r.error;
       if (r.ok && tenant.email && tenant.email.toLowerCase() !== email) compartirCalendario_(calendarioId, tenant.email.toLowerCase(), 'writer');
     }
+    // Invitación por correo: a cada persona activa, una vez por correo (si cambia el correo, otra vez).
+    let invitada = previa ? String(previa.invitada || '') : '';
+    if (n.activo !== false && email && invitada.split(' ')[0] !== email) {
+      invitada = invitarPersona_({ id: id, nombre: limpiarTexto_(n.nombre, 60), email: email, calendarioId: calendarioId }, tenant, negocio);
+    }
     let foto = String(n.foto || '').trim();
     if (/^data:image\//.test(foto)) foto = guardarFotoEquipo_(foto, n.nombre, tenant.carpetaId) || (previa ? previa.foto : '');
     const servicios = (Array.isArray(n.servicios) ? n.servicios : []).map(function (x) { return limpiarTexto_(x, 60); }).filter(Boolean);
     filas.push([id, paraCelda_(limpiarTexto_(n.nombre, 60)), email, calendarioId, /^https:\/\//.test(foto) ? foto.slice(0, 500) : '',
       paraCelda_(limpiarTexto_(n.cargo || '', 60)), servicios.join(', '), horarioEquipoTexto_((n.horarios || []).map(function (h) {
         return { dia: parseDia_(h.dia), inicio: hhmm_(toMinutes_(h.inicio)), fin: hhmm_(toMinutes_(h.fin)) };
-      })), n.activo === false ? 'no' : 'si', compartido]);
+      })), n.activo === false ? 'no' : 'si', compartido, invitada]);
   });
   actuales.forEach(function (p) {
     if (vistos[p.id]) return;
-    filas.push([p.id, p.nombre, p.email, p.calendarioId, p.foto, p.cargo, p.servicios.join(', '), horarioEquipoTexto_(p.horario), 'no', p.compartido]);
+    filas.push([p.id, p.nombre, p.email, p.calendarioId, p.foto, p.cargo, p.servicios.join(', '), horarioEquipoTexto_(p.horario), 'no', p.compartido, p.invitada]);
   });
   sheet.getRange(1, 1, 1, EQUIPO_HEADERS.length).setValues([EQUIPO_HEADERS]);
   sheet.getRange(1, 1, sheet.getMaxRows(), EQUIPO_HEADERS.length).setNumberFormat('@');

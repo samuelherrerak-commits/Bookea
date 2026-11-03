@@ -66,6 +66,16 @@ export function avisoReagendada(slug: string, c: CitaAviso & { antes?: { fecha?:
   }
 }
 
+/** Una cita cancelada desde Mi negocio. */
+export function avisoCancelada(slug: string, c: CitaAviso): Notificacion {
+  return {
+    titulo: '✖️ Cita cancelada',
+    cuerpo: `${c.cliente} · ${c.servicios}\n${diaCorto(c.fecha)} · ${horaLegible(c.hora)}`,
+    tag: `reserva-${c.id}`,
+    url: urlNegocio(slug),
+  }
+}
+
 export function avisoRecordatorio(slug: string, c: { id: string; cliente: string; servicios: string; inicio: number }, ahora: number): Notificacion {
   const min = Math.max(1, Math.round((c.inicio - ahora) / 60000))
   const { minutos } = enCaracas(c.inicio)
@@ -179,6 +189,14 @@ export async function nuevaReserva(db: D1Database, slug: string, c: CitaAviso) {
 export async function citaReagendada(db: D1Database, slug: string, c: CitaAviso & { antes?: { fecha?: string; hora?: string } }) {
   await guardarCita(db, slug, c)
   await avisar(db, slug, avisoReagendada(slug, c), c.profesionalId ? { persona: c.profesionalId } : null)
+}
+
+/** Cita cancelada: sin recordatorio, y avisa a quien la atendía (y al administrador). */
+export async function citaCancelada(db: D1Database, slug: string, c: CitaAviso) {
+  if (c.id) await db.prepare('DELETE FROM push_citas WHERE slug = ? AND id = ?').bind(slug, c.id).run()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(c.fecha || '') && /^\d{2}:\d{2}$/.test(c.hora || '')) {
+    await avisar(db, slug, avisoCancelada(slug, c), c.profesionalId ? { persona: c.profesionalId } : null)
+  }
 }
 
 /** Lo que corre el cron cada 5 minutos. */

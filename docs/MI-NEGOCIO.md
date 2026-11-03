@@ -2,6 +2,10 @@
 
 `bookeaa.com/negocio` es la app del dueño de cada negocio. Se agrega a la pantalla de inicio y abre como app, sin la barra del navegador.
 
+Tiene el diseño de bookeaa.com: fondo blanco, negro carbón, Barlow y títulos en Barlow Condensed en mayúsculas. Ver `html.mi-negocio` en `src/index.css`.
+
+**Equipo** solo aparece en Configurar si el negocio tiene el plan bookeaa team (se cambia desde la central).
+
 - **Hoy:**
   - las citas del día con hora, cliente, servicio y botón de WhatsApp;
   - cuál es la próxima;
@@ -13,6 +17,11 @@
   - **Otra hora** permite poner cualquier hora. Si choca con otra cita o queda fuera del horario, avisa y se puede **mover igual**. Una hora que ya pasó no se acepta.
   - Al moverla se mueve su evento en el calendario y se actualiza la fila (`Fecha_Cita`, `Hora_Cita` y, con equipo, `Profesional`). La columna `Reagendada` guarda la fecha y hora de antes, y la cita muestra 🔁 *Reagendada*.
   - Después ofrece **Avisarle por WhatsApp** al cliente con el mensaje listo ("Tu cita de … quedó para el …").
+- **Cancelar** (junto a Reagendar; solo el administrador):
+  - pide un motivo opcional y ofrece **Mejor reagendarla**;
+  - al cancelar se borra su evento del calendario, así la hora queda libre en la página;
+  - la fila queda *Cancelada* con el motivo en `Motivo_Cancelacion`, y el panel la cuenta como cancelada;
+  - ofrece **Avisarle por WhatsApp** con el mensaje listo y el link para reservar otra.
 - **Configurar:** lo mismo que la ventana de la hoja ("Configurar mi página"), desde el teléfono. Se guarda en la hoja del negocio y la página lo muestra en la próxima carga:
   - **Servicios:** nombre, precio, minutos, categoría y adicionales (pestaña Servicios);
   - **Horario:** días con uno o varios tramos, cada cuántos minutos, días a mostrar, aviso mínimo y alertas del calendario;
@@ -33,6 +42,7 @@
 Los avisos son:
 - 📅 cada reserva nueva;
 - 💸 cada Pago Móvil por verificar;
+- ✖️ cada cita cancelada desde Mi negocio (ya no hay recordatorio);
 - 🔁 cada cita reagendada, con la hora nueva y la de antes (el recordatorio pasa a la hora nueva);
 - ⏰ 30 minutos antes de cada cita;
 - ☀️ a las 7:00 a. m., las citas del día.

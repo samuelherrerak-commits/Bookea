@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { formatTime12 } from '../lib/format'
 import { LUGAR_TIPOS } from '../lib/lugar'
 import { ESTILO_DEF, ESTILOS, PALETAS } from '../lib/theme'
-import { BOOKEAA_WHATSAPP } from '../config'
 import { fotoCuadrada } from '../lib/image'
 import * as api from './api'
 import { MiPlan } from './MiPlan'
@@ -31,6 +30,11 @@ const SECCIONES: { id: Id; titulo: string; detalle: string; icono: string }[] = 
   { id: 'mensaje', titulo: 'Mensaje de WhatsApp', detalle: 'Lo que te llega con cada reserva', icono: '💬' },
   { id: 'ticket', titulo: 'Ticket de reserva', detalle: 'Activarlo o facturar con tu imprenta', icono: '🧾' },
 ]
+
+/** Las secciones de este negocio: Equipo solo aparece con el plan bookeaa team. */
+export function seccionesDe(datos: Pick<api.Configuracion, 'equipo'>) {
+  return SECCIONES.filter((s) => s.id !== 'equipo' || datos.equipo?.plan === 'team')
+}
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const METODOS = ['Pago en la cita', 'Bolívares (Pago Móvil)']
@@ -89,8 +93,9 @@ export function Configurar({ sesion, slug, alSalir, inicial = null }: Props) {
     }
   }
 
-  if (abierta) {
-    const s = SECCIONES.find((x) => x.id === abierta)!
+  const secciones = seccionesDe(datos)
+  const s = secciones.find((x) => x.id === abierta)
+  if (abierta && s) {
     const props = { datos, guardar, slug }
     return (
       <div className="mt-1">
@@ -118,12 +123,12 @@ export function Configurar({ sesion, slug, alSalir, inicial = null }: Props) {
   return (
     <div className="mt-2">
       <ul className="overflow-hidden rounded-3xl bg-surface shadow-card ring-1 ring-line">
-        {SECCIONES.map((s, i) => (
+        {secciones.map((s, i) => (
           <li key={s.id} className={i ? 'border-t border-line' : ''}>
             <button type="button" onClick={() => setAbierta(s.id)} className="flex w-full items-center gap-4 px-4 py-4 text-left">
               <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-sand text-[20px]" aria-hidden>{s.icono}</span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[16px] font-semibold">{s.titulo}</span>
+                <span className="block font-condensed text-[18px] font-bold uppercase tracking-[0.04em]">{s.titulo}</span>
                 <span className="block truncate text-[13px] text-muted">{s.detalle}</span>
               </span>
               <svg viewBox="0 0 24 24" className="size-5 text-muted" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
@@ -1028,6 +1033,48 @@ function FotoPersona({ foto, nombre, onChange }: { foto: string; nombre: string;
   )
 }
 
+/** La invitación por correo (cómo entrar a Mi negocio): cuándo se mandó, o el error, y reenviarla. */
+function Invitacion({ persona: p, sesion, slug, cambios }: { persona: api.PersonaEquipo; sesion: string; slug: string; cambios: boolean }) {
+  const [invitada, setInvitada] = useState(p.invitada ?? '')
+  const [estado, setEstado] = useState<'listo' | 'enviando' | 'enviada'>('listo')
+  const [error, setError] = useState('')
+  useEffect(() => setInvitada(p.invitada ?? ''), [p.invitada])
+  const [correo, fecha] = invitada.split(' ')
+  const vale = !!fecha && correo === p.email
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-sand px-4 py-3 text-[14px]">
+      <p className="min-w-0 flex-1">
+        {/^error:/.test(invitada)
+          ? <span className="text-danger">✉️ No se pudo mandar la invitación: {invitada.replace(/^error:\s*/, '')}</span>
+          : vale
+            ? <>✉️ Le enviamos cómo entrar a Mi negocio{fecha ? ` el ${formatoCorto(fecha)}` : ''}.</>
+            : <>✉️ Al guardar le mandamos un correo con cómo entrar a Mi negocio.</>}
+        {error && <span className="block text-danger">{error}</span>}
+      </p>
+      {(vale || /^error:/.test(invitada)) && (
+        <button type="button" disabled={cambios || estado === 'enviando'} title={cambios ? 'Guarda primero los cambios' : ''}
+          onClick={async () => {
+            setEstado('enviando')
+            setError('')
+            try {
+              const r = await api.invitarEquipo(sesion, slug, p.id)
+              setInvitada(r.invitada)
+              setEstado('enviada')
+            } catch (e) {
+              setError((e as Error).message)
+              setEstado('listo')
+            }
+          }}
+          className="shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 ring-line disabled:opacity-50">
+          {estado === 'enviando' ? 'Enviando…' : estado === 'enviada' ? '✓ Reenviada' : 'Reenviar'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+const formatoCorto = (ymd: string) => /^\d{4}-\d{2}-\d{2}$/.test(ymd) ? `${Number(ymd.slice(8))}/${Number(ymd.slice(5, 7))}` : ymd
+
 /** Si su calendario ya está compartido con su Gmail, o qué falló y cómo reintentarlo. */
 function EstadoCalendario({ persona: p, cambios, reintentar }: { persona: api.PersonaEquipo; cambios: boolean; reintentar: () => Promise<string[]> }) {
   const [estado, setEstado] = useState<'listo' | 'enviando'>('listo')
@@ -1108,15 +1155,6 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
 
   return (
     <>
-      {eq.plan !== 'team' && (
-        <div className="mt-3 rounded-3xl bg-ink p-5 text-bg">
-          <p className="text-[13px] uppercase tracking-[0.12em] opacity-70">bookeaa team</p>
-          <p className="mt-1 font-display text-[26px] leading-tight">Una agenda para cada persona de tu equipo</p>
-          <p className="mt-2 text-[14px] opacity-85">Tus clientes eligen con quién; cada quien ve sus citas y recibe sus avisos. $25 al mes hasta 5 personas y $5 por cada persona más.</p>
-          <a href={`https://wa.me/${BOOKEAA_WHATSAPP}?text=${encodeURIComponent('Hola, quiero pasar mi negocio a bookeaa team.')}`} target="_blank" rel="noopener noreferrer"
-            className="mt-4 inline-block rounded-full bg-bg px-5 py-3 text-[15px] font-semibold text-ink">Quiero bookeaa team</a>
-        </div>
-      )}
 
       <Tarjeta className="mt-4">
         <Interruptor activo={eq.activo} onChange={(v) => setEq({ ...eq, activo: v })}>
@@ -1224,6 +1262,7 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
                   </div>
                   <Interruptor activo={p.activo} onChange={(v) => editar(i, { activo: v })}>Activa (recibe reservas)</Interruptor>
                   {p.id && <EstadoCalendario persona={p} cambios={cambios} reintentar={guardarEquipo} />}
+                  {p.id && p.activo && <Invitacion persona={p} sesion={sesion} slug={slug} cambios={cambios} />}
                   {p.id && (
                     <div className="grid grid-cols-2 gap-2">
                       <button type="button" onClick={async () => { await navigator.clipboard?.writeText(link(p.id)).catch(() => {}); setCopiado(p.id); setTimeout(() => setCopiado(''), 1500) }}
@@ -1249,7 +1288,7 @@ function EquipoSec({ datos, guardar, slug, sesion, alSalir }: SecProps & { sesio
         className="mt-3 w-full rounded-full px-5 py-3 text-[15px] font-semibold ring-1 ring-line">
         + Agregar persona
       </button>
-      <p className="mt-3 text-[13px] text-muted">Al guardar, a cada persona nueva le creamos su calendario de citas y se lo compartimos a su Gmail (y a ti): le llega un correo de Google para agregarlo. Quien sale del equipo queda inactiva: su calendario y sus citas no se borran.</p>
+      <p className="mt-3 text-[13px] text-muted">Al guardar, a cada persona nueva le creamos su calendario de citas y se lo compartimos a su Gmail (y a ti), y le mandamos un correo con cómo entrar a Mi negocio y su link. Quien sale del equipo queda inactiva: su calendario y sus citas no se borran.</p>
       <Guardar
         cambios={cambios}
         alGuardar={guardarEquipo}

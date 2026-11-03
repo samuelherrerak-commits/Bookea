@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { avisoReagendada, avisoRecordatorio, avisoReserva, avisoResumen, fechaCaracas } from './avisos'
+import { avisoCancelada, avisoReagendada, avisoRecordatorio, avisoReserva, avisoResumen, fechaCaracas } from './avisos'
 import { manejarPush } from './index'
 import { msDeCita } from './tiempo'
 
@@ -25,6 +25,10 @@ describe('avisos de Mi negocio', () => {
       tag: 'reserva-r1',
       url: '/negocio?n=barberia',
     })
+  })
+
+  it('cita cancelada', () => {
+    expect(avisoCancelada('barberia', cita)).toEqual({ titulo: '✖️ Cita cancelada', cuerpo: 'Carlos · Corte y barba\nJue 15 oct · 2:00 p. m.', tag: 'reserva-r1', url: '/negocio?n=barberia' })
   })
 
   it('recordatorio con los minutos que faltan', () => {

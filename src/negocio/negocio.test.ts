@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { hoyCaracas } from './api'
 import { telefonoWa } from './NegocioApp'
-import { mensajeReagendada } from './Reagendar'
+import { seccionesDe } from './Configurar'
+import { mensajeCancelada, mensajeReagendada } from './Reagendar'
 
 describe('Mi negocio', () => {
   it('teléfono venezolano a formato de wa.me', () => {
@@ -33,5 +34,23 @@ describe('reagendar: el mensaje para el cliente', () => {
       .toBe('Hola Pedro, te escribimos de Barbería Norte. Tu cita de Corte quedó para el sábado 24 de octubre a las 1:00 p. m. con Andrés. ¿Te queda bien?')
     expect(mensajeReagendada({ cliente: '', negocio: 'Spa', servicios: 'Masaje', fecha: '2026-10-26', hora: '09:00' }))
       .toBe('Hola, te escribimos de Spa. Tu cita de Masaje quedó para el lunes 26 de octubre a las 9:00 a. m. ¿Te queda bien?')
+  })
+})
+
+describe('Configurar: Equipo solo con bookeaa team', () => {
+  it('un negocio individual no ve la sección Equipo; uno team sí', () => {
+    const ids = (plan?: 'individual' | 'team') =>
+      seccionesDe({ equipo: plan ? { plan, activo: false, modo: 'servicio', cualquiera: true, personas: [] } : undefined }).map((s) => s.id)
+    expect(ids()).not.toContain('equipo')
+    expect(ids('individual')).not.toContain('equipo')
+    expect(ids('team')).toContain('equipo')
+    expect(ids('team')).toHaveLength(ids('individual').length + 1)
+  })
+})
+
+describe('cancelar: el mensaje para el cliente', () => {
+  it('con el día, la hora y el link para reservar otra', () => {
+    expect(mensajeCancelada({ cliente: 'Ana Pérez', negocio: 'Spa Sol', servicios: 'Masaje', fecha: '2026-11-05', hora: '15:00', link: 'https://www.bookeaa.com/u/spa-sol' }))
+      .toBe('Hola Ana, te escribimos de Spa Sol. Tu cita de Masaje del jueves 5 de noviembre a las 3:00 p. m. quedó cancelada. Cuando quieras, puedes reservar otra aquí: https://www.bookeaa.com/u/spa-sol')
   })
 })
