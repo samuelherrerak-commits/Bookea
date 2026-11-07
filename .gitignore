@@ -14,3 +14,7 @@ marketing/personal/fyp/voz-samuel/
 # Bot de WhatsApp (local)
 bot/.dev.vars
 bot/.wrangler/
+
+# Tutorial de Mi negocio: el audio y los cuadros de prueba se regeneran
+marketing/tutorial/public/audio.wav
+marketing/tutorial/out/
