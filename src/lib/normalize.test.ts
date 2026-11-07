@@ -101,9 +101,9 @@ describe('normalizeHorarios', () => {
     expect(cfg.horario[1]).toEqual([])
   })
 
-  it('usa valores por defecto y el WhatsApp del negocio si la hoja está vacía', () => {
+  it('usa valores por defecto si la hoja está vacía, sin WhatsApp de otro negocio', () => {
     const cfg = normalizeConfig([])
-    expect(cfg.whatsapp).toBe('584122516390')
+    expect(cfg.whatsapp).toBe('')
     expect(cfg.horario[1]).toEqual([[540, 1140]])
     expect(cfg.zonaHoraria).toBe('America/Caracas')
   })

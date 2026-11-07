@@ -52,7 +52,8 @@ export function SuccessView({ whatsappUrl, calendarUrl, modalidad, ticket, onNew
   const [estado, setEstado] = useState<EstadoTicket>(ticket ? 'imprimiendo' : 'ninguno')
   const [compartible] = useState(puedeCompartir)
   const pidio = useRef(false)
-  const [seguir, setSeguir] = useState(true)
+  // Sin WhatsApp del negocio no hay a dónde llevarla: la cita ya quedó guardada igual.
+  const [seguir, setSeguir] = useState(!!whatsappUrl)
 
   const bajar = useCallback(async () => {
     if (!ticket) return
@@ -111,7 +112,9 @@ export function SuccessView({ whatsappUrl, calendarUrl, modalidad, ticket, onNew
             : 'Ticket descargado.'
           : seguir
             ? 'Te estamos llevando a WhatsApp para enviar el resumen…'
-            : 'Cuando quieras, abre WhatsApp para enviar el resumen.'
+            : whatsappUrl
+              ? 'Cuando quieras, abre WhatsApp para enviar el resumen.'
+              : 'Tu cita quedó agendada. Te esperamos.'
 
   return (
     <div className={'flex min-h-dvh flex-col items-center px-6 text-center ' + (ticket ? 'py-10' : 'justify-center px-8')}>
@@ -161,9 +164,11 @@ export function SuccessView({ whatsappUrl, calendarUrl, modalidad, ticket, onNew
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4 }}
       >
-        <Button block onClick={() => window.location.assign(whatsappUrl)}>
-          <IconWhatsApp size={19} /> Abrir WhatsApp
-        </Button>
+        {whatsappUrl && (
+          <Button block onClick={() => window.location.assign(whatsappUrl)}>
+            <IconWhatsApp size={19} /> Abrir WhatsApp
+          </Button>
+        )}
         {ticket && (
           <Button block variant="secondary" disabled={estado === 'imprimiendo'} onClick={() => { setSeguir(false); void bajar() }}>
             <IconDescarga /> {estado === 'error' ? 'Reintentar ticket' : 'Descargar ticket'}

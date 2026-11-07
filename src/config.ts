@@ -7,7 +7,7 @@ const env = import.meta.env
 export const API_URL: string = (env.VITE_API_URL ?? '').trim()
 /** Viaja en cada petición, así que no es secreto; solo que no vive en el repo. Se fija en Render. */
 export const API_TOKEN: string = (env.VITE_API_TOKEN ?? '').trim()
-/** Solo respaldo: la hoja de cada negocio manda en su clave `whatsapp`. */
+/** Solo para la demo (datos de prueba). Un negocio real usa su clave `whatsapp`, sin respaldo. */
 export const DEFAULT_WHATSAPP: string = (env.VITE_WHATSAPP ?? '').replace(/\D/g, '') || '584122516390'
 /** Contacto de bookeaa (landing): a dónde llegan las consultas y los pedidos de prueba gratis. */
 export const BOOKEAA_WHATSAPP: string = (env.VITE_BOOKEAA_WHATSAPP ?? '').replace(/\D/g, '') || '584220298203'

@@ -1,4 +1,3 @@
-import { DEFAULT_WHATSAPP } from '../config'
 import type { BusinessConfig, BusyRange, Catalog, Equipo, Money, Profesional, Promo, Sede, Service, Tasa, ThemeEstilo } from '../types'
 import { parseHHMM } from './format'
 import { derivarAcento } from './color'
@@ -155,7 +154,8 @@ export const DEFAULT_CONFIG: BusinessConfig = {
   nombreNegocio: 'Mi Negocio',
   marca: 'Mi Negocio',
   logoUrl: '',
-  whatsapp: DEFAULT_WHATSAPP,
+  // Sin número de respaldo: un negocio sin WhatsApp no le manda sus clientes a otro.
+  whatsapp: '',
   horario: [[], [[540, 1140]], [[540, 1140]], [[540, 1140]], [[540, 1140]], [[540, 1140]], [[540, 1140]]],
   intervaloMin: 30,
   diasAnticipacion: 21,
@@ -315,7 +315,7 @@ export function normalizeConfig(
     marca: map.marca || d.marca,
     // El logo subido gana; si no hay, el enlace (corregido si es de Drive).
     logoUrl: logoSubido(extra.logo) || logoDirecto(map.logo_url) || d.logoUrl,
-    whatsapp: whatsapp || d.whatsapp,
+    whatsapp,
     horario,
     intervaloMin: int('intervalo_min', d.intervaloMin) || d.intervaloMin,
     diasAnticipacion: int('dias_anticipacion', d.diasAnticipacion) || d.diasAnticipacion,

@@ -3811,6 +3811,14 @@ function registrarPagoCentral_(data, email, ahoraMs) {
   return { ok: true, vence: nuevo };
 }
 
+/** "0412 555 1234" → "584125551234"; con código de país se deja igual; '' si no es un teléfono. */
+function whatsappDe_(telefono) {
+  let d = String(telefono || '').replace(/\D/g, '');
+  if (/^0\d{10}$/.test(d)) d = '58' + d.slice(1);
+  else if (/^4\d{9}$/.test(d)) d = '58' + d;
+  return d.length >= 10 && d.length <= 15 ? d : '';
+}
+
 function crearNegocioCentral_(data, ahoraMs) {
   const nombre = limpiarTexto_(data.nombre, 80);
   const slug = String(data.slug || '').trim().toLowerCase();
@@ -3825,6 +3833,16 @@ function crearNegocioCentral_(data, ahoraMs) {
     return { error: 'datos_invalidos', mensaje: String(err.message || err) };
   }
   const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  // El teléfono del alta es el WhatsApp del negocio: sin él, su página no tiene a dónde mandar
+  // a los clientes. "0412…" → "58412…". El dueño lo puede cambiar en Mi negocio.
+  const whatsapp = whatsappDe_(data.telefono);
+  if (whatsapp) {
+    try {
+      setConfigKey_(SpreadsheetApp.openById(creado.ssId).getSheetByName('Configuracion'), 'whatsapp', whatsapp);
+    } catch (err) {
+      console.warn('No se pudo guardar el WhatsApp del negocio nuevo: ' + err);
+    }
+  }
   escribirTenant_(creado.slug, {
     Telefono: paraCelda_(String(data.telefono || '').replace(/[^\d]/g, '').slice(0, 20)),
     Vence: sumarDias_(hoy, dias), // primer mes gratis (o los días de prueba que se elijan)
