@@ -145,7 +145,7 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
         duracionMin: summary.duracionMin,
         ubicacion:
           modalidad === 'domicilio' ? 'A domicilio' : lugar?.sede?.direccion || lugar?.sede?.mapsUrl || lugar?.titulo || '',
-        detalles: `Total: ${formatEUR(finalSummary.total, true)}\nWhatsApp: https://wa.me/${catalog.config.whatsapp}`,
+        detalles: `Total: ${formatEUR(finalSummary.total, true)}${catalog.config.whatsapp ? `\nWhatsApp: https://wa.me/${catalog.config.whatsapp}` : ''}`,
         zonaHoraria: catalog.config.zonaHoraria,
       })
       const message = buildWhatsAppMessage({
@@ -191,7 +191,7 @@ export function PaymentView({ catalog, summary, onBack, onSlotTaken, onSuccess }
               tasa: pagoMovil ? result.tasa : null,
               color: catalog.config.tema.deep,
             }
-      onSuccess({ whatsappUrl: buildWhatsAppUrl(catalog.config.whatsapp, message), calendarUrl, modalidad, ticket })
+      onSuccess({ whatsappUrl: catalog.config.whatsapp ? buildWhatsAppUrl(catalog.config.whatsapp, message) : '', calendarUrl, modalidad, ticket })
     } catch (err) {
       setSubmitting(false)
       if (err instanceof ApiError && err.code === 'cupo_ocupado') {

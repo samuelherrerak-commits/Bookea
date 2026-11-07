@@ -181,12 +181,14 @@ export function CatalogView({ catalog, status, error, onRetry, summary }: Catalo
           )}
 
           <footer className="px-5 pt-4 text-center text-[13px] text-muted">
-            <a
-              href={`https://wa.me/${catalog.config.whatsapp}`}
-              className="inline-flex h-11 items-center gap-2 rounded-full px-4 text-ink ring-1 ring-line"
-            >
-              <IconWhatsApp size={18} className="text-[#25D366]" /> ¿Dudas? Escríbenos
-            </a>
+            {catalog.config.whatsapp && (
+              <a
+                href={`https://wa.me/${catalog.config.whatsapp}`}
+                className="inline-flex h-11 items-center gap-2 rounded-full px-4 text-ink ring-1 ring-line"
+              >
+                <IconWhatsApp size={18} className="text-[#25D366]" /> ¿Dudas? Escríbenos
+              </a>
+            )}
             <p className="mt-6">          © {new Date().getFullYear()} {catalog.config.marca}</p>
           </footer>
         </motion.div>
