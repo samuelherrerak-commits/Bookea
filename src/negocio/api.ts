@@ -562,3 +562,16 @@ const DEMO = {
     }
   },
 }
+
+// Demo de un negocio individual recién afiliado (/negocio?demo=individual): sin equipo y con el
+// mes de prueba al día. Es la que se usa para el video tutorial y para mostrar en ventas.
+if (DEMO_MODE && typeof location !== 'undefined' && new URLSearchParams(location.search).get('demo') === 'individual') {
+  DEMO.sesion = { ...DEMO.sesion, negocios: DEMO.sesion.negocios.filter((n) => n.rol === 'admin') }
+  DEMO.configuracion.equipo = { plan: 'individual', activo: false, modo: 'servicio', cualquiera: true, personas: [] }
+  DEMO.plan = { ...DEMO.plan, estado: 'prueba', vence: sumarDias(hoyCaracas(), 26), dias: 26, porVerificar: false }
+  const agenda = DEMO.agenda
+  DEMO.agenda = (desde) => {
+    const a = agenda(desde)
+    return { ...a, citas: a.citas.map((c) => ({ ...c, profesional: '', profesionalId: '' })) }
+  }
+}
