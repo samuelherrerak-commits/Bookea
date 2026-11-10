@@ -26,6 +26,21 @@ node scripts/fyp.mjs FYP-S01-VIE-VOZ --voz es_ES-davefx-medium --vel 0.85
 - Voces (licencias libres, se bajan solas la primera vez): `es_MX-claude-high` (por defecto, Apache 2.0), `es_MX-ald-medium` (dominio público) y `es_ES-davefx-medium` (CC0). La pronunciación de la marca está en `fyp/voz.py` (`bookeaa` → "bukea").
 - Una voz de IA realista debe etiquetarse como contenido generado por IA al publicar en TikTok e Instagram.
 
+## Noviembre (técnica nueva: un nicho por semana)
+
+Estrategia y evaluación de octubre: [`ESTRATEGIA-NOVIEMBRE.md`](ESTRATEGIA-NOVIEMBRE.md). Todo el contenido del mes (19 días hábiles × 4 piezas) sale de `noviembre/dias.py`:
+
+```bash
+python3 noviembre/generar.py     # CALENDARIO-NOVIEMBRE.csv, guiones/ELEVENLABS-NOV-*.txt, fyp/videos-noviembre.json y los carruseles 25–43
+node scripts/fyp.mjs FYP-N01-MIE-MG                                  # MG (sin voz): renderiza → salida/fyp/<id>.mp4
+FFMPEG_PATH=/usr/bin/ffmpeg node scripts/fyp.mjs FYP-N01-MIE-VOZ --voz "archivo:/ruta/A1.mp3" --recortes "0-17.9"   # VOZ con el MP3 de ElevenLabs
+node ../scripts/render-carruseles.mjs 25 26 27 --tiktok              # carruseles (y copia a public/fotos-tiktok para TikTok)
+python3 fyp/generar_cola.py                                          # semilla de la cola de Marketing de Central
+```
+
+- Ids: `FYP-N<nn>-<DÍA>-MG` (8:00), `-VOZ` (13:00, voz A), `-VOZ2` (18:00, voz B) y `CARRUSEL-<25…43>` (17:00).
+- Los guiones de ElevenLabs van con etiquetas; `guiones/ELEVENLABS-NOV-LEEME.md` dice qué bloque es de qué día. Cada MP3 trae 4–5 bloques: se corta por los silencios entre bloques.
+
 ## Mejorar el video crudo (luz y ruido)
 
 ```bash

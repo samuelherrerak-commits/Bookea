@@ -35,6 +35,9 @@ const todos = JSON.parse(readFileSync(join(RAIZ, 'fyp', 'videos.json'), 'utf8'))
 // fyp/pruebas.json: videos sueltos (fuera del calendario) con el mismo formato que videos.json.
 const pruebas = join(RAIZ, 'fyp', 'pruebas.json')
 if (existsSync(pruebas)) todos.push(...JSON.parse(readFileSync(pruebas, 'utf8')))
+// fyp/videos-noviembre.json: los 57 videos de noviembre (los genera noviembre/generar.py).
+const noviembre = join(RAIZ, 'fyp', 'videos-noviembre.json')
+if (existsSync(noviembre)) todos.push(...JSON.parse(readFileSync(noviembre, 'utf8')))
 // --todos: todos los videos que ya tienen escenas (MG y VOZ), en orden. Pensado para dejarlo corriendo de fondo.
 const ids = args.includes('--todos')
   ? todos.filter((v) => v.escenas && v.tipo !== 'CAM').map((v) => v.id)

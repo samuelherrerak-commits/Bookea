@@ -1,0 +1,3329 @@
+[
+ {
+  "id": "FYP-N01-MIE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-04",
+  "dia": "Mié",
+  "hora": "08:00",
+  "titulo": "Mis clientes prefieren WhatsApp",
+  "gancho": "Tus clientes no prefieren WhatsApp: prefieren que les respondas.",
+  "caption": "Tus clientes no prefieren WhatsApp: prefieren que les respondas. 📅 Comenta BARBERO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#barberia #barberos #barbershop #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 2.9,
+    "fondo": "negro",
+    "titulo": [
+     "“MIS CLIENTES",
+     "PREFIEREN",
+     "WHATSAPP”."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Barbero, ¿te suena?"
+   },
+   {
+    "dur": 2.9,
+    "fondo": "blanco",
+    "titulo": [
+     "PREFIEREN QUE",
+     "LES RESPONDAS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 2.9,
+    "fondo": "negro",
+    "titulo": [
+     "Y TÚ ESTÁS",
+     "CORTANDO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 2.9,
+    "fondo": "blanco",
+    "titulo": [
+     "TU LINK",
+     "RESPONDE",
+     "POR TI."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "negro",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "BARBERO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N01-MIE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-04",
+  "dia": "Mié",
+  "hora": "13:00",
+  "titulo": "Mis clientes prefieren WhatsApp (voz A)",
+  "gancho": "Tus clientes no prefieren WhatsApp: prefieren que les respondas.",
+  "caption": "Barbero, ¿tus clientes te escriben por WhatsApp para pedir hora? Comenta BARBERO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#barberia #barberos #barbershop #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Barbero, ¿tus clientes te escriben por WhatsApp para pedir hora? Y tú, con la máquina en la mano, no puedes contestar. Cuando por fin respondes, ya reservaron en otra barbería. Con bookeaa tu cliente entra a tu link, ve las horas libres y reserva solo. Y tú sigues cortando. Comenta BARBERO y te armo tu página gratis.",
+  "escenas": [
+   {
+    "ancla": "Barbero, ¿tus clientes",
+    "fondo": "negro",
+    "titulo": [
+     "¿TE ESCRIBEN",
+     "PARA PEDIR",
+     "HORA?"
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Barbero, ¿te suena?"
+   },
+   {
+    "ancla": "Y tú, con",
+    "fondo": "blanco",
+    "titulo": [
+     "TÚ ESTÁS",
+     "CORTANDO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Con bookeaa tu",
+    "fondo": "negro",
+    "titulo": [
+     "ENTRA.",
+     "VE TUS HORAS.",
+     "RESERVA SOLO."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Y tú sigues",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "BARBERO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N01-MIE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-04",
+  "dia": "Mié",
+  "hora": "18:00",
+  "titulo": "Mis clientes prefieren WhatsApp (voz B)",
+  "gancho": "Tus clientes no prefieren WhatsApp: prefieren que les respondas.",
+  "caption": "Dices que tus clientes prefieren WhatsApp. Primer mes gratis, después $10 al mes. Escríbeme BARBERO 📅",
+  "hashtags": "#barberia #barberos #barbershop #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Dices que tus clientes prefieren WhatsApp. En realidad prefieren una respuesta rápida. Con bookeaa, el WhatsApp queda para atender, no para agendar. Tu cliente reserva en tu link y a ti te llega un aviso en el teléfono. Escríbeme BARBERO y te la dejo lista, gratis.",
+  "escenas": [
+   {
+    "ancla": "Dices que tus",
+    "fondo": "negro",
+    "titulo": [
+     "“PREFIEREN",
+     "WHATSAPP”."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Mito de barbería"
+   },
+   {
+    "ancla": "En realidad prefieren",
+    "fondo": "blanco",
+    "titulo": [
+     "PREFIEREN",
+     "UNA RESPUESTA",
+     "RÁPIDA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Con bookeaa, el",
+    "fondo": "negro",
+    "titulo": [
+     "EL LINK",
+     "AGENDA.",
+     "TÚ ATIENDES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme BARBERO y",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "BARBERO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N02-JUE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-05",
+  "dia": "Jue",
+  "hora": "08:00",
+  "titulo": "Un sábado en la barbería",
+  "gancho": "Imagina un sábado en tu barbería: 14 clientes y el teléfono sonando.",
+  "caption": "Imagina un sábado en tu barbería: 14 clientes y el teléfono sonando. 📅 Comenta BARBERO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#barberia #barberos #barbershop #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "SÁBADO.",
+     "14 CLIENTES.",
+     "1 BARBERO."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Imagina un sábado"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "Y EL TELÉFONO",
+     "NO PARA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "CON LINK,",
+     "RESERVAN",
+     "SOLOS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "BARBERO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N02-JUE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-05",
+  "dia": "Jue",
+  "hora": "13:00",
+  "titulo": "Un sábado en la barbería (voz A)",
+  "gancho": "Imagina un sábado en tu barbería: 14 clientes y el teléfono sonando.",
+  "caption": "Imagina un sábado en tu barbería. Comenta BARBERO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#barberia #barberos #barbershop #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Imagina un sábado en tu barbería. Catorce clientes agendados, el teléfono sonando, y tú con la máquina en la mano. Cada mensaje sin responder es un cliente que se va a otro lado. Con bookeaa tu agenda ya está en un link: tus clientes reservan solos y el sábado se llena sin que tengas que soltar la máquina. Comenta BARBERO y te armo tu página gratis.",
+  "escenas": [
+   {
+    "ancla": "Imagina un sábado",
+    "fondo": "negro",
+    "titulo": [
+     "SÁBADO.",
+     "14 CLIENTES.",
+     "1 BARBERO."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Imagina"
+   },
+   {
+    "ancla": "Catorce clientes agendados,",
+    "fondo": "blanco",
+    "titulo": [
+     "MENSAJES",
+     "SIN RESPONDER."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Con bookeaa tu",
+    "fondo": "negro",
+    "titulo": [
+     "RESERVAN",
+     "SOLOS."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Comenta BARBERO y",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "BARBERO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N02-JUE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-05",
+  "dia": "Jue",
+  "hora": "18:00",
+  "titulo": "Un sábado en la barbería (voz B)",
+  "gancho": "Imagina un sábado en tu barbería: 14 clientes y el teléfono sonando.",
+  "caption": "Un ejemplo con números. Primer mes gratis, después $10 al mes. Escríbeme BARBERO 📅",
+  "hashtags": "#barberia #barberos #barbershop #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Un ejemplo con números. Si cada cita te lleva tres mensajes y atiendes quince clientes, son cuarenta y cinco mensajes. Con bookeaa, tu cliente elige su hora en el link y esos mensajes desaparecen. Tú recuperas ese tiempo para cortar. Escríbeme BARBERO y te dejo la página lista gratis.",
+  "escenas": [
+   {
+    "ancla": "Un ejemplo con",
+    "fondo": "negro",
+    "titulo": [
+     "UN EJEMPLO",
+     "CON NÚMEROS."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Haz la cuenta"
+   },
+   {
+    "ancla": "Si cada cita",
+    "fondo": "blanco",
+    "titulo": [
+     "15 × 3 =",
+     "45 MENSAJES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Con bookeaa, tu",
+    "fondo": "negro",
+    "titulo": [
+     "ESOS MENSAJES",
+     "DESAPARECEN."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme BARBERO y",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "BARBERO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N03-VIE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-06",
+  "dia": "Vie",
+  "hora": "08:00",
+  "titulo": "Te armo tu página de barbería",
+  "gancho": "Barbero: te armo tu página de reservas gratis y te dejo tu cartel con QR.",
+  "caption": "Barbero: te armo tu página de reservas gratis y te dejo tu cartel con QR. 📅 Comenta BARBERO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#barberia #barberos #barbershop #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "TU BARBERÍA",
+     "CON SU PROPIA",
+     "PÁGINA."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Para barberos"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "TUS SERVICIOS.",
+     "TUS PRECIOS.",
+     "TUS HORAS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "CARTEL CON",
+     "TU QR PARA EL",
+     "MOSTRADOR."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "BARBERO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N03-VIE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-06",
+  "dia": "Vie",
+  "hora": "13:00",
+  "titulo": "Te armo tu página de barbería (voz A)",
+  "gancho": "Barbero: te armo tu página de reservas gratis y te dejo tu cartel con QR.",
+  "caption": "Barbero, esto es para ti. Comenta BARBERO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#barberia #barberos #barbershop #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Barbero, esto es para ti. Te armo tu página de reservas gratis: tu nombre, tus servicios, tus precios y tus horas libres. Y te dejo un cartel con tu código QR para el mostrador: el cliente lo escanea y reserva desde la silla. El primer mes es gratis. Comenta BARBERO y te la armo hoy.",
+  "escenas": [
+   {
+    "ancla": "Barbero, esto es",
+    "fondo": "negro",
+    "titulo": [
+     "BARBERO,",
+     "ESTO ES",
+     "PARA TI."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Viernes"
+   },
+   {
+    "ancla": "Te armo tu",
+    "fondo": "blanco",
+    "titulo": [
+     "TU NOMBRE.",
+     "TUS PRECIOS.",
+     "TUS HORAS."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/2-servicios.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Y te dejo",
+    "fondo": "negro",
+    "titulo": [
+     "CARTEL CON",
+     "TU QR."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "El primer mes",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "BARBERO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N03-VIE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-06",
+  "dia": "Vie",
+  "hora": "18:00",
+  "titulo": "Te armo tu página de barbería (voz B)",
+  "gancho": "Barbero: te armo tu página de reservas gratis y te dejo tu cartel con QR.",
+  "caption": "Cómo funciona, en tres pasos. Primer mes gratis, después $10 al mes. Escríbeme BARBERO 📅",
+  "hashtags": "#barberia #barberos #barbershop #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Cómo funciona, en tres pasos. Uno: me dices tus servicios y tus horas. Dos: yo configuro tu página. Tres: la compartes con un link o con tu código QR. Si te gusta, sigues por diez dólares al mes. Si no, no pasó nada. Escríbeme BARBERO.",
+  "escenas": [
+   {
+    "ancla": "Cómo funciona, en",
+    "fondo": "negro",
+    "titulo": [
+     "TRES PASOS."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Así de simple"
+   },
+   {
+    "ancla": "Uno: me dices",
+    "fondo": "blanco",
+    "titulo": [
+     "1 · ME DICES.",
+     "2 · YO LA ARMO.",
+     "3 · COMPARTES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Si te gusta,",
+    "fondo": "negro",
+    "titulo": [
+     "10 DÓLARES",
+     "AL MES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Si no, no",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "BARBERO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N04-LUN-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-09",
+  "dia": "Lun",
+  "hora": "08:00",
+  "titulo": "Dos clientas, la misma hora",
+  "gancho": "Manicurista, ¿alguna vez agendaste a dos clientas a la misma hora?",
+  "caption": "Manicurista, ¿alguna vez agendaste a dos clientas a la misma hora? 📅 Comenta UÑAS 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "DOS CLIENTAS.",
+     "LA MISMA",
+     "HORA."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Manicurista, ¿te pasó?"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "UNA SE VA",
+     "MOLESTA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "UNA HORA.",
+     "UNA CITA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N04-LUN-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-09",
+  "dia": "Lun",
+  "hora": "13:00",
+  "titulo": "Dos clientas, la misma hora (voz A)",
+  "gancho": "Manicurista, ¿alguna vez agendaste a dos clientas a la misma hora?",
+  "caption": "Manicurista, ¿alguna vez agendaste a dos clientas a la misma hora? Comenta UÑAS 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Manicurista, ¿alguna vez agendaste a dos clientas a la misma hora? Una se va molesta, y la otra… ya no vuelve. Pasa cuando tu agenda vive en la libreta, en el chat y en tu cabeza. Con bookeaa solo existe una agenda: cuando una hora se ocupa, desaparece del link para todas. Comenta UÑAS y te armo tu página gratis.",
+  "escenas": [
+   {
+    "ancla": "Manicurista, ¿alguna vez",
+    "fondo": "negro",
+    "titulo": [
+     "DOS CLIENTAS.",
+     "LA MISMA",
+     "HORA."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "¿Te pasó?"
+   },
+   {
+    "ancla": "Una se va",
+    "fondo": "blanco",
+    "titulo": [
+     "LIBRETA.",
+     "CHAT.",
+     "TU CABEZA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Con bookeaa solo",
+    "fondo": "negro",
+    "titulo": [
+     "UNA HORA.",
+     "UNA CITA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Comenta UÑAS y",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N04-LUN-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-09",
+  "dia": "Lun",
+  "hora": "18:00",
+  "titulo": "Dos clientas, la misma hora (voz B)",
+  "gancho": "Manicurista, ¿alguna vez agendaste a dos clientas a la misma hora?",
+  "caption": "Un servicio de uñas puede durar dos horas. Primer mes gratis, después $10 al mes. Escríbeme UÑAS 📅",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Un servicio de uñas puede durar dos horas. Por eso un cruce no es un descuido pequeño: es una clienta menos. En bookeaa cada servicio tiene su duración, y el calendario bloquea el tiempo exacto. Nadie puede reservar una hora que ya no tienes. Escríbeme UÑAS y la configuro gratis.",
+  "escenas": [
+   {
+    "ancla": "Un servicio de",
+    "fondo": "negro",
+    "titulo": [
+     "2 HORAS",
+     "POR CLIENTA."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Dato de oficio"
+   },
+   {
+    "ancla": "Por eso un",
+    "fondo": "blanco",
+    "titulo": [
+     "UN CRUCE",
+     "ES UNA",
+     "CLIENTA MENOS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "En bookeaa cada",
+    "fondo": "negro",
+    "titulo": [
+     "EL TIEMPO",
+     "SE BLOQUEA",
+     "SOLO."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Escríbeme UÑAS y",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N05-MAR-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-10",
+  "dia": "Mar",
+  "hora": "08:00",
+  "titulo": "El tiempo se bloquea solo",
+  "gancho": "Tu clienta elige el servicio y el tiempo se bloquea solo.",
+  "caption": "Tu clienta elige el servicio y el tiempo se bloquea solo. 📅 Comenta UÑAS 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "ESMALTADO.",
+     "ACRÍLICAS.",
+     "RETOQUE."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Cada servicio, su tiempo"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "CADA UNO CON",
+     "SU DURACIÓN",
+     "Y SU PRECIO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "ELLA ELIGE.",
+     "TÚ ATIENDES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N05-MAR-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-10",
+  "dia": "Mar",
+  "hora": "13:00",
+  "titulo": "El tiempo se bloquea solo (voz A)",
+  "gancho": "Tu clienta elige el servicio y el tiempo se bloquea solo.",
+  "caption": "¿Y si tu clienta pudiera elegir su servicio sin escribirte? Comenta UÑAS 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "¿Y si tu clienta pudiera elegir su servicio sin escribirte? Esmaltado, acrílicas, retoque: cada uno con su precio y cuánto dura. Ella elige, ve las horas que de verdad caben, y reserva. La cita cae en tu calendario y a ti te llega un aviso. Comenta UÑAS y te la configuro gratis.",
+  "escenas": [
+   {
+    "ancla": "¿Y si tu",
+    "fondo": "negro",
+    "titulo": [
+     "¿Y SI ELLA",
+     "ELIGE SIN",
+     "ESCRIBIRTE?"
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Imagina"
+   },
+   {
+    "ancla": "Esmaltado, acrílicas, retoque:",
+    "fondo": "blanco",
+    "titulo": [
+     "ESMALTADO.",
+     "ACRÍLICAS.",
+     "RETOQUE."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/2-servicios.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Ella elige, ve",
+    "fondo": "negro",
+    "titulo": [
+     "ELLA ELIGE.",
+     "TÚ ATIENDES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "La cita cae",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N05-MAR-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-10",
+  "dia": "Mar",
+  "hora": "18:00",
+  "titulo": "El tiempo se bloquea solo (voz B)",
+  "gancho": "Tu clienta elige el servicio y el tiempo se bloquea solo.",
+  "caption": "Esto es lo que pasa cuando una clienta reserva en tu link. Primer mes gratis, después $10 al mes. Escríbeme UÑAS 📅",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Esto es lo que pasa cuando una clienta reserva en tu link. Elige el servicio, y solo ve horas donde cabe el tiempo completo. Tú recibes un aviso en el teléfono, treinta minutos antes un recordatorio, y a las siete de la mañana el resumen de tus citas. Escríbeme UÑAS y lo dejamos listo.",
+  "escenas": [
+   {
+    "ancla": "Esto es lo",
+    "fondo": "negro",
+    "titulo": [
+     "ASÍ RESERVA",
+     "UNA CLIENTA."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Paso a paso"
+   },
+   {
+    "ancla": "Elige el servicio,",
+    "fondo": "blanco",
+    "titulo": [
+     "SOLO VE HORAS",
+     "DONDE CABE."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Tú recibes un",
+    "fondo": "negro",
+    "titulo": [
+     "AVISO.",
+     "RECORDATORIO.",
+     "RESUMEN 7 A. M."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme UÑAS y",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N06-MIE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-11",
+  "dia": "Mié",
+  "hora": "08:00",
+  "titulo": "Ya tengo mis clientas fijas",
+  "gancho": "“Ya tengo mis clientas fijas”. Qué bueno. Pero las fijas también cancelan.",
+  "caption": "“Ya tengo mis clientas fijas”. Qué bueno. Pero las fijas también cancelan. 📅 Comenta UÑAS 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "“YA TENGO",
+     "MIS CLIENTAS",
+     "FIJAS”."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Manicurista, ¿te suena?"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "LAS FIJAS",
+     "TAMBIÉN",
+     "CANCELAN."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "¿QUIÉN LLENA",
+     "ESE HUECO?"
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N06-MIE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-11",
+  "dia": "Mié",
+  "hora": "13:00",
+  "titulo": "Ya tengo mis clientas fijas (voz A)",
+  "gancho": "“Ya tengo mis clientas fijas”. Qué bueno. Pero las fijas también cancelan.",
+  "caption": "“Ya tengo mis clientas fijas”. Comenta UÑAS 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "“Ya tengo mis clientas fijas”. Qué bueno. Pero las fijas también cancelan, también cambian de hora, y también se olvidan. Y cuando eso pasa, ese hueco se queda vacío. Con bookeaa esa hora libre aparece en tu link y alguien nuevo puede tomarla. Comenta UÑAS y te armo tu página gratis.",
+  "escenas": [
+   {
+    "ancla": "“Ya tengo mis",
+    "fondo": "negro",
+    "titulo": [
+     "“YA TENGO",
+     "MIS CLIENTAS",
+     "FIJAS”."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Manicurista, ¿te suena?"
+   },
+   {
+    "ancla": "Qué bueno. Pero",
+    "fondo": "blanco",
+    "titulo": [
+     "LAS FIJAS",
+     "TAMBIÉN",
+     "CANCELAN."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Con bookeaa esa",
+    "fondo": "negro",
+    "titulo": [
+     "ESA HORA",
+     "LA TOMA",
+     "ALGUIEN NUEVO."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Comenta UÑAS y",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N06-MIE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-11",
+  "dia": "Mié",
+  "hora": "18:00",
+  "titulo": "Ya tengo mis clientas fijas (voz B)",
+  "gancho": "“Ya tengo mis clientas fijas”. Qué bueno. Pero las fijas también cancelan.",
+  "caption": "Tener clientas fijas es la mejor base que puedes tener. Primer mes gratis, después $10 al mes. Escríbeme UÑAS 📅",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Tener clientas fijas es la mejor base que puedes tener. Una agenda online no las reemplaza: las ordena. Tus fijas reservan en dos toques, y las horas que quedan libres las ve quien todavía no te conoce. Es el mismo negocio, con menos mensajes. Escríbeme UÑAS y probamos gratis.",
+  "escenas": [
+   {
+    "ancla": "Tener clientas fijas",
+    "fondo": "negro",
+    "titulo": [
+     "LAS FIJAS",
+     "SON TU BASE."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Sin reemplazar nada"
+   },
+   {
+    "ancla": "Una agenda online",
+    "fondo": "blanco",
+    "titulo": [
+     "NO LAS",
+     "REEMPLAZA.",
+     "LAS ORDENA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Tus fijas reservan",
+    "fondo": "negro",
+    "titulo": [
+     "LAS FIJAS:",
+     "2 TOQUES.",
+     "LAS LIBRES:",
+     "PARA NUEVAS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Es el mismo",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N07-JUE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-12",
+  "dia": "Jue",
+  "hora": "08:00",
+  "titulo": "11:02 p. m., reserva sola",
+  "gancho": "Son las once de la noche y una clienta quiere agendar.",
+  "caption": "Son las once de la noche y una clienta quiere agendar. 📅 Comenta UÑAS 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "11:02 P. M."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Imagina"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "ELLA QUIERE",
+     "UNA HORA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "TÚ DUERMES.",
+     "TU LINK LA",
+     "ATIENDE."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N07-JUE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-12",
+  "dia": "Jue",
+  "hora": "13:00",
+  "titulo": "11:02 p. m., reserva sola (voz A)",
+  "gancho": "Son las once de la noche y una clienta quiere agendar.",
+  "caption": "Son las once de la noche. Comenta UÑAS 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Son las once de la noche. Una clienta ve tus uñas en una foto y quiere agendar. Si tiene que esperar a que despiertes, quizá ya no quiera. Pero si tienes tu link, entra, elige su servicio, y reserva en dos minutos. Tú despiertas con la cita ya en tu calendario. Comenta UÑAS.",
+  "escenas": [
+   {
+    "ancla": "Son las once",
+    "fondo": "negro",
+    "titulo": [
+     "11:02",
+     "P. M."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Imagina"
+   },
+   {
+    "ancla": "Una clienta ve",
+    "fondo": "blanco",
+    "titulo": [
+     "ELLA QUIERE",
+     "UNA HORA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Pero si tienes",
+    "fondo": "negro",
+    "titulo": [
+     "ENTRA.",
+     "ELIGE.",
+     "RESERVA."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/2-servicios.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Tú despiertas con",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N07-JUE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-12",
+  "dia": "Jue",
+  "hora": "18:00",
+  "titulo": "11:02 p. m., reserva sola (voz B)",
+  "gancho": "Son las once de la noche y una clienta quiere agendar.",
+  "caption": "Muchas citas se piden de noche, cuando ya cerraste. Primer mes gratis, después $10 al mes. Escríbeme UÑAS 📅",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Muchas citas se piden de noche, cuando ya cerraste. El cliente no espera: reserva donde pueda hacerlo. Con bookeaa tu página recibe reservas las veinticuatro horas, y tú ves todo en la mañana. Escríbeme UÑAS y te dejo la página lista, gratis.",
+  "escenas": [
+   {
+    "ancla": "Muchas citas se",
+    "fondo": "negro",
+    "titulo": [
+     "LAS CITAS",
+     "SE PIDEN",
+     "DE NOCHE."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Un detalle"
+   },
+   {
+    "ancla": "El cliente no",
+    "fondo": "blanco",
+    "titulo": [
+     "NO ESPERA.",
+     "RESERVA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Con bookeaa tu",
+    "fondo": "negro",
+    "titulo": [
+     "24 HORAS.",
+     "TÚ LO VES",
+     "EN LA MAÑANA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme UÑAS y",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N08-VIE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-13",
+  "dia": "Vie",
+  "hora": "08:00",
+  "titulo": "Tu página con tu marca",
+  "gancho": "Manicurista: tu página de reservas puede verse como tu marca.",
+  "caption": "Manicurista: tu página de reservas puede verse como tu marca. 📅 Comenta UÑAS 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "TU PÁGINA",
+     "CON TU",
+     "ESTILO."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Para manicuristas"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "8 ESTILOS.",
+     "TUS COLORES.",
+     "TU LOGO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "CUPÓN PARA",
+     "CLIENTAS",
+     "NUEVAS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N08-VIE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-13",
+  "dia": "Vie",
+  "hora": "13:00",
+  "titulo": "Tu página con tu marca (voz A)",
+  "gancho": "Manicurista: tu página de reservas puede verse como tu marca.",
+  "caption": "Manicurista, tu página de reservas puede verse como tu marca. Comenta UÑAS 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Manicurista, tu página de reservas puede verse como tu marca. Elige entre ocho estilos, tus colores y tu logo. Y si quieres atraer clientas nuevas, puedes crear un cupón de primera vez. El primer mes es gratis y yo te ayudo a configurarla. Comenta UÑAS.",
+  "escenas": [
+   {
+    "ancla": "Manicurista, tu página",
+    "fondo": "negro",
+    "titulo": [
+     "TU PÁGINA,",
+     "TU MARCA."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Viernes"
+   },
+   {
+    "ancla": "Elige entre ocho",
+    "fondo": "blanco",
+    "titulo": [
+     "8 ESTILOS.",
+     "TUS COLORES.",
+     "TU LOGO."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/1-inicio.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Y si quieres",
+    "fondo": "negro",
+    "titulo": [
+     "CUPÓN PARA",
+     "CLIENTAS",
+     "NUEVAS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "El primer mes",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N08-VIE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-13",
+  "dia": "Vie",
+  "hora": "18:00",
+  "titulo": "Tu página con tu marca (voz B)",
+  "gancho": "Manicurista: tu página de reservas puede verse como tu marca.",
+  "caption": "Esto es lo que incluye bukéa. Primer mes gratis, después $10 al mes. Escríbeme UÑAS 📅",
+  "hashtags": "#uñas #manicurista #nailsvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Esto es lo que incluye bookeaa. Tu página con tu nombre, ocho estilos, tus servicios con precio y duración, cupones, y reservas todo el día. Se conecta a tu Google Calendar. Primer mes gratis; después, diez dólares al mes. Escríbeme UÑAS.",
+  "escenas": [
+   {
+    "ancla": "Esto es lo",
+    "fondo": "negro",
+    "titulo": [
+     "LO QUE",
+     "INCLUYE."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Todo en uno"
+   },
+   {
+    "ancla": "Tu página con",
+    "fondo": "blanco",
+    "titulo": [
+     "TU NOMBRE.",
+     "TUS SERVICIOS.",
+     "TUS CUPONES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Se conecta a",
+    "fondo": "negro",
+    "titulo": [
+     "TU GOOGLE",
+     "CALENDAR."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Primer mes gratis;",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "UÑAS."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N09-LUN-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-16",
+  "dia": "Lun",
+  "hora": "08:00",
+  "titulo": "La cita que no llegó",
+  "gancho": "La clienta no llegó y tu hora quedó vacía.",
+  "caption": "La clienta no llegó y tu hora quedó vacía. 📅 Comenta CONSULTA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "LA CLIENTA",
+     "NO LLEGÓ."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Spas y consultorios"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "TU HORA",
+     "QUEDÓ VACÍA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "SE LE",
+     "OLVIDÓ."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N09-LUN-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-16",
+  "dia": "Lun",
+  "hora": "13:00",
+  "titulo": "La cita que no llegó (voz A)",
+  "gancho": "La clienta no llegó y tu hora quedó vacía.",
+  "caption": "La clienta no llegó. Comenta CONSULTA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "La clienta no llegó. Tu hora quedó vacía, y no hay forma de recuperarla. Muchas veces no es mala fe: simplemente se le olvidó. Cuando reserva en bookeaa, la cita cae en su calendario, y su teléfono se la recuerda solita. Menos olvidos, menos horas perdidas. Comenta CONSULTA y te armo tu página gratis.",
+  "escenas": [
+   {
+    "ancla": "La clienta no",
+    "fondo": "negro",
+    "titulo": [
+     "NO LLEGÓ."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Spas y consultorios"
+   },
+   {
+    "ancla": "Tu hora quedó",
+    "fondo": "blanco",
+    "titulo": [
+     "TU HORA",
+     "QUEDÓ VACÍA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Cuando reserva en",
+    "fondo": "negro",
+    "titulo": [
+     "LA CITA CAE",
+     "EN SU",
+     "CALENDARIO."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/6-listo.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Menos olvidos, menos",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N09-LUN-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-16",
+  "dia": "Lun",
+  "hora": "18:00",
+  "titulo": "La cita que no llegó (voz B)",
+  "gancho": "La clienta no llegó y tu hora quedó vacía.",
+  "caption": "Un consultorio o un spa vive de sus horas. Primer mes gratis, después $10 al mes. Escríbeme CONSULTA 📅",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Un consultorio o un spa vive de sus horas. Cada hora vacía es dinero que no vuelve. Con bookeaa, la cita queda en el calendario del cliente y en el tuyo, y tú recibes un aviso treinta minutos antes y un resumen cada mañana a las siete. Escríbeme CONSULTA y te la dejo lista, gratis.",
+  "escenas": [
+   {
+    "ancla": "Un consultorio o",
+    "fondo": "negro",
+    "titulo": [
+     "VIVES DE",
+     "TUS HORAS."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "La cuenta"
+   },
+   {
+    "ancla": "Cada hora vacía",
+    "fondo": "blanco",
+    "titulo": [
+     "HORA VACÍA =",
+     "DINERO QUE",
+     "NO VUELVE."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Con bookeaa, la",
+    "fondo": "negro",
+    "titulo": [
+     "SU CALENDARIO.",
+     "TU CALENDARIO.",
+     "AVISO 30 MIN."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme CONSULTA y",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N10-MAR-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-17",
+  "dia": "Mar",
+  "hora": "08:00",
+  "titulo": "Pago Móvil dentro de la cita",
+  "gancho": "Pago Móvil: el cliente reporta y tú confirmas con un toque.",
+  "caption": "Pago Móvil: el cliente reporta y tú confirmas con un toque. 📅 Comenta CONSULTA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "EL CLIENTE",
+     "REPORTA SU",
+     "PAGO MÓVIL."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Cobrar en bolívares"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "SUBE EL",
+     "CAPTURE."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "TÚ TOCAS:",
+     "“PAGO",
+     "RECIBIDO”."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N10-MAR-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-17",
+  "dia": "Mar",
+  "hora": "13:00",
+  "titulo": "Pago Móvil dentro de la cita (voz A)",
+  "gancho": "Pago Móvil: el cliente reporta y tú confirmas con un toque.",
+  "caption": "¿Cuántas veces un cliente te dijo «ya te pagué» y tú no lo veías por ningún lado? Comenta CONSULTA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "¿Cuántas veces un cliente te dijo «ya te pagué» y tú no lo veías por ningún lado? En bookeaa el cliente reporta su Pago Móvil al reservar y sube el capture. A ti te llega el aviso, lo revisas, y con un toque confirmas el pago. Todo en la misma cita. Comenta CONSULTA y te lo configuro gratis.",
+  "escenas": [
+   {
+    "ancla": "¿Cuántas veces un",
+    "fondo": "negro",
+    "titulo": [
+     "“YA TE",
+     "PAGUÉ”."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "¿Te pasó?"
+   },
+   {
+    "ancla": "En bookeaa el",
+    "fondo": "blanco",
+    "titulo": [
+     "REPORTA",
+     "SU PAGO",
+     "MÓVIL."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/6-listo.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "A ti te",
+    "fondo": "negro",
+    "titulo": [
+     "UN TOQUE:",
+     "“PAGO",
+     "RECIBIDO”."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Comenta CONSULTA y",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N10-MAR-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-17",
+  "dia": "Mar",
+  "hora": "18:00",
+  "titulo": "Pago Móvil dentro de la cita (voz B)",
+  "gancho": "Pago Móvil: el cliente reporta y tú confirmas con un toque.",
+  "caption": "Cobrar en bolívares tiene su ciencia. Primer mes gratis, después $10 al mes. Escríbeme CONSULTA 📅",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Cobrar en bolívares tiene su ciencia. Bukéa calcula el monto a la tasa oficial del día, y el cliente reporta el Pago Móvil con su capture. Tú ves los pagos por verificar en tu teléfono y los confirmas con un toque. Escríbeme CONSULTA y lo dejamos listo.",
+  "escenas": [
+   {
+    "ancla": "Cobrar en bolívares",
+    "fondo": "negro",
+    "titulo": [
+     "COBRAR EN",
+     "BOLÍVARES."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Pago Móvil"
+   },
+   {
+    "ancla": "Bukéa calcula el",
+    "fondo": "blanco",
+    "titulo": [
+     "MONTO A LA",
+     "TASA DEL DÍA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Tú ves los",
+    "fondo": "negro",
+    "titulo": [
+     "VERIFICAS",
+     "EN TU",
+     "TELÉFONO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme CONSULTA y",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N11-MIE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-18",
+  "dia": "Mié",
+  "hora": "08:00",
+  "titulo": "Es caro / no tengo tiempo",
+  "gancho": "“No tengo tiempo para configurar nada”. Por eso la configuro yo.",
+  "caption": "“No tengo tiempo para configurar nada”. Por eso la configuro yo. 📅 Comenta CONSULTA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "“NO TENGO",
+     "TIEMPO PARA",
+     "CONFIGURAR”."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Dos excusas comunes"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "LA CONFIGURO",
+     "YO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "10 DÓLARES",
+     "AL MES.",
+     "PRIMER MES",
+     "GRATIS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N11-MIE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-18",
+  "dia": "Mié",
+  "hora": "13:00",
+  "titulo": "Es caro / no tengo tiempo (voz A)",
+  "gancho": "“No tengo tiempo para configurar nada”. Por eso la configuro yo.",
+  "caption": "«No tengo tiempo para configurar nada». Comenta CONSULTA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "«No tengo tiempo para configurar nada». Lo entiendo. Por eso la configuro yo. Me mandas tus servicios, tus precios y tus horas, y el mismo día tu página está lista. El primer mes es gratis, y después son diez dólares al mes. Comenta CONSULTA y empezamos hoy.",
+  "escenas": [
+   {
+    "ancla": "«No tengo tiempo",
+    "fondo": "negro",
+    "titulo": [
+     "“NO TENGO",
+     "TIEMPO”."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Dos excusas comunes"
+   },
+   {
+    "ancla": "Lo entiendo. Por",
+    "fondo": "blanco",
+    "titulo": [
+     "LA CONFIGURO",
+     "YO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Me mandas tus",
+    "fondo": "negro",
+    "titulo": [
+     "SERVICIOS.",
+     "PRECIOS.",
+     "HORAS."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/2-servicios.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "El primer mes",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N11-MIE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-18",
+  "dia": "Mié",
+  "hora": "18:00",
+  "titulo": "Es caro / no tengo tiempo (voz B)",
+  "gancho": "“No tengo tiempo para configurar nada”. Por eso la configuro yo.",
+  "caption": "Hagamos la cuenta. Primer mes gratis, después $10 al mes. Escríbeme CONSULTA 📅",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Hagamos la cuenta. Si cobras más de diez dólares por una cita, con evitar perder una al mes ya se pagó. Y el primer mes es gratis, para que lo compruebes tú mismo. Escríbeme CONSULTA.",
+  "escenas": [
+   {
+    "ancla": "Hagamos la cuenta.",
+    "fondo": "negro",
+    "titulo": [
+     "HAGAMOS",
+     "LA CUENTA."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "¿Está caro?"
+   },
+   {
+    "ancla": "Si cobras más",
+    "fondo": "blanco",
+    "titulo": [
+     "10 DÓLARES",
+     "AL MES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Y el primer",
+    "fondo": "negro",
+    "titulo": [
+     "PRIMER MES",
+     "GRATIS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme CONSULTA.",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N12-JUE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-19",
+  "dia": "Jue",
+  "hora": "08:00",
+  "titulo": "Dos profesionales, un link",
+  "gancho": "Imagina un consultorio con dos profesionales y una sola agenda.",
+  "caption": "Imagina un consultorio con dos profesionales y una sola agenda. 📅 Comenta CONSULTA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "2",
+     "PROFESIONALES.",
+     "1 SOLO LINK."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "bookeaa team"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "CADA UNO CON",
+     "SU CALENDARIO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "EL CLIENTE",
+     "ELIGE CON",
+     "QUIÉN."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N12-JUE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-19",
+  "dia": "Jue",
+  "hora": "13:00",
+  "titulo": "Dos profesionales, un link (voz A)",
+  "gancho": "Imagina un consultorio con dos profesionales y una sola agenda.",
+  "caption": "Imagina un consultorio con dos profesionales. Comenta CONSULTA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Imagina un consultorio con dos profesionales. Si agendan por separado, tarde o temprano se cruzan. Con bookeaa cada profesional tiene su propio calendario, sus servicios y sus horarios, y el cliente elige con quién quiere reservar. Un solo link, cero cruces. Comenta CONSULTA y te lo armo gratis.",
+  "escenas": [
+   {
+    "ancla": "Imagina un consultorio",
+    "fondo": "negro",
+    "titulo": [
+     "2",
+     "PROFESIONALES."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "bookeaa team"
+   },
+   {
+    "ancla": "Si agendan por",
+    "fondo": "blanco",
+    "titulo": [
+     "AGENDAS",
+     "POR SEPARADO",
+     "= CRUCES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Con bookeaa cada",
+    "fondo": "negro",
+    "titulo": [
+     "CADA UNO,",
+     "SU CALENDARIO."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Un solo link,",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N12-JUE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-19",
+  "dia": "Jue",
+  "hora": "18:00",
+  "titulo": "Dos profesionales, un link (voz B)",
+  "gancho": "Imagina un consultorio con dos profesionales y una sola agenda.",
+  "caption": "Un negocio con equipo necesita orden. Primer mes gratis, después $10 al mes. Escríbeme CONSULTA 📅",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Un negocio con equipo necesita orden. En bookeaa agregas a cada persona, eliges qué servicios hace cada una, y cada una recibe sus propios avisos. Tú ves todas las citas y puedes pasar una cita de una persona a otra. Escríbeme CONSULTA y lo configuramos.",
+  "escenas": [
+   {
+    "ancla": "Un negocio con",
+    "fondo": "negro",
+    "titulo": [
+     "EQUIPO.",
+     "ORDEN."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "bookeaa team"
+   },
+   {
+    "ancla": "En bookeaa agregas",
+    "fondo": "blanco",
+    "titulo": [
+     "CADA PERSONA:",
+     "SUS SERVICIOS.",
+     "SUS AVISOS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Tú ves todas",
+    "fondo": "negro",
+    "titulo": [
+     "PASAS UNA CITA",
+     "A OTRA PERSONA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme CONSULTA y",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N13-VIE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-20",
+  "dia": "Vie",
+  "hora": "08:00",
+  "titulo": "Pruébala como cliente",
+  "gancho": "Antes de decidir, reserva en una agenda real como lo haría tu cliente.",
+  "caption": "Antes de decidir, reserva en una agenda real como lo haría tu cliente. 📅 Comenta CONSULTA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "PRUÉBALA",
+     "COMO TU",
+     "CLIENTE."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Antes de decidir"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "ABRE EL",
+     "LINK DE",
+     "EJEMPLO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "ELIGE.",
+     "RESERVA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N13-VIE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-20",
+  "dia": "Vie",
+  "hora": "13:00",
+  "titulo": "Pruébala como cliente (voz A)",
+  "gancho": "Antes de decidir, reserva en una agenda real como lo haría tu cliente.",
+  "caption": "Si tienes un spa, un consultorio o una clínica estética, esto es para ti. Comenta CONSULTA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Si tienes un spa, un consultorio o una clínica estética, esto es para ti. Tu página de reservas con tu nombre, tus servicios y tus horas, y los pagos por Pago Móvil dentro de la misma cita. Yo la configuro contigo. Primer mes gratis. Comenta CONSULTA.",
+  "escenas": [
+   {
+    "ancla": "Si tienes un",
+    "fondo": "negro",
+    "titulo": [
+     "SPA.",
+     "CONSULTORIO.",
+     "ESTÉTICA."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Viernes"
+   },
+   {
+    "ancla": "Tu página de",
+    "fondo": "blanco",
+    "titulo": [
+     "TU PÁGINA.",
+     "TUS PAGOS",
+     "EN LA CITA."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/6-listo.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Yo la configuro",
+    "fondo": "negro",
+    "titulo": [
+     "LA CONFIGURO",
+     "CONTIGO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Primer mes gratis.",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N13-VIE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-20",
+  "dia": "Vie",
+  "hora": "18:00",
+  "titulo": "Pruébala como cliente (voz B)",
+  "gancho": "Antes de decidir, reserva en una agenda real como lo haría tu cliente.",
+  "caption": "Antes de decidir, mira cómo se ve una agenda real. Primer mes gratis, después $10 al mes. Escríbeme CONSULTA 📅",
+  "hashtags": "#spa #estetica #consultorio #bienestar #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Antes de decidir, mira cómo se ve una agenda real. Te mando el link de una página de ejemplo, la abres desde tu teléfono, y reservas como lo haría tu cliente. Si te gusta, la armamos con tus datos. Escríbeme CONSULTA.",
+  "escenas": [
+   {
+    "ancla": "Antes de decidir,",
+    "fondo": "negro",
+    "titulo": [
+     "MIRA UNA",
+     "AGENDA REAL."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Sin compromiso"
+   },
+   {
+    "ancla": "Te mando el",
+    "fondo": "blanco",
+    "titulo": [
+     "ABRE.",
+     "RESERVA.",
+     "COMO TU",
+     "CLIENTE."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Si te gusta,",
+    "fondo": "negro",
+    "titulo": [
+     "SI TE GUSTA,",
+     "LA ARMAMOS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme CONSULTA.",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "CONSULTA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N14-LUN-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-23",
+  "dia": "Lun",
+  "hora": "08:00",
+  "titulo": "Dos agendas, una cita doble",
+  "gancho": "Tienes dos sedes o dos personas atendiendo, cada una con su libreta.",
+  "caption": "Tienes dos sedes o dos personas atendiendo, cada una con su libreta. 📅 Comenta EQUIPO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "2 SEDES.",
+     "2 LIBRETAS."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Cuando el negocio crece"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "1 CLIENTE",
+     "EN DOS",
+     "AGENDAS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "UNA SOLA",
+     "AGENDA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N14-LUN-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-23",
+  "dia": "Lun",
+  "hora": "13:00",
+  "titulo": "Dos agendas, una cita doble (voz A)",
+  "gancho": "Tienes dos sedes o dos personas atendiendo, cada una con su libreta.",
+  "caption": "Tienes dos sedes, o dos personas atendiendo. Comenta EQUIPO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Tienes dos sedes, o dos personas atendiendo. Cada una con su libreta, su chat y su propia agenda. Un día, dos clientes llegan a la misma hora con la misma persona. Con bookeaa hay una sola agenda: cada persona con su calendario, todo en el mismo lugar. Comenta EQUIPO y te armo tu página gratis.",
+  "escenas": [
+   {
+    "ancla": "Tienes dos sedes,",
+    "fondo": "negro",
+    "titulo": [
+     "2 SEDES.",
+     "2 LIBRETAS."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Cuando el negocio crece"
+   },
+   {
+    "ancla": "Cada una con",
+    "fondo": "blanco",
+    "titulo": [
+     "LA MISMA",
+     "HORA.",
+     "LA MISMA",
+     "PERSONA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Con bookeaa hay",
+    "fondo": "negro",
+    "titulo": [
+     "UNA SOLA",
+     "AGENDA."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Comenta EQUIPO y",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N14-LUN-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-23",
+  "dia": "Lun",
+  "hora": "18:00",
+  "titulo": "Dos agendas, una cita doble (voz B)",
+  "gancho": "Tienes dos sedes o dos personas atendiendo, cada una con su libreta.",
+  "caption": "Cuando un negocio crece, la agenda se complica. Primer mes gratis, después $10 al mes. Escríbeme EQUIPO 📅",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Cuando un negocio crece, la agenda se complica. Más personas, más sedes, más cruces. Bukéa permite varias sedes y varios profesionales en un solo negocio, con sus horarios y sus servicios por separado. Escríbeme EQUIPO y lo organizamos.",
+  "escenas": [
+   {
+    "ancla": "Cuando un negocio",
+    "fondo": "negro",
+    "titulo": [
+     "CRECER",
+     "COMPLICA LA",
+     "AGENDA."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Más gente, más cruces"
+   },
+   {
+    "ancla": "Más personas, más",
+    "fondo": "blanco",
+    "titulo": [
+     "MÁS PERSONAS.",
+     "MÁS SEDES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Bukéa permite varias",
+    "fondo": "negro",
+    "titulo": [
+     "VARIAS SEDES.",
+     "VARIAS",
+     "PERSONAS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme EQUIPO y",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N15-MAR-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-24",
+  "dia": "Mar",
+  "hora": "08:00",
+  "titulo": "Agrega a tu equipo",
+  "gancho": "Cómo agregar a una persona de tu equipo en bookeaa.",
+  "caption": "Cómo agregar a una persona de tu equipo en bookeaa. 📅 Comenta EQUIPO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "AGREGAS",
+     "A LA PERSONA."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "bookeaa team"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "ELIGES QUÉ",
+     "SERVICIOS HACE."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "TIENE SU",
+     "PROPIO",
+     "CALENDARIO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N15-MAR-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-24",
+  "dia": "Mar",
+  "hora": "13:00",
+  "titulo": "Agrega a tu equipo (voz A)",
+  "gancho": "Cómo agregar a una persona de tu equipo en bookeaa.",
+  "caption": "¿Cómo agregas a una persona de tu equipo? Comenta EQUIPO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "¿Cómo agregas a una persona de tu equipo? La agregas con su nombre, eliges qué servicios hace, y listo: tiene su propio calendario. Y le llegan sus propios avisos: sus reservas, sus recordatorios y el resumen de su mañana. Comenta EQUIPO y lo configuramos juntos.",
+  "escenas": [
+   {
+    "ancla": "¿Cómo agregas a",
+    "fondo": "negro",
+    "titulo": [
+     "¿CÓMO AGREGAS",
+     "A TU EQUIPO?"
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "bookeaa team"
+   },
+   {
+    "ancla": "La agregas con",
+    "fondo": "blanco",
+    "titulo": [
+     "SU NOMBRE.",
+     "SUS SERVICIOS.",
+     "SU CALENDARIO."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Y le llegan",
+    "fondo": "negro",
+    "titulo": [
+     "SUS AVISOS.",
+     "SU RESUMEN."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Comenta EQUIPO y",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N15-MAR-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-24",
+  "dia": "Mar",
+  "hora": "18:00",
+  "titulo": "Agrega a tu equipo (voz B)",
+  "gancho": "Cómo agregar a una persona de tu equipo en bookeaa.",
+  "caption": "Tres cosas para ordenar a tu equipo. Primer mes gratis, después $10 al mes. Escríbeme EQUIPO 📅",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Tres cosas para ordenar a tu equipo. Una: cada persona con su calendario. Dos: cada persona con sus servicios. Tres: tú ves todo y puedes mover citas entre personas. Si alguien sale del equipo, su historial no se borra. Escríbeme EQUIPO.",
+  "escenas": [
+   {
+    "ancla": "Tres cosas para",
+    "fondo": "negro",
+    "titulo": [
+     "TRES COSAS."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Ordena a tu gente"
+   },
+   {
+    "ancla": "Una: cada persona",
+    "fondo": "blanco",
+    "titulo": [
+     "UN CALENDARIO.",
+     "SUS SERVICIOS.",
+     "TÚ VES TODO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Si alguien sale",
+    "fondo": "negro",
+    "titulo": [
+     "EL HISTORIAL",
+     "NO SE BORRA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme EQUIPO.",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N16-MIE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-25",
+  "dia": "Mié",
+  "hora": "08:00",
+  "titulo": "Mi gente no es buena con la tecnología",
+  "gancho": "“Mi gente no es buena con la tecnología”. No necesita serlo.",
+  "caption": "“Mi gente no es buena con la tecnología”. No necesita serlo. 📅 Comenta EQUIPO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "“MI GENTE",
+     "NO SABE DE",
+     "TECNOLOGÍA”."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Dueños de negocio"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "NO NECESITA",
+     "SABER."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "VE SUS CITAS.",
+     "RECIBE AVISOS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N16-MIE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-25",
+  "dia": "Mié",
+  "hora": "13:00",
+  "titulo": "Mi gente no es buena con la tecnología (voz A)",
+  "gancho": "“Mi gente no es buena con la tecnología”. No necesita serlo.",
+  "caption": "«Mi gente no es buena con la tecnología». Comenta EQUIPO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "«Mi gente no es buena con la tecnología». No necesita serlo. Bukéa se abre como una app en el teléfono, y lo único que hacen es ver sus citas y recibir los avisos. Si pueden usar WhatsApp, pueden usar esto. Comenta EQUIPO y lo probamos.",
+  "escenas": [
+   {
+    "ancla": "«Mi gente no",
+    "fondo": "negro",
+    "titulo": [
+     "“MI GENTE NO",
+     "SABE DE",
+     "TECNOLOGÍA”."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Dueños de negocio"
+   },
+   {
+    "ancla": "No necesita serlo.",
+    "fondo": "blanco",
+    "titulo": [
+     "NO NECESITA",
+     "SERLO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Bukéa se abre",
+    "fondo": "negro",
+    "titulo": [
+     "VER SUS CITAS.",
+     "RECIBIR AVISOS."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Si pueden usar",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N16-MIE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-25",
+  "dia": "Mié",
+  "hora": "18:00",
+  "titulo": "Mi gente no es buena con la tecnología (voz B)",
+  "gancho": "“Mi gente no es buena con la tecnología”. No necesita serlo.",
+  "caption": "Antes de implementar una herramienta, piensa en quién la va a usar. Primer mes gratis, después $10 al mes. Escríbeme EQUIPO 📅",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Antes de implementar una herramienta, piensa en quién la va a usar. En bookeaa tu equipo solo entra con su cuenta de Google, ve sus citas del día y recibe avisos en el teléfono. La configuración la haces tú, o la hago yo contigo. Escríbeme EQUIPO.",
+  "escenas": [
+   {
+    "ancla": "Antes de implementar",
+    "fondo": "negro",
+    "titulo": [
+     "¿QUIÉN LA",
+     "VA A USAR?"
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Piensa en tu equipo"
+   },
+   {
+    "ancla": "En bookeaa tu",
+    "fondo": "blanco",
+    "titulo": [
+     "CUENTA DE",
+     "GOOGLE.",
+     "SUS CITAS.",
+     "SUS AVISOS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "La configuración la",
+    "fondo": "negro",
+    "titulo": [
+     "LA CONFIGURAS",
+     "TÚ, O YO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme EQUIPO.",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N17-JUE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-26",
+  "dia": "Jue",
+  "hora": "08:00",
+  "titulo": "A domicilio, el traslado ya viene sumado",
+  "gancho": "Si atiendes a domicilio, sabes lo difícil que es cuadrar las citas.",
+  "caption": "Si atiendes a domicilio, sabes lo difícil que es cuadrar las citas. 📅 Comenta EQUIPO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "EL TRASLADO",
+     "SE COME",
+     "TU TIEMPO."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Si atiendes a domicilio"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "LA PÁGINA LO",
+     "SUMA SOLA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "RECARGO +",
+     "TIEMPO DE",
+     "TRASLADO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N17-JUE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-26",
+  "dia": "Jue",
+  "hora": "13:00",
+  "titulo": "A domicilio, el traslado ya viene sumado (voz A)",
+  "gancho": "Si atiendes a domicilio, sabes lo difícil que es cuadrar las citas.",
+  "caption": "Si atiendes a domicilio, sabes lo difícil que es cuadrar las citas. Comenta EQUIPO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Si atiendes a domicilio, sabes lo difícil que es cuadrar las citas. El traslado se come el tiempo, y casi nunca se cobra. En bookeaa el cliente elige si quiere la cita en tu local o a domicilio, y el recargo y el tiempo de traslado se suman solos. Comenta EQUIPO y te armo tu página gratis.",
+  "escenas": [
+   {
+    "ancla": "Si atiendes a",
+    "fondo": "negro",
+    "titulo": [
+     "A DOMICILIO,",
+     "CUADRAR",
+     "ES DIFÍCIL."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "A domicilio"
+   },
+   {
+    "ancla": "El traslado se",
+    "fondo": "blanco",
+    "titulo": [
+     "EL TRASLADO",
+     "SE COME",
+     "TU TIEMPO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "En bookeaa el",
+    "fondo": "negro",
+    "titulo": [
+     "LOCAL O",
+     "DOMICILIO.",
+     "SE SUMA SOLO."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Comenta EQUIPO y",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N17-JUE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-26",
+  "dia": "Jue",
+  "hora": "18:00",
+  "titulo": "A domicilio, el traslado ya viene sumado (voz B)",
+  "gancho": "Si atiendes a domicilio, sabes lo difícil que es cuadrar las citas.",
+  "caption": "Un ejemplo. Primer mes gratis, después $10 al mes. Escríbeme EQUIPO 📅",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Un ejemplo. Un servicio de veinte dólares, a domicilio con un veinte por ciento de recargo, son veinticuatro. Todo lo calcula la página, tú no tienes que explicarlo. Y el tiempo de traslado queda bloqueado en tu agenda. Escríbeme EQUIPO.",
+  "escenas": [
+   {
+    "ancla": "Un ejemplo.",
+    "fondo": "negro",
+    "titulo": [
+     "UN EJEMPLO."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "La cuenta"
+   },
+   {
+    "ancla": "Un servicio de",
+    "fondo": "blanco",
+    "titulo": [
+     "$20 + 20 % =",
+     "$24."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Todo lo calcula",
+    "fondo": "negro",
+    "titulo": [
+     "LA PÁGINA",
+     "LO CALCULA.",
+     "EL TRASLADO",
+     "SE BLOQUEA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme EQUIPO.",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N18-VIE-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-27",
+  "dia": "Vie",
+  "hora": "08:00",
+  "titulo": "Cierra noviembre con tu agenda lista",
+  "gancho": "Diciembre ya casi llega: ¿tu agenda sigue en una libreta?",
+  "caption": "Diciembre ya casi llega: ¿tu agenda sigue en una libreta? 📅 Comenta EQUIPO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "DICIEMBRE",
+     "YA CASI",
+     "LLEGA."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Viernes de decisiones"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "TU AGENDA,",
+     "LISTA ESTA",
+     "SEMANA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "LA CONFIGURO",
+     "GRATIS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "EQUIPO."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N18-VIE-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-27",
+  "dia": "Vie",
+  "hora": "13:00",
+  "titulo": "Cierra noviembre con tu agenda lista (voz A)",
+  "gancho": "Diciembre ya casi llega: ¿tu agenda sigue en una libreta?",
+  "caption": "Viernes de decisiones. Comenta EQUIPO 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Viernes de decisiones. Diciembre suele ser de los meses más movidos para negocios de belleza y cuidado personal. Si tu agenda sigue en una libreta, vas a perder clientes justo cuando más llegan. Esta semana te la configuro gratis, con tu nombre y tus servicios. Comenta AGENDA.",
+  "escenas": [
+   {
+    "ancla": "Viernes de decisiones.",
+    "fondo": "negro",
+    "titulo": [
+     "VIERNES DE",
+     "DECISIONES."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Antes de diciembre"
+   },
+   {
+    "ancla": "Diciembre suele ser",
+    "fondo": "blanco",
+    "titulo": [
+     "DICIEMBRE:",
+     "MÁS CLIENTES.",
+     "MÁS MENSAJES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Esta semana te",
+    "fondo": "negro",
+    "titulo": [
+     "TE LA",
+     "CONFIGURO",
+     "GRATIS."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/1-inicio.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Comenta AGENDA.",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "AGENDA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N18-VIE-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-27",
+  "dia": "Vie",
+  "hora": "18:00",
+  "titulo": "Cierra noviembre con tu agenda lista (voz B)",
+  "gancho": "Diciembre ya casi llega: ¿tu agenda sigue en una libreta?",
+  "caption": "Dos cosas antes de que llegue diciembre. Primer mes gratis, después $10 al mes. Escríbeme EQUIPO 📅",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Dos cosas antes de que llegue diciembre. Una: tu página de reservas lista. Dos: tus clientes habituales ya saben cómo reservar en ella. Te ayudo con las dos. Primer mes gratis. Escríbeme AGENDA.",
+  "escenas": [
+   {
+    "ancla": "Dos cosas antes",
+    "fondo": "negro",
+    "titulo": [
+     "DOS COSAS."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Antes de diciembre"
+   },
+   {
+    "ancla": "Una: tu página",
+    "fondo": "blanco",
+    "titulo": [
+     "1 · TU PÁGINA.",
+     "2 · CLIENTES",
+     "YA SABEN."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Te ayudo con",
+    "fondo": "negro",
+    "titulo": [
+     "TE AYUDO",
+     "CON LAS DOS."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Primer mes gratis.",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "AGENDA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N19-LUN-MG",
+  "tipo": "MG",
+  "fecha": "2026-11-30",
+  "dia": "Lun",
+  "hora": "08:00",
+  "titulo": "Mañana empieza diciembre",
+  "gancho": "Mañana empieza diciembre: ¿cuántas horas libres tienes?",
+  "caption": "Mañana empieza diciembre: ¿cuántas horas libres tienes? 📅 Comenta AGENDA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "escenas": [
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "MAÑANA",
+     "EMPIEZA",
+     "DICIEMBRE."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Último día de noviembre"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "blanco",
+    "titulo": [
+     "¿CUÁNTAS",
+     "HORAS LIBRES",
+     "TIENES?"
+    ],
+    "estilo": "grande"
+   },
+   {
+    "dur": 3.4,
+    "fondo": "negro",
+    "titulo": [
+     "TU LINK",
+     "LAS LLENA."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "fondo": "blanco",
+    "kicker": "Tu página de reservas",
+    "titulo": [
+     "COMENTA",
+     "AGENDA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N19-LUN-VOZ",
+  "tipo": "VOZ",
+  "fecha": "2026-11-30",
+  "dia": "Lun",
+  "hora": "13:00",
+  "titulo": "Mañana empieza diciembre (voz A)",
+  "gancho": "Mañana empieza diciembre: ¿cuántas horas libres tienes?",
+  "caption": "Mañana empieza diciembre. Comenta AGENDA 👇 y te armo tu página de reservas gratis.",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Mañana empieza diciembre. Más clientes, más mensajes, más horas que cuadrar. Con tu link, el cliente reserva solo mientras tú trabajas. Comenta AGENDA y empezamos este mes con tu página lista.",
+  "escenas": [
+   {
+    "ancla": "Mañana empieza diciembre.",
+    "fondo": "negro",
+    "titulo": [
+     "MAÑANA",
+     "EMPIEZA",
+     "DICIEMBRE."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Último día de noviembre"
+   },
+   {
+    "ancla": "Más clientes, más",
+    "fondo": "blanco",
+    "titulo": [
+     "MÁS CLIENTES.",
+     "MÁS MENSAJES."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Con tu link,",
+    "fondo": "negro",
+    "titulo": [
+     "RESERVA SOLO.",
+     "TÚ TRABAJAS."
+    ],
+    "estilo": "grande",
+    "telefonos": [
+     {
+      "img": "flujo/4-agenda.jpg",
+      "ancho": 330,
+      "x": 375,
+      "y": 780,
+      "en": 0.9
+     }
+    ]
+   },
+   {
+    "ancla": "Comenta AGENDA y",
+    "fondo": "blanco",
+    "titulo": [
+     "COMENTA",
+     "AGENDA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA ARMO GRATIS 👇"
+   }
+  ]
+ },
+ {
+  "id": "FYP-N19-LUN-VOZ2",
+  "tipo": "VOZ",
+  "fecha": "2026-11-30",
+  "dia": "Lun",
+  "hora": "18:00",
+  "titulo": "Mañana empieza diciembre (voz B)",
+  "gancho": "Mañana empieza diciembre: ¿cuántas horas libres tienes?",
+  "caption": "Mira tu calendario de diciembre. Primer mes gratis, después $10 al mes. Escríbeme AGENDA 📅",
+  "hashtags": "#emprendedores #negociosvenezuela #agendaonline #bookeaa",
+  "estilo2": true,
+  "vozTexto": "Mira tu calendario de diciembre. ¿Cuántas horas ya están reservadas? ¿Cuántas siguen libres? Si tus clientes pueden reservar en un link, esas horas libres se llenan solas. Escríbeme AGENDA.",
+  "escenas": [
+   {
+    "ancla": "Mira tu calendario",
+    "fondo": "negro",
+    "titulo": [
+     "MIRA TU",
+     "DICIEMBRE."
+    ],
+    "estilo": "grande",
+    "entrada": "corte",
+    "kicker": "Un minuto"
+   },
+   {
+    "ancla": "¿Cuántas horas ya",
+    "fondo": "blanco",
+    "titulo": [
+     "¿CUÁNTAS",
+     "ESTÁN",
+     "LIBRES?"
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Si tus clientes",
+    "fondo": "negro",
+    "titulo": [
+     "UN LINK.",
+     "HORAS QUE",
+     "SE LLENAN."
+    ],
+    "estilo": "grande"
+   },
+   {
+    "ancla": "Escríbeme AGENDA.",
+    "fondo": "blanco",
+    "titulo": [
+     "ESCRÍBEME",
+     "AGENDA."
+    ],
+    "estilo": "mega",
+    "pastilla": "TE LA DEJO LISTA, GRATIS"
+   }
+  ]
+ }
+]
