@@ -1,0 +1,16 @@
+{
+  "name": "bookeaa-tutorial",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "audio": "node scripts/audio.mjs",
+    "render": "node scripts/audio.mjs && remotion render src/index.ts Tutorial ../salida/tutorial/configura-tu-pagina.mp4 --codec h264 --crf 17"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.530",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "4.0.530"
+  }
+}

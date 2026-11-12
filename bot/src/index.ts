@@ -13,7 +13,7 @@ import { manejarBandeja } from './bandeja'
 import { guardarConversacion, guardarMensaje, leerConversacion, nueva, sumarUso } from './db'
 import { firmaMetaValida } from './firma'
 import { manejarMcp } from './mcp'
-import { manejarOAuth } from './oauth'
+import { manejarOAuth, mantenerConexiones } from './oauth'
 import { procesar } from './flujo'
 import { cuerpoMensaje, enviar, marcarLeido, mensajesDelWebhook, textoDeSalida, type Recibido } from './whatsapp'
 import type { Servicios } from './tipos'
@@ -46,7 +46,7 @@ export default {
   },
 
   async scheduled(_evento: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(repasar(env, Date.now()))
+    ctx.waitUntil(Promise.all([repasar(env, Date.now()), mantenerConexiones(env, Date.now())]))
   },
 }
 

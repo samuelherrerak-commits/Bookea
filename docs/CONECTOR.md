@@ -9,14 +9,18 @@ Con este conector, Claude administra bookeaa contigo desde cualquier chat. Puede
 Ejemplo: *"Crea una veterinaria de ejemplo con mi correo, con consulta, vacunas y baño, abierta de lunes a sábado"*.
 
 ## Cómo funciona
-- Es un servidor MCP dentro del **Worker del bot** (Cloudflare): `https://bookeaa-bot.<tu-subdominio>.workers.dev/mcp`. No hay que pagar ni mantener otro servidor.
+- Es un servidor MCP dentro del **Worker del bot** (Cloudflare): **`https://bookeaa-bot.samuelherrera-k.workers.dev/mcp`**. No hay que pagar ni mantener otro servidor.
 - **Quién puede usarlo:** solo un administrador de bookeaa.
   1. Al conectarlo, Claude te manda a **bookeaa.com/conectar**.
   2. Ahí entras con Google, igual que en la central.
   3. El Apps Script comprueba que tu correo esté en `dueno_admins`.
 - **Con qué permisos actúa Claude:** con tu sesión de la central. Las validaciones son las mismas de la central y de Mi negocio, y no se agregó ninguna puerta nueva al Apps Script (solo la operación `yo`, que dice quién eres).
-- **Cuánto dura el permiso:** igual que la sesión de la central, hasta 30 días. Cuando vence, Claude te pide volver a conectar.
-- **Qué se guarda:** los tokens van en D1 cifrados con SHA-256, nunca en claro.
+- **Cuánto dura el permiso:** no vence mientras sigas en `dueno_admins`.
+  - Claude recibe un token de 7 días y un *refresh token* con el que lo renueva solo.
+  - Cada renovación pide al Apps Script una sesión nueva de la central (op `renovar`, otros 30 días).
+  - El cron del Worker (cada 5 minutos) renueva las sesiones que vencen en menos de 5 días, aunque Claude no se use por semanas.
+  - Si sales de `dueno_admins`, la próxima renovación falla y Claude pide volver a conectar.
+- **Qué se guarda:** los tokens y los refresh tokens van en D1 cifrados con SHA-256, nunca en claro. Los refresh tokens rotan en cada uso.
 
 Herramientas: `listar_negocios`, `ver_metricas`, `ver_negocio`, `crear_negocio`, `editar_negocio`, `suspender_negocio`, `registrar_pago`, `ver_cobros`, `aprobar_pago`, `rechazar_pago`, `ver_citas`, `ver_horas_para_reagendar`, `reagendar_cita`, `cancelar_cita`, `ver_configuracion` y `guardar_configuracion`.
 
@@ -27,11 +31,13 @@ Herramientas: `listar_negocios`, `ver_metricas`, `ver_negocio`, `crear_negocio`,
    - tu Gmail en `dueno_admins`.
 3. **En Claude:** ve a [claude.ai/customize/connectors](https://claude.ai/customize/connectors) → **Agregar conector personalizado**.
    - Nombre: `bookeaa`.
-   - URL: `https://bookeaa-bot.<tu-subdominio>.workers.dev/mcp`, la misma de la bandeja cambiando `/bandeja` por `/mcp`.
+   - URL: `https://bookeaa-bot.samuelherrera-k.workers.dev/mcp`, la misma de la bandeja cambiando `/bandeja` por `/mcp`.
 4. Toca **Conectar**: se abre bookeaa.com/conectar. Entra con Google y toca **Permitir**.
 5. Abre un chat nuevo: los conectores se cargan al empezar.
 
 ## Si algo falla
+- **El conector dice "desconectado" o no aparece en el chat:** en [claude.ai/customize/connectors](https://claude.ai/customize/connectors), abre bookeaa y toca **Conectar** de nuevo. Después abre un chat nuevo. Desde la versión con refresh tokens no debería volver a pasar.
+- **Probar que el Worker responde:** abre `https://bookeaa-bot.samuelherrera-k.workers.dev/.well-known/oauth-authorization-server`. Debe mostrar un JSON con `refresh_token` en `grant_types_supported`. Si no aparece, la Action del bot no se ha desplegado.
 - **"No eres administrador de bookeaa":** agrega tu Gmail a `dueno_admins` en el Apps Script.
 - **"El pedido venció":** pasaron más de 15 minutos. Vuelve a tocar Conectar en Claude.
 - **Claude dice que no puede conectar:**

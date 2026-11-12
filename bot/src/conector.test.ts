@@ -4,12 +4,12 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import worker from './index'
 import { HERRAMIENTAS, slugDe } from './mcp'
-import { redireccionValida, sha256 } from './oauth'
+import { mantenerConexiones, redireccionValida, sha256 } from './oauth'
 
 /** D1 sobre SQLite en memoria, con las migraciones reales. */
 function d1() {
   const db = new DatabaseSync(':memory:')
-  for (const f of ['0001_inicial.sql', '0002_avisos.sql', '0003_conector.sql']) db.exec(readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8'))
+  for (const f of ['0001_inicial.sql', '0002_avisos.sql', '0003_conector.sql', '0005_conector_renovar.sql']) db.exec(readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8'))
   const preparar = (sql: string, args: unknown[] = []) => ({
     bind: (...a: unknown[]) => preparar(sql, a),
     run: async () => (db.prepare(sql).run(...(args as any[])), { success: true }),
@@ -25,6 +25,9 @@ const VUELTA = 'https://claude.ai/api/mcp/auth_callback'
 const SESION = `admin@gmail.com|${Date.now() + 20 * 86400_000}|firma`
 let env: any
 let apps: ReturnType<typeof vi.fn>
+/** Sesiones que el Apps Script de prueba da por válidas (la de la página y las renovadas). */
+let validas: Set<string>
+let renovadas: string[]
 
 const pedir = (ruta: string, init: RequestInit = {}) => worker.fetch(new Request(W + ruta, init), env, {} as any)
 const pkce = async () => {
@@ -34,9 +37,17 @@ const pkce = async () => {
 
 beforeEach(() => {
   env = { DB: d1(), APPS_SCRIPT_URL: 'https://script.google.com/macros/s/x/exec', BOT_TOKEN: 't' }
+  validas = new Set([SESION])
+  renovadas = []
   apps = vi.fn(async (_url: string, init: RequestInit) => {
     const d = JSON.parse(String(init.body))
-    if (d.sesion !== SESION) return Response.json({ error: 'sesion', mensaje: 'Tu sesión venció.' })
+    if (!validas.has(d.sesion)) return Response.json({ error: 'sesion', mensaje: 'Tu sesión venció.' })
+    if (d.op === 'renovar') {
+      const nueva = `admin@gmail.com|${Date.now() + 30 * 86400_000}|nueva-${renovadas.length + 1}`
+      validas.add(nueva)
+      renovadas.push(nueva)
+      return Response.json({ email: 'admin@gmail.com', sesion: nueva })
+    }
     if (d.op === 'yo') return Response.json({ email: 'admin@gmail.com', conector: W + '/bandeja' })
     if (d.op === 'resumen') return Response.json({ hoy: '2026-10-22', precio: 10, totales: { activos: 1 }, negocios: [{ slug: 'barberia-norte', nombre: 'Barbería Norte', estado: 'activo', vence: '2026-11-05', dias: 14, email: 'a@gmail.com', telefono: '', creado: '2026-09-05', ultimoPago: '2026-10-05', notas: '' }, { slug: 'spa-sol', nombre: 'Spa Sol', estado: 'prueba' }], prospectos: [] })
     if (d.op === 'crear') return Response.json({ ok: true, slug: d.slug, hoja: 'https://docs.google.com/x' })
@@ -79,20 +90,84 @@ describe('conector de Claude · OAuth', () => {
     const recurso = await (await pedir('/.well-known/oauth-protected-resource/mcp')).json() as any
     expect(recurso).toMatchObject({ resource: `${W}/mcp`, authorization_servers: [W] })
     const servidor = await (await pedir('/.well-known/oauth-authorization-server')).json() as any
-    expect(servidor).toMatchObject({ authorization_endpoint: `${W}/authorize`, token_endpoint: `${W}/token`, registration_endpoint: `${W}/register`, code_challenge_methods_supported: ['S256'] })
+    expect(servidor).toMatchObject({ authorization_endpoint: `${W}/authorize`, token_endpoint: `${W}/token`, registration_endpoint: `${W}/register`, code_challenge_methods_supported: ['S256'], grant_types_supported: ['authorization_code', 'refresh_token'] })
     const r = await pedir('/mcp', { method: 'POST', body: '{}' })
     expect(r.status).toBe(401)
     expect(r.headers.get('www-authenticate')).toContain(`resource_metadata="${W}/.well-known/oauth-protected-resource"`)
   })
 
-  it('flujo completo: el token vale hasta que vence la sesión de la central y no se guarda en claro', async () => {
+  it('flujo completo: token de 7 días con refresh token, sesión renovada y nada guardado en claro', async () => {
     const { token, t } = await conectar()
     expect(t.token_type).toBe('Bearer')
-    expect(t.expires_in).toBeGreaterThan(19 * 86400)
-    expect(t.expires_in).toBeLessThanOrEqual(20 * 86400)
+    expect(t.expires_in).toBe(7 * 86400)
+    expect(t.refresh_token).toMatch(/^[\w-]{40,}$/)
+    // La sesión que trajo la página se cambia por una nueva de 30 días.
+    expect(renovadas).toHaveLength(1)
     const filas = env.DB.crudo.prepare('SELECT hash, sesion FROM oauth_tokens').all() as any[]
     expect(filas).toHaveLength(1)
     expect(filas[0].hash).not.toBe(token)
+    expect(filas[0].sesion).toBe(renovadas[0])
+    const ren = env.DB.crudo.prepare('SELECT hash FROM oauth_renovaciones').all() as any[]
+    expect(ren).toHaveLength(1)
+    expect(ren[0].hash).not.toBe(t.refresh_token)
+  })
+
+  it('refresh token: entrega otro token, rota el refresh y renueva la sesión', async () => {
+    const { t, reg } = await conectar()
+    const refrescar = (refresh: string) => pedir('/token', { method: 'POST', body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refresh, client_id: reg.client_id }) })
+    const r = await refrescar(t.refresh_token)
+    expect(r.status).toBe(200)
+    const t2 = await r.json() as any
+    expect(t2.access_token).not.toBe(t.access_token)
+    expect(t2.refresh_token).not.toBe(t.refresh_token)
+    expect(renovadas).toHaveLength(2)
+    // El refresh viejo ya no sirve; el nuevo token sí, con la sesión nueva.
+    expect((await refrescar(t.refresh_token)).status).toBe(400)
+    const lista = await (await rpc(t2.access_token, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'ver_cobros', arguments: {} } })).json() as any
+    expect(lista.result.isError).toBeUndefined()
+    expect(JSON.parse(String(apps.mock.calls.at(-1)![1].body)).sesion).toBe(renovadas[1])
+    // De otro cliente, no.
+    expect((await pedir('/token', { method: 'POST', body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: t2.refresh_token, client_id: 'otro' }) })).status).toBe(400)
+  })
+
+  it('refresh token: si ya no es administrador se borra; si el Apps Script no responde, se guarda para reintentar', async () => {
+    const { t, reg } = await conectar()
+    const refrescar = () => pedir('/token', { method: 'POST', body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: t.refresh_token, client_id: reg.client_id }) })
+    apps.mockImplementationOnce(async () => new Response('<html><title>Error</title></html>', { status: 500 }))
+    const caido = await refrescar()
+    expect(caido.status).toBe(503)
+    expect(((await caido.json()) as any).error).toBe('temporarily_unavailable')
+    apps.mockImplementationOnce(async () => Response.json({ error: 'no_autorizado', mensaje: 'No eres administrador.' }))
+    const fuera = await refrescar()
+    expect(fuera.status).toBe(400)
+    expect(((await fuera.json()) as any).error).toBe('invalid_grant')
+    expect(env.DB.crudo.prepare('SELECT count(*) AS n FROM oauth_renovaciones').get().n).toBe(0)
+  })
+
+  it('con un Code.gs sin "renovar" se queda la misma sesión mientras no venza', async () => {
+    apps.mockImplementation(async (_url: string, init: RequestInit) => {
+      const d = JSON.parse(String(init.body))
+      if (d.sesion !== SESION) return Response.json({ error: 'sesion' })
+      if (d.op === 'yo') return Response.json({ email: 'admin@gmail.com', conector: W + '/bandeja' })
+      return Response.json({ error: 'op_desconocida' })
+    })
+    const { t } = await conectar()
+    expect(t.expires_in).toBe(7 * 86400)
+    expect(env.DB.crudo.prepare('SELECT sesion FROM oauth_tokens').get().sesion).toBe(SESION)
+  })
+
+  it('el cron renueva las sesiones que vencen en menos de 5 días, aunque Claude no se use', async () => {
+    await conectar()
+    const pronto = `admin@gmail.com|${Date.now() + 2 * 86400_000}|vieja`
+    validas.add(pronto)
+    env.DB.crudo.prepare('UPDATE oauth_renovaciones SET sesion = ?').run(pronto)
+    await mantenerConexiones(env)
+    const fila = env.DB.crudo.prepare('SELECT sesion FROM oauth_renovaciones').get() as any
+    expect(fila.sesion).toBe(renovadas.at(-1))
+    // Las que aún tienen tiempo no se tocan.
+    const llamadas = apps.mock.calls.length
+    await mantenerConexiones(env)
+    expect(apps.mock.calls.length).toBe(llamadas)
   })
 
   it('rechaza PKCE equivocado, redirect no registrada, otro origen y a quien no es administrador', async () => {
@@ -151,7 +226,7 @@ describe('conector de Claude · MCP', () => {
     const crear = await llamar('crear_negocio', { nombre: 'Veterinaria Patitas', email: 'yo@gmail.com' })
     expect(crear.isError).toBeUndefined()
     const enviado = JSON.parse(String(apps.mock.calls.at(-1)![1].body))
-    expect(enviado).toMatchObject({ accion: 'central', op: 'crear', slug: 'veterinaria-patitas', diasPrueba: 30, sesion: SESION })
+    expect(enviado).toMatchObject({ accion: 'central', op: 'crear', slug: 'veterinaria-patitas', diasPrueba: 30, sesion: renovadas[0] })
     await llamar('suspender_negocio', { slug: 'spa-sol', suspender: true })
     expect(JSON.parse(String(apps.mock.calls.at(-1)![1].body))).toMatchObject({ op: 'activo', slug: 'spa-sol', activo: false })
     await llamar('ver_citas', { slug: 'spa-sol' })

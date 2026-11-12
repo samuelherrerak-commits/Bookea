@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { DEMO_MODE } from '../config'
 import * as central from '../central/api'
 import { Entrar, Logo } from '../negocio/NegocioApp'
 import type { Sesion } from '../negocio/api'
@@ -59,7 +60,10 @@ export default function ConectarApp() {
       try {
         const yo = await central.yo(sesion.sesion)
         if (!yo.conector) {
-          if (vivo) setPaso({ tipo: 'pedir', cliente: 'Claude', destino: 'claude.ai', conector: '', email: yo.email })
+          // Solo la demo funciona sin Worker; en producción sería un "listo" falso que nunca vuelve a Claude.
+          if (!vivo) return
+          if (DEMO_MODE) setPaso({ tipo: 'pedir', cliente: 'Claude', destino: 'claude.ai', conector: '', email: yo.email })
+          else setPaso({ tipo: 'error', mensaje: 'Falta la dirección del Worker: pon bot_bandeja_url en las propiedades del Apps Script y vuelve a conectar desde Claude.' })
           return
         }
         const r = await fetch(`${yo.conector}/oauth/pedido?id=${encodeURIComponent(pedido)}`)
