@@ -2937,6 +2937,11 @@ function atenderDueno_(data, ahoraMs) {
 
   const email = leerSesion_(data.sesion, ahoraMs);
   if (!email) return { error: 'sesion', mensaje: 'Tu sesión venció. Entra otra vez.' };
+  // La lista de negocios al día: la app la pide al abrir (la de 'entrar' queda guardada y no ve
+  // los negocios creados después ni los equipos a los que te agregaron).
+  if (op === 'negocios') {
+    return { negocios: accesosDe_(email, getTenants_()).map(function (a) { return { slug: a.tenant.slug, nombre: a.tenant.nombre, rol: a.rol, persona: a.persona }; }) };
+  }
   const acceso = accesosDe_(email, getTenants_()).filter(function (a) { return a.tenant.slug === String(data.slug || ''); })[0];
   if (!acceso) return { error: 'no_autorizado', mensaje: 'Ese negocio no es tuyo.' };
   // bookeaa team: una persona del equipo solo ve y toca lo suyo.

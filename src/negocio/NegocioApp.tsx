@@ -70,6 +70,30 @@ export default function NegocioApp() {
     setSesion(null)
   }, [])
 
+  // Al abrir, la lista de negocios se pide de nuevo: la de la sesión es la del día en que entró.
+  const token = sesion?.sesion
+  useEffect(() => {
+    if (!token) return
+    let vivo = true
+    api.negocios(token).then(
+      ({ negocios }) => {
+        if (!vivo || !Array.isArray(negocios)) return
+        setSesion((s) => {
+          if (!s || JSON.stringify(s.negocios) === JSON.stringify(negocios)) return s
+          const nueva = { ...s, negocios }
+          guardar(CLAVE_SESION, nueva)
+          return nueva
+        })
+      },
+      (e) => {
+        if (vivo && e instanceof api.ErrorNegocio && e.codigo === 'sesion') salir()
+      },
+    )
+    return () => {
+      vivo = false
+    }
+  }, [token, salir])
+
   if (!sesion) {
     return (
       <Entrar
