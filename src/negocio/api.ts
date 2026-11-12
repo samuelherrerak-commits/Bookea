@@ -41,6 +41,8 @@ export interface Cita {
   profesionalId?: string
   /** "2026-10-24 10:00": la fecha y hora de antes, si se reagendó desde Mi negocio. */
   reagendada?: string
+  /** Por qué la canceló el negocio. */
+  motivo?: string
 }
 
 export interface Agenda {
@@ -423,6 +425,161 @@ function panelDemo(periodo: PeriodoPanel): Panel {
     },
     anterior: { desde: '', hasta: '', reservas: Math.round(reservas * 0.86), ingresos: Math.round(ingresos * 0.82), clientes: Math.round(reservas * 0.62), canceladas: Math.round(reservas * 0.08) },
   }
+}
+
+// ---------- CRM: clientes e historial ----------
+
+export type SegmentoCliente = 'frecuente' | 'nuevo' | 'por_volver' | 'inactivo' | 'ocasional'
+
+export interface Cliente {
+  /** Últimos 10 dígitos del teléfono (o "n:" + nombre si no dejó teléfono). */
+  clave: string
+  nombre: string
+  telefono: string
+  /** Citas no canceladas que ya pasaron. */
+  visitas: number
+  canceladas: number
+  gastado: number
+  primera: string
+  /** Última visita (yyyy-MM-dd) o ''. */
+  ultima: string
+  /** Próxima cita "yyyy-MM-dd HH:mm" o ''. */
+  proxima: string
+  /** Cada cuántos días suele volver (null con menos de 2 visitas). */
+  cadaDias: number | null
+  sinVenir: number | null
+  frecuente: boolean
+  segmento: SegmentoCliente
+  servicios: { nombre: string; n: number }[]
+  persona: string
+}
+
+export interface Clientes {
+  hoy: string
+  moneda: Agenda['negocio']['moneda']
+  totales: { clientes: number; frecuentes: number; nuevos: number; porVolver: number; inactivos: number; regresan: number }
+  clientes: Cliente[]
+}
+
+export interface FichaCliente {
+  hoy: string
+  moneda: Agenda['negocio']['moneda']
+  cliente: Cliente
+  citas: Cita[]
+}
+
+export interface Historial {
+  hoy: string
+  moneda: Agenda['negocio']['moneda']
+  mes: string
+  primerMes: string
+  ultimoMes: string
+  citas: Cita[]
+}
+
+/** La misma clave que el Apps Script (claveCliente_): así la app encuentra la ficha de una cita. */
+export function claveCliente(telefono: string, nombre: string): string {
+  const d = telefono.replace(/\D/g, '').slice(-10)
+  if (d.length >= 7) return d
+  const n = nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  return n ? 'n:' + n : ''
+}
+
+export function clientes(sesion: string, slug: string): Promise<Clientes> {
+  if (DEMO_MODE) return espera(crmDemo().clientes)
+  return llamar<Clientes>({ op: 'clientes', sesion, slug })
+}
+
+export function fichaCliente(sesion: string, slug: string, cliente: string): Promise<FichaCliente> {
+  if (DEMO_MODE) {
+    const d = crmDemo()
+    const c = d.clientes.clientes.find((x) => x.clave === cliente)
+    if (!c) return Promise.reject(new ErrorNegocio('no_existe', 'No encontramos ese cliente.'))
+    return espera({ hoy: d.hoy, moneda: d.moneda, cliente: c, citas: d.citas.filter((x) => claveCliente(x.telefono, x.cliente) === cliente).reverse() })
+  }
+  return llamar<FichaCliente>({ op: 'cliente', sesion, slug, cliente })
+}
+
+export function historial(sesion: string, slug: string, mes?: string): Promise<Historial> {
+  if (DEMO_MODE) {
+    const d = crmDemo()
+    const m = mes || d.hoy.slice(0, 7)
+    return espera({ hoy: d.hoy, moneda: d.moneda, mes: m, primerMes: d.citas[0].fecha.slice(0, 7), ultimoMes: d.citas[d.citas.length - 1].fecha.slice(0, 7), citas: d.citas.filter((c) => c.fecha.slice(0, 7) === m).reverse() })
+  }
+  return llamar<Historial>({ op: 'historial', sesion, slug, ...(mes ? { mes } : {}) })
+}
+
+let crmCache: { hoy: string; moneda: Agenda['negocio']['moneda']; citas: Cita[]; clientes: Clientes } | null = null
+
+/**
+ * Demo del CRM: seis meses de una barbería con clientes fieles, otros que dejaron de venir y
+ * nuevos. Los clientes se calculan con las mismas reglas que clientesDe_ del Apps Script.
+ */
+function crmDemo() {
+  const hoy = hoyCaracas()
+  if (crmCache?.hoy === hoy) return crmCache
+  let semilla = 42
+  const azar = () => ((semilla = (semilla * 16807) % 2147483647) / 2147483647)
+  const nombres = ['Pedro Silva', 'Ana Pérez', 'Luis Rojas', 'María Gómez', 'Carlos Méndez', 'Rosa Díaz', 'José Herrera', 'Daniela Torres', 'Miguel Castro', 'Valentina Ruiz', 'Andrés Blanco', 'Camila Suárez', 'Jorge Medina', 'Gabriela León', 'Ricardo Peña', 'Sofía Rivas', 'Fernando Ortiz', 'Paola Vargas', 'Héctor Salas', 'Lucía Romero', 'Diego Navas', 'Isabel Mora', 'Raúl Campos', 'Elena Paredes']
+  const servicios: [string, number][] = [['Corte', 10], ['Corte y barba', 16], ['Barba', 8], ['Corte niño', 7]]
+  const personas = ['Carla Méndez', 'Andrés Rojas', 'Sofía Pérez']
+  const citas: Cita[] = []
+  nombres.forEach((cliente, i) => {
+    const telefono = `0412 555 ${String(1000 + i * 37).slice(-4)}`
+    // Cada cliente tiene su ritmo: unos vienen cada 2 o 3 semanas, otros pararon, otros son nuevos.
+    const cada = 14 + Math.round(azar() * 30)
+    const inicio = i < 4 ? -175 : i > 19 ? -20 + Math.round(azar() * 10) : -170 + Math.round(azar() * 60)
+    const fin = i % 7 === 3 ? -95 : i % 5 === 2 ? -60 : 10
+    const persona = personas[i % 3]
+    for (let d = inicio; d <= fin; d += cada + Math.round(azar() * 6 - 3)) {
+      const [nombre, precio] = servicios[i % 9 === 0 ? 1 : Math.floor(azar() * 3)]
+      const hora = `${String(9 + Math.floor(azar() * 9)).padStart(2, '0')}:${azar() < 0.5 ? '00' : '30'}`
+      const cancelada = azar() < 0.07
+      citas.push({
+        id: `c${citas.length + 1}`, cliente, telefono, servicios: nombre, total: precio, totalBs: null, fecha: sumarDias(hoy, d), hora,
+        metodo: azar() < 0.55 ? 'Pago en la cita' : 'Bolívares (Pago Móvil)', estado: cancelada ? 'Cancelada' : 'Confirmada',
+        lugar: 'En la barbería', direccion: 'Av. Libertador, local 12', capture: '', recibo: null, profesional: azar() < 0.8 ? persona : personas[(i + 1) % 3],
+        profesionalId: '', reagendada: '', ...(cancelada ? { motivo: 'El cliente no podía venir' } : {}),
+      } as Cita)
+    }
+  })
+  citas.sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora))
+  const dias = (a: string, b: string) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000)
+  const grupos = new Map<string, Cita[]>()
+  for (const c of citas) grupos.set(claveCliente(c.telefono, c.cliente), [...(grupos.get(claveCliente(c.telefono, c.cliente)) ?? []), c])
+  const lista: Cliente[] = [...grupos.entries()].map(([clave, todas]) => {
+    const validas = todas.filter((c) => !/cancel/i.test(c.estado))
+    const visitas = validas.filter((c) => c.fecha <= hoy)
+    const proximas = validas.filter((c) => c.fecha > hoy)
+    const ultima = visitas.at(-1)?.fecha ?? ''
+    const unicos = [...new Set(visitas.map((c) => c.fecha))]
+    const cadaDias = unicos.length >= 2 ? Math.round(dias(unicos[0], unicos.at(-1)!) / (unicos.length - 1)) : null
+    const sinVenir = ultima ? dias(ultima, hoy) : null
+    const segmento: SegmentoCliente =
+      ultima && !proximas.length && sinVenir! > 120 ? 'inactivo'
+        : visitas.length >= 2 && !proximas.length && cadaDias !== null && sinVenir! > Math.max(21, Math.round(cadaDias * 1.3)) ? 'por_volver'
+          : visitas.length >= 3 ? 'frecuente'
+            : dias(todas[0].fecha, hoy) <= 30 ? 'nuevo' : 'ocasional'
+    const cuenta = (xs: string[]) => [...xs.reduce((m, x) => m.set(x, (m.get(x) ?? 0) + 1), new Map<string, number>())].map(([nombre, n]) => ({ nombre, n })).sort((a, b) => b.n - a.n)
+    return {
+      clave, nombre: todas.at(-1)!.cliente, telefono: todas.at(-1)!.telefono, visitas: visitas.length, canceladas: todas.length - validas.length,
+      gastado: visitas.reduce((a, c) => a + c.total, 0), primera: todas[0].fecha, ultima, proxima: proximas[0] ? `${proximas[0].fecha} ${proximas[0].hora}` : '',
+      cadaDias, sinVenir, frecuente: visitas.length >= 3, segmento, servicios: cuenta(visitas.map((c) => c.servicios)).slice(0, 3), persona: cuenta(visitas.map((c) => c.profesional ?? '')).at(0)?.nombre ?? '',
+    }
+  }).sort((a, b) => b.visitas - a.visitas || b.gastado - a.gastado)
+  const conVisitas = lista.filter((c) => c.visitas > 0)
+  crmCache = {
+    hoy, moneda: 'EUR', citas,
+    clientes: {
+      hoy, moneda: 'EUR', clientes: lista,
+      totales: {
+        clientes: lista.length, frecuentes: lista.filter((c) => c.frecuente).length, nuevos: lista.filter((c) => c.segmento === 'nuevo').length,
+        porVolver: lista.filter((c) => c.segmento === 'por_volver').length, inactivos: lista.filter((c) => c.segmento === 'inactivo').length,
+        regresan: conVisitas.length ? Math.round((conVisitas.filter((c) => c.visitas >= 2).length / conVisitas.length) * 100) : 0,
+      },
+    },
+  }
+  return crmCache
 }
 
 // ---------- Mi plan y pagos ----------
