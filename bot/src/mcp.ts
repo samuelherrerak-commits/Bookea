@@ -23,7 +23,7 @@ interface Herramienta {
 }
 
 const ESTADOS = ['activo', 'prueba', 'pendiente', 'vencido', 'suspendido', 'sin_fecha']
-const SECCIONES = ['marca', 'estilo', 'lugar', 'horario', 'servicios', 'pagos', 'mensaje', 'comprobantes', 'bloqueos', 'cupones', 'equipo']
+const SECCIONES = ['marca', 'logo', 'estilo', 'lugar', 'horario', 'servicios', 'pagos', 'mensaje', 'comprobantes', 'bloqueos', 'cupones', 'equipo']
 
 const obj = (properties: Record<string, unknown>, required: string[] = []) => ({ type: 'object', properties, required, additionalProperties: false })
 const slug = { type: 'string', description: 'Link del negocio, lo que va después de /u/ (ej. "barberia-norte").' }
@@ -204,6 +204,7 @@ export const HERRAMIENTAS: Herramienta[] = [
     description: [
       'Guarda una sección de la configuración de un negocio, con las mismas validaciones que Mi negocio → Configurar. `datos` tiene la misma forma que devuelve ver_configuracion:',
       '- marca: {config:{nombre_negocio, marca, logo_url, hero_titulo, hero_subtitulo}}',
+      '- logo: {logo: "data:image/png;base64,…"} (PNG, JPG o WEBP de hasta ~33 KB, cuadrado de unos 360 px; "" lo quita). Gana sobre logo_url.',
       '- estilo: {config:{tema_estilo (elegante|moderno|editorial|amable|audaz|clasico|minimal|retro), paleta (Rosa Clásico, Rosa Palo, Coral, Terracota, Salvia, Bosque, Azul Noche, Lavanda, Dorado, Carbón), color_principal (#hex o vacío), color_fondo}}',
       '- lugar: {config:{lugar_tipo (spa|consultorio|barberia|estudio|salon|clinica|local|otro), lugar_nombre, permite_domicilio (si|no), recargo_domicilio_pct, minutos_extra_domicilio}, sedes:[{nombre, direccion, mapsUrl, activa}]}',
       '- horario: {config:{intervalo_min, dias_anticipacion, anticipacion_min_horas, zona_horaria, recordatorio_minutos}, horarios:[{dia:"Lunes", inicio:"09:00", fin:"18:00"}]} (los días sin tramo quedan cerrados)',
