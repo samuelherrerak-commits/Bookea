@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { BarrasH, BarrasMes, Cambio, Cifra, Tarjeta, mesLargo } from '../central/graficos'
 import { capitalize, formatLongDate } from '../lib/format'
 import { formatMonto } from '../lib/ticket'
+import { Clientes, Historial } from './Crm'
 import * as api from './api'
 
 /**
@@ -24,7 +25,7 @@ const DIAS_SEMANA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
 const diaCorto = (ymd: string) => String(Number(ymd.slice(8, 10)))
 const diaLargo = (ymd: string) => `${DIAS_SEMANA[new Date(ymd + 'T12:00:00Z').getUTCDay()]} ${capitalize(formatLongDate(ymd)).replace(/^\w+\s/, '')}`
 
-export function PanelNegocio({ sesion, slug, alSalir }: { sesion: string; slug: string; alSalir: () => void }) {
+function Numeros({ sesion, slug, alSalir }: { sesion: string; slug: string; alSalir: () => void }) {
   const [periodo, setPeriodo] = useState<api.PeriodoPanel>(() => {
     try {
       return (localStorage.getItem(CLAVE_PERIODO) as api.PeriodoPanel) || 'mes'
@@ -65,7 +66,7 @@ export function PanelNegocio({ sesion, slug, alSalir }: { sesion: string; slug: 
   }
 
   return (
-    <div className="mt-2 space-y-4">
+    <div className="space-y-4">
       <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 no-scrollbar lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="Período">
         {PERIODOS.map(([id, t]) => (
           <button key={id} type="button" aria-pressed={periodo === id} onClick={() => setPeriodo(id)}
@@ -148,6 +149,45 @@ export function PanelNegocio({ sesion, slug, alSalir }: { sesion: string; slug: 
           </>
         )
       })()}
+    </div>
+  )
+}
+
+type Vista = 'numeros' | 'clientes' | 'historial'
+const VISTAS: [Vista, string][] = [['numeros', 'Números'], ['clientes', 'Clientes'], ['historial', 'Historial']]
+const CLAVE_VISTA = 'bookeaa-panel-vista'
+
+/** El Panel: números del negocio, sus clientes (CRM) y el historial de citas mes a mes. */
+export function PanelNegocio({ sesion, slug, alSalir, negocio }: { sesion: string; slug: string; alSalir: () => void; negocio: string }) {
+  const [vista, setVista] = useState<Vista>(() => {
+    try {
+      const v = localStorage.getItem(CLAVE_VISTA) as Vista
+      return VISTAS.some(([id]) => id === v) ? v : 'numeros'
+    } catch {
+      return 'numeros'
+    }
+  })
+  const elegir = (v: Vista) => {
+    setVista(v)
+    try {
+      localStorage.setItem(CLAVE_VISTA, v)
+    } catch {
+      /* modo privado */
+    }
+  }
+  return (
+    <div className="mt-2 space-y-4">
+      <div className="grid grid-cols-3 gap-1 rounded-full bg-sand p-1 lg:max-w-md" role="tablist" aria-label="Panel">
+        {VISTAS.map(([id, t]) => (
+          <button key={id} type="button" role="tab" aria-selected={vista === id} onClick={() => elegir(id)}
+            className={'rounded-full px-3 py-2 text-[15px] font-semibold transition-colors ' + (vista === id ? 'bg-ink text-bg' : 'text-muted')}>
+            {t}
+          </button>
+        ))}
+      </div>
+      {vista === 'numeros' && <Numeros sesion={sesion} slug={slug} alSalir={alSalir} />}
+      {vista === 'clientes' && <Clientes sesion={sesion} slug={slug} alSalir={alSalir} negocio={negocio} />}
+      {vista === 'historial' && <Historial sesion={sesion} slug={slug} alSalir={alSalir} negocio={negocio} />}
     </div>
   )
 }

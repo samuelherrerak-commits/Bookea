@@ -73,6 +73,25 @@ La pestaña **Panel** muestra cuánto dinero dejaron las reservas en un período
 
 Son las cifras que marcó cada reserva en la página, en la moneda del negocio. No es lo que se cobró de verdad: un descuento hecho en persona no aparece. Las personas del equipo no ven el Panel.
 
+Arriba del Panel hay tres vistas: **Números** (lo de arriba), **Clientes** e **Historial**. La app recuerda la última que abriste.
+
+### Clientes (CRM)
+Los clientes salen de las reservas, agrupados por **teléfono** (da igual si lo escribieron `0412…` o `+58 412…`; sin teléfono, por nombre).
+- Arriba: cuántos clientes hay, cuántos son **frecuentes** (3 visitas o más), cuántos están **por volver** y qué % **vuelve** (de los que vinieron, cuántos vinieron más de una vez).
+- Cada cliente tiene un **segmento**, en este orden:
+  - **Inactivo:** más de 120 días sin venir y sin cita agendada.
+  - **Por volver:** vino 2 veces o más, no tiene cita y ya pasó más de lo que suele tardar (su promedio entre visitas × 1,3, mínimo 21 días).
+  - **Frecuente:** 3 visitas o más.
+  - **Nuevo:** su primera cita fue hace menos de 30 días.
+  - **Ocasional:** el resto.
+- Se filtra por segmento y se busca por nombre o teléfono. El botón de WhatsApp abre el chat; a los que están **por volver** o **inactivos** les deja escrito un mensaje para invitarlos, con el link de reservas.
+- Al tocar un cliente se abre su **ficha**: visitas, cuánto ha gastado, cada cuántos días viene, última y próxima cita, cancelaciones, sus servicios de siempre, quién lo atiende y **toda su historia** de citas (con el motivo si se canceló y si se reagendó).
+
+Una visita es una cita no cancelada con fecha de hoy o antes.
+
+### Historial
+Todas las citas de un mes, por día, desde la primera reserva del negocio. Se pasa de mes con las flechas y se filtra por **atendidas, agendadas o canceladas**, por persona del equipo y por cliente, teléfono o servicio. **Descargar Excel (CSV)** baja lo que se ve, para abrirlo en Excel o Google Sheets. Al tocar una cita se abre la ficha del cliente.
+
 ## En computadora
 Mi negocio, la central y la página de reservas se adaptan a la pantalla:
 - **Mi negocio:**

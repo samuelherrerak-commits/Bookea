@@ -372,7 +372,7 @@ function Panel({ sesion, alSalir }: { sesion: api.Sesion; alSalir: () => void })
             link={`${location.origin}/u/${slug}`} onCerrar={() => setCancelando(null)} onCancelada={cancelada} alSalir={alSalir}
             onReagendar={(c) => { setCancelando(null); setMoviendo(c) }} />
         )}
-        {pestana === 'panel' && !esEquipo && <PanelNegocio sesion={sesion.sesion} slug={slug} alSalir={alSalir} />}
+        {pestana === 'panel' && !esEquipo && <PanelNegocio sesion={sesion.sesion} slug={slug} alSalir={alSalir} negocio={nombre} />}
         {pestana === 'bloqueos' && <MisBloqueos sesion={sesion.sesion} slug={slug} alSalir={alSalir} />}
         {pestana === 'configurar' && <Configurar key={`${slug}-${seccion.n}`} sesion={sesion.sesion} slug={slug} alSalir={alSalir} inicial={seccion.id} />}
         {pestana === 'ajustes' && (

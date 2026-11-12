@@ -2843,6 +2843,8 @@ function citasEntre_(filas, desde, hasta) {
         profesionalId: String(r.Profesional_ID || ''),
         // "2026-10-24 10:00" si se movió desde Mi negocio.
         reagendada: String(r.Reagendada || ''),
+        // Motivo que anotó el negocio al cancelarla.
+        motivo: String(r.Motivo_Cancelacion || ''),
       };
     })
     .filter(function (c) { return c.id && c.fecha && c.fecha >= desde && c.fecha <= hasta; })
@@ -2951,6 +2953,7 @@ function atenderDueno_(data, ahoraMs) {
     return atenderBloqueos_(op, data, openTenant_(tenant), tenant, String(data.persona || ''), ahoraMs);
   }
   if (op === 'panel') return panelNegocio_(tenant, data, ahoraMs);
+  if (op === 'clientes' || op === 'cliente' || op === 'historial') return crmNegocio_(op, tenant, data, ahoraMs);
   if (op === 'horas_reagendar') return horasReagendar_(openTenant_(tenant), tenant, data, ahoraMs);
   if (op === 'reagendar') return reagendarCita_(openTenant_(tenant), tenant, data, ahoraMs);
   if (op === 'cancelar') return cancelarCita_(openTenant_(tenant), tenant, data);
@@ -5589,6 +5592,135 @@ function resumenPeriodo_(filas, desde, hasta, hoy, porMes) {
   r.porMetodo = lista(metodos, 8);
   r.serie = serie;
   return r;
+}
+
+// ---------- CRM de Mi negocio: clientes e historial (solo el administrador) ----------
+// Todo sale de la pestaña Reservaciones: no hay otra base de clientes que mantener.
+
+/** Días sin venir para dar a un cliente por inactivo. */
+const CRM_DIAS_INACTIVO = 120;
+/** Visitas para ser cliente frecuente. */
+const CRM_VISITAS_FRECUENTE = 3;
+
+/** Un cliente es su teléfono (últimos 10 dígitos: 0412… y 58412… son el mismo); sin teléfono, su nombre. */
+function claveCliente_(telefono, nombre) {
+  const d = String(telefono || '').replace(/\D/g, '').slice(-10);
+  if (d.length >= 7) return d;
+  const n = normKey_(nombre);
+  return n ? 'n:' + n : '';
+}
+
+/** Lo más repetido de una lista de nombres (los `max` primeros, con cuántas veces). */
+function masRepetidos_(lista, max) {
+  const cuenta = {};
+  lista.forEach(function (x) { if (x) cuenta[x] = (cuenta[x] || 0) + 1; });
+  return Object.keys(cuenta).map(function (k) { return { nombre: k, n: cuenta[k] }; })
+    .sort(function (a, b) { return b.n - a.n || a.nombre.localeCompare(b.nombre); }).slice(0, max);
+}
+
+/**
+ * Los clientes del negocio con su historia: visitas (citas no canceladas que ya pasaron), lo que
+ * gastaron, cada cuánto vienen, qué se hacen y con quién, y su segmento:
+ *  - inactivo: no viene hace más de CRM_DIAS_INACTIVO días y no tiene cita;
+ *  - por_volver: vino 2+ veces, no tiene cita y ya pasó (con margen) lo que suele tardar en volver;
+ *  - frecuente: CRM_VISITAS_FRECUENTE visitas o más;
+ *  - nuevo: su primera cita fue en los últimos 30 días;
+ *  - ocasional: los demás.
+ */
+function clientesDe_(citas, hoy) {
+  const grupos = {};
+  citas.forEach(function (c) {
+    const k = claveCliente_(c.telefono, c.cliente);
+    if (!k) return;
+    (grupos[k] = grupos[k] || []).push(c);
+  });
+  return Object.keys(grupos).map(function (k) {
+    const todas = grupos[k].slice().sort(function (a, b) { return (a.fecha + a.hora).localeCompare(b.fecha + b.hora); });
+    const validas = todas.filter(function (c) { return !/cancel/i.test(c.estado); });
+    const visitas = validas.filter(function (c) { return c.fecha <= hoy; });
+    const proximas = validas.filter(function (c) { return c.fecha > hoy; });
+    const ultimaCita = todas[todas.length - 1];
+    const ultima = visitas.length ? visitas[visitas.length - 1].fecha : '';
+    let cadaDias = null;
+    if (visitas.length >= 2) {
+      // Días distintos: dos servicios el mismo día cuentan como una sola vuelta.
+      const dias = visitas.map(function (c) { return c.fecha; }).filter(function (f, i, a) { return a.indexOf(f) === i; });
+      if (dias.length >= 2) cadaDias = Math.round(diasEntre_(dias[0], dias[dias.length - 1]) / (dias.length - 1));
+    }
+    const sinVenir = ultima ? diasEntre_(ultima, hoy) : null;
+    const primera = todas[0].fecha;
+    let segmento = 'ocasional';
+    if (ultima && !proximas.length && sinVenir > CRM_DIAS_INACTIVO) segmento = 'inactivo';
+    else if (visitas.length >= 2 && !proximas.length && cadaDias !== null && sinVenir > Math.max(21, Math.round(cadaDias * 1.3))) segmento = 'por_volver';
+    else if (visitas.length >= CRM_VISITAS_FRECUENTE) segmento = 'frecuente';
+    else if (diasEntre_(primera, hoy) <= 30) segmento = 'nuevo';
+    const servicios = [];
+    visitas.forEach(function (c) { String(c.servicios).split(/\s*,\s*/).forEach(function (x) { if (x) servicios.push(x); }); });
+    return {
+      clave: k,
+      nombre: ultimaCita.cliente,
+      telefono: ultimaCita.telefono,
+      visitas: visitas.length,
+      canceladas: todas.length - validas.length,
+      gastado: round2_(visitas.reduce(function (a, c) { return a + (c.total || 0); }, 0)),
+      primera: primera,
+      ultima: ultima,
+      proxima: proximas.length ? proximas[0].fecha + ' ' + proximas[0].hora : '',
+      cadaDias: cadaDias,
+      sinVenir: sinVenir,
+      frecuente: visitas.length >= CRM_VISITAS_FRECUENTE,
+      segmento: segmento,
+      servicios: masRepetidos_(servicios, 3),
+      persona: (masRepetidos_(visitas.map(function (c) { return c.profesional; }), 1)[0] || {}).nombre || '',
+    };
+  });
+}
+
+/** Clientes, ficha de un cliente o historial de un mes (ops 'clientes', 'cliente', 'historial'). */
+function crmNegocio_(op, tenant, data, ahoraMs) {
+  const hoy = Utilities.formatDate(new Date(ahoraMs), ZONA, 'yyyy-MM-dd');
+  const libro = openTenant_(tenant);
+  const config = getConfig_(libro);
+  const moneda = normalizarMoneda_(config.moneda);
+  const citas = citasEntre_(getSheetData_(libro, 'Reservaciones'), '0000-00-00', '9999-99-99');
+
+  if (op === 'historial') {
+    const mes = /^\d{4}-\d{2}$/.test(String(data.mes || '')) ? String(data.mes) : hoy.slice(0, 7);
+    const delMes = citas.filter(function (c) { return c.fecha.slice(0, 7) === mes; }).reverse();
+    return {
+      hoy: hoy, moneda: moneda, mes: mes,
+      primerMes: citas.length ? citas[0].fecha.slice(0, 7) : mes,
+      ultimoMes: citas.length ? citas[citas.length - 1].fecha.slice(0, 7) : mes,
+      citas: delMes,
+    };
+  }
+
+  const clientes = clientesDe_(citas, hoy);
+  if (op === 'cliente') {
+    const clave = String(data.cliente || '');
+    const c = clientes.filter(function (x) { return x.clave === clave; })[0];
+    if (!c) return { error: 'no_existe', mensaje: 'No encontramos ese cliente.' };
+    return {
+      hoy: hoy, moneda: moneda, cliente: c,
+      citas: citas.filter(function (x) { return claveCliente_(x.telefono, x.cliente) === clave; }).reverse(),
+    };
+  }
+
+  const cuenta = function (seg) { return clientes.filter(function (c) { return c.segmento === seg; }).length; };
+  const conVisitas = clientes.filter(function (c) { return c.visitas > 0; });
+  return {
+    hoy: hoy, moneda: moneda,
+    totales: {
+      clientes: clientes.length,
+      frecuentes: clientes.filter(function (c) { return c.frecuente; }).length,
+      nuevos: cuenta('nuevo'),
+      porVolver: cuenta('por_volver'),
+      inactivos: cuenta('inactivo'),
+      // Qué parte de los que vinieron volvió al menos una vez.
+      regresan: conVisitas.length ? Math.round(conVisitas.filter(function (c) { return c.visitas >= 2; }).length / conVisitas.length * 100) : 0,
+    },
+    clientes: clientes.sort(function (a, b) { return b.visitas - a.visitas || b.gastado - a.gastado || (b.ultima || '').localeCompare(a.ultima || ''); }).slice(0, 2000),
+  };
 }
 
 /** Panel de Mi negocio (solo el administrador). */

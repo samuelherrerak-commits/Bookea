@@ -22,7 +22,7 @@ Ejemplo: *"Crea una veterinaria de ejemplo con mi correo, con consulta, vacunas 
   - Si sales de `dueno_admins`, la próxima renovación falla y Claude pide volver a conectar.
 - **Qué se guarda:** los tokens y los refresh tokens van en D1 cifrados con SHA-256, nunca en claro. Los refresh tokens rotan en cada uso.
 
-Herramientas: `listar_negocios`, `ver_metricas`, `ver_negocio`, `crear_negocio`, `editar_negocio`, `suspender_negocio`, `registrar_pago`, `ver_cobros`, `aprobar_pago`, `rechazar_pago`, `ver_citas`, `ver_horas_para_reagendar`, `reagendar_cita`, `cancelar_cita`, `ver_configuracion` y `guardar_configuracion`.
+Herramientas: `listar_negocios`, `ver_metricas`, `ver_negocio`, `crear_negocio`, `editar_negocio`, `suspender_negocio`, `registrar_pago`, `ver_cobros`, `aprobar_pago`, `rechazar_pago`, `ver_citas`, `ver_horas_para_reagendar`, `reagendar_cita`, `cancelar_cita`, `ver_panel`, `ver_clientes`, `ver_cliente`, `ver_historial`, `ver_configuracion` y `guardar_configuracion`.
 
 ## Ponerlo en marcha (una vez)
 1. **Fusiona el PR.** La Action del bot aplica sola la migración `0003_conector.sql` y despliega el Worker.
