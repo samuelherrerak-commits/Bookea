@@ -220,6 +220,13 @@ export interface Cupon {
   /** Usos que quedan; null = ilimitado. */
   usos: number | null
 }
+/** Combo de servicios a un precio especial (servicios = sus id). */
+export interface Promocion {
+  id: string
+  nombre: string
+  servicios: string[]
+  precio: number
+}
 export interface Configuracion {
   config: Record<string, string>
   paginaUrl: string
@@ -229,6 +236,7 @@ export interface Configuracion {
   mensajes: Mensaje[]
   bloqueos: Bloqueo[]
   cupones: Cupon[]
+  promociones?: Promocion[]
   /** data URL del logo subido ('' si no hay). */
   logo: string
   /** bookeaa team. */
@@ -300,7 +308,7 @@ export function desbloquear(sesion: string, slug: string, id: string, persona = 
 
 const espera = <T,>(v: T) => new Promise<T>((ok) => setTimeout(() => ok(v), 350))
 
-export type Seccion = 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'marca' | 'estilo' | 'logo' | 'lugar' | 'pagos' | 'mensaje' | 'comprobantes' | 'equipo'
+export type Seccion = 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'promociones' | 'marca' | 'estilo' | 'logo' | 'lugar' | 'pagos' | 'mensaje' | 'comprobantes' | 'equipo'
 export interface DatosSeccion {
   config?: Record<string, string>
   servicios?: Servicio[]
@@ -309,6 +317,7 @@ export interface DatosSeccion {
   mensajes?: Mensaje[]
   bloqueos?: Bloqueo[]
   cupones?: Cupon[]
+  promociones?: Promocion[]
   logo?: string
   equipo?: PersonaEquipo[]
 }
@@ -327,7 +336,7 @@ export function guardar(sesion: string, slug: string, seccion: Seccion, datos: D
   if (DEMO_MODE) {
     const c = DEMO.configuracion
     Object.assign(c.config, datos.config ?? {})
-    for (const k of ['servicios', 'horarios', 'sedes', 'mensajes', 'bloqueos', 'cupones'] as const) if (datos[k]) (c[k] as unknown) = datos[k]
+    for (const k of ['servicios', 'horarios', 'sedes', 'mensajes', 'bloqueos', 'cupones', 'promociones'] as const) if (datos[k]) (c[k] as unknown) = datos[k]
     if (seccion === 'logo') c.logo = datos.logo ?? ''
     if (seccion === 'equipo' && c.equipo) {
       const cfg = datos.config ?? {}
@@ -685,6 +694,7 @@ const DEMO = {
     mensajes: [{ nombre: 'Clásica', texto: 'Hola {negocio}, soy {nombre}. Reservé {servicios} el {fecha} a las {hora}.' }],
     bloqueos: [{ fecha: sumarDias(hoyCaracas(), 6), inicio: '', fin: '', motivo: 'Vacaciones' }],
     cupones: [{ codigo: 'OCTUBRE10', porcentaje: 10, monto: 0, usos: null }, { codigo: 'BIENVENIDA', porcentaje: 0, monto: 2, usos: 15 }],
+    promociones: [],
     logo: '',
     equipo: {
       plan: 'team',

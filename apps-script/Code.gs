@@ -3266,8 +3266,9 @@ const CLAVES_DUENO = {
   comprobantes: ['facturacion_modo', 'ticket_reserva', 'facturacion_rif', 'facturacion_razon_social', 'facturacion_proveedor'],
 };
 /** Secciones que solo tocan tablas (sin claves de Configuracion). */
-const TABLAS_DUENO = ['servicios', 'bloqueos', 'logo', 'cupones', 'equipo'];
+const TABLAS_DUENO = ['servicios', 'bloqueos', 'logo', 'cupones', 'promociones', 'equipo'];
 const MAX_CUPONES = 200;
+const MAX_PROMOCIONES = 30;
 const MAX_SERVICIOS = 120;
 
 /** Filas de datos como texto visible (las horas no se vuelven fechas). */
@@ -3364,6 +3365,14 @@ function duenoLeerConfig_(ss, tenant, ahoraMs) {
         usos: String(r[3]).trim() === '' ? null : Math.max(0, Math.floor(toNumber_(r[3]))),
       };
     }).filter(function (c) { return c.codigo; }),
+    // Combos de servicios a un precio especial (la página los muestra arriba, en Promociones).
+    promociones: cfgFilas_(ss, 'Promociones', 4).map(function (r) {
+      return {
+        id: String(r[0] || '').trim(), nombre: String(r[1] || '').trim(),
+        servicios: String(r[2] || '').split(/[,;|+]/).map(function (x) { return x.trim(); }).filter(Boolean),
+        precio: toNumber_(r[3]),
+      };
+    }).filter(function (p) { return p.nombre; }),
     logo: leerLogoHoja_(ss),
     // bookeaa team (solo lo ve el administrador): el ID del calendario sirve para su enlace de Google Calendar.
     equipo: {
@@ -3487,6 +3496,17 @@ function duenoValidar_(seccion, datos) {
       if (c.usos !== null && c.usos !== undefined && c.usos !== '' && !(Number(c.usos) >= 0 && Number(c.usos) <= 100000)) errores.push(codigo + ': revisa los usos.');
     });
   }
+  if (seccion === 'promociones') {
+    const lista = datos.promociones || [];
+    if (lista.length > MAX_PROMOCIONES) errores.push('Máximo ' + MAX_PROMOCIONES + ' promociones.');
+    lista.forEach(function (p) {
+      const nombre = String(p.nombre || '').trim();
+      if (!nombre) return errores.push('Hay una promoción sin nombre.');
+      const servicios = Array.isArray(p.servicios) ? p.servicios.filter(Boolean) : [];
+      if (servicios.length < 1) errores.push(nombre + ': elige al menos un servicio.');
+      if (!(Number(p.precio) > 0)) errores.push(nombre + ': escribe el precio de la promoción.');
+    });
+  }
   if (seccion === 'logo' && datos.logo && !logoValido_(datos.logo)) errores.push('La imagen no se pudo guardar. Prueba con un PNG o JPG más liviano.');
   return errores;
 }
@@ -3570,6 +3590,19 @@ function duenoGuardar_(ss, tenant, seccion, datos, ahoraMs) {
       cfgReemplazar_(cfgHoja_(ss, 'Cupones'), 4, (datos.cupones || []).map(function (c) {
         const usos = c.usos === null || c.usos === undefined || c.usos === '' ? '' : Math.floor(Number(c.usos));
         return [String(c.codigo).trim().toUpperCase(), Number(c.porcentaje) || '', Number(c.monto) ? round2_(Number(c.monto)) : '', usos];
+      }));
+    }
+    if (seccion === 'promociones') {
+      // Los servicios van por su ID: si no existe en Servicios, la promoción no se publica.
+      const ids = getServicios_(ss).map(function (x) { return normKey_(x.ID); });
+      const faltan = [];
+      (datos.promociones || []).forEach(function (p) {
+        p.servicios.forEach(function (id) { if (ids.indexOf(normKey_(id)) === -1) faltan.push(String(id)); });
+      });
+      if (faltan.length) return { ok: false, errores: ['No existen estos servicios: ' + faltan.join(', ') + '.'] };
+      cfgReemplazar_(cfgHoja_(ss, 'Promociones'), 4, (datos.promociones || []).map(function (p, i) {
+        return [paraCelda_(limpiarTexto_(p.id || 'P' + (i + 1), 60)), paraCelda_(limpiarTexto_(p.nombre, 80)),
+          p.servicios.map(function (x) { return limpiarTexto_(String(x), 60); }).join(', '), round2_(Number(p.precio))];
       }));
     }
     if (seccion === 'logo') {

@@ -23,7 +23,7 @@ interface Herramienta {
 }
 
 const ESTADOS = ['activo', 'prueba', 'pendiente', 'vencido', 'suspendido', 'sin_fecha']
-const SECCIONES = ['marca', 'logo', 'estilo', 'lugar', 'horario', 'servicios', 'pagos', 'mensaje', 'comprobantes', 'bloqueos', 'cupones', 'equipo']
+const SECCIONES = ['marca', 'logo', 'estilo', 'lugar', 'horario', 'servicios', 'pagos', 'mensaje', 'comprobantes', 'bloqueos', 'cupones', 'promociones', 'equipo']
 
 const obj = (properties: Record<string, unknown>, required: string[] = []) => ({ type: 'object', properties, required, additionalProperties: false })
 const slug = { type: 'string', description: 'Link del negocio, lo que va después de /u/ (ej. "barberia-norte").' }
@@ -238,8 +238,9 @@ export const HERRAMIENTAS: Herramienta[] = [
       '- comprobantes: {config:{facturacion_modo (interno|fiscal), ticket_reserva (si|no), facturacion_rif, facturacion_razon_social, facturacion_proveedor}}',
       '- bloqueos: {bloqueos:[{fecha:"yyyy-MM-dd", inicio, fin, motivo}]}',
       '- cupones: {cupones:[{codigo, porcentaje, monto, usos}]}',
+      '- promociones: {promociones:[{id, nombre, servicios:[ids de servicios], precio}]} (combos a precio especial; salen arriba en la página)',
       '- equipo (bookeaa team: una agenda por persona): {config:{equipo_activo (si|no), equipo_modo (servicio = primero el servicio | persona = primero la persona | ambos), equipo_cualquiera (si|no: ofrecer "Cualquiera disponible")}, equipo:[{id (de ver_configuracion; sin id = persona nueva), nombre, email (su Gmail: recibe su calendario), cargo, foto (enlace https; o una imagen "data:image/jpeg;base64,…" que se guarda en Drive), servicios:[ids de servicios; vacío = todos], horarios:[{dia:"Lunes", inicio, fin}] (vacío = el del negocio), activo}]}. A cada persona nueva se le crea su calendario "Citas <nombre> · <negocio>" y se le comparte (a ella y al dueño); en ver_configuracion, calendarioEstado dice si Google ya lo compartió (compartido | pendiente | error, con calendarioError). Guardar de nuevo reintenta. Su link: https://www.bookeaa.com/u/<slug>?con=<id>.',
-      'Ojo: servicios, horarios, sedes, mensajes, bloqueos, cupones y equipo REEMPLAZAN la lista completa: manda también los que se quedan (en equipo, quien no venga queda inactivo).',
+      'Ojo: servicios, horarios, sedes, mensajes, bloqueos, cupones, promociones y equipo REEMPLAZAN la lista completa: manda también los que se quedan (en equipo, quien no venga queda inactivo).',
     ].join('\n'),
     inputSchema: obj({ slug, seccion: { type: 'string', enum: SECCIONES }, datos: { type: 'object', additionalProperties: true } }, ['slug', 'seccion', 'datos']),
     annotations: escritura,
