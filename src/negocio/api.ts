@@ -73,6 +73,12 @@ async function llamar<T>(datos: Record<string, unknown>): Promise<T> {
   return json
 }
 
+/** Los negocios de esta sesión, al día (los creados después de entrar también). */
+export function negocios(sesion: string): Promise<{ negocios: Sesion['negocios'] }> {
+  if (DEMO_MODE) return Promise.resolve({ negocios: DEMO.sesion.negocios })
+  return llamar({ op: 'negocios', sesion })
+}
+
 export function entrar(credencial: string): Promise<Sesion> {
   if (DEMO_MODE) return Promise.resolve(DEMO.sesion)
   return llamar<Sesion>({ op: 'entrar', credencial })
