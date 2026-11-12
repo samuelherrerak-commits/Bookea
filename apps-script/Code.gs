@@ -3860,6 +3860,9 @@ function atenderCentral_(data, ahoraMs) {
   const op = String(data.op || '');
   // Para el conector de Claude: quién es el administrador y dónde está el Worker que lo atiende.
   if (op === 'yo') return { email: email, conector: urlWorker_() };
+  // Para el conector de Claude: una sesión nueva (otros 30 días) mientras la actual siga viva y
+  // el correo siga en dueno_admins. Así la conexión no se cae cuando vence la sesión.
+  if (op === 'renovar') return { email: email, sesion: crearSesion_(email, ahoraMs) };
   if (op === 'resumen') return resumenCentral_(ahoraMs);
   if (op === 'cobros') return cobrosCentral_(ahoraMs);
   if (op === 'metricas') return metricasCentral_(ahoraMs, !!data.fresco);
