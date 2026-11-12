@@ -39,11 +39,11 @@ function negocio() {
 
 const AHORA = Date.UTC(2026, 9, 9, 15)
 const NOMBRES = ['duenoGuardar_', 'duenoValidar_', 'duenoLeerConfig_', 'cfgFilas_', 'cfgHora_', 'cfgActiva_', 'cfgAlertas_', 'cfgReemplazar_', 'cfgHoja_',
-  'setConfigKey_', 'normKey_', 'limpiarTexto_', 'paraCelda_', 'round2_', 'toNumber_', 'toMinutes_', 'ymd_', 'getConfig_', 'idsComoLaPagina_', 'assignIds_', 'slug_']
+  'setConfigKey_', 'normKey_', 'limpiarTexto_', 'paraCelda_', 'round2_', 'toNumber_', 'toMinutes_', 'ymd_', 'getConfig_', 'idsComoLaPagina_', 'assignIds_', 'slug_', 'getServicios_', 'getSheetData_', 'pick_']
 const cargar = (extra: Record<string, unknown> = {}) => {
   let limpiado = ''
   const f = funcionesGs<Record<string, Fn>>(gs, NOMBRES, {
-    CLAVES_DUENO: constanteGs(gs, 'CLAVES_DUENO'), TABLAS_DUENO: constanteGs(gs, 'TABLAS_DUENO'), MAX_SERVICIOS: 120, MAX_CUPONES: 200,
+    CLAVES_DUENO: constanteGs(gs, 'CLAVES_DUENO'), TABLAS_DUENO: constanteGs(gs, 'TABLAS_DUENO'), MAX_SERVICIOS: 120, MAX_CUPONES: 200, MAX_PROMOCIONES: 30,
     DIAS_SEMANA: constanteGs(gs, 'DIAS_SEMANA'), SHEETS: [], ZONA: 'America/Caracas',
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => undefined }) },
     SpreadsheetApp: { flush: () => undefined },
@@ -152,5 +152,24 @@ describe('Code.gs · cupones desde Mi negocio', () => {
       'A B: el código lleva de 3 a 20 letras o números, sin espacios.', 'DOS: elige porcentaje o monto, no los dos.',
       'CERO: escribe cuánto descuenta.', 'MUCHO: el porcentaje va de 1 a 100.', 'MUCHO está repetido.',
     ]))
+  })
+})
+
+describe('Code.gs · promociones desde Mi negocio', () => {
+  it('guarda combos por id de servicio y los devuelve', () => {
+    const { ss, hojas } = negocio()
+    hojas.Servicios.datos.push(['lavado', 'Lavado', 3, 10, 'Adicional'])
+    const { f } = cargar()
+    const r = f.duenoGuardar_(ss, { slug: 'b' }, 'promociones', { promociones: [{ id: '', nombre: 'Corte + lavado', servicios: ['corte', 'lavado'], precio: 11 }] }, AHORA)
+    expect(r.ok).toBe(true)
+    expect(hojas.Promociones.datos[1]).toEqual(['P1', 'Corte + lavado', 'corte, lavado', 11])
+    expect(r.datos.promociones).toEqual([{ id: 'P1', nombre: 'Corte + lavado', servicios: ['corte', 'lavado'], precio: 11 }])
+  })
+
+  it('no guarda servicios que no existen ni promociones sin precio', () => {
+    const { ss } = negocio()
+    const { f } = cargar()
+    expect(f.duenoGuardar_(ss, { slug: 'b' }, 'promociones', { promociones: [{ nombre: 'X', servicios: ['nada'], precio: 5 }] }, AHORA).errores).toEqual(['No existen estos servicios: nada.'])
+    expect(f.duenoValidar_('promociones', { promociones: [{ nombre: 'Y', servicios: [], precio: 0 }] })).toEqual(['Y: elige al menos un servicio.', 'Y: escribe el precio de la promoción.'])
   })
 })

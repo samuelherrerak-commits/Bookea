@@ -14,7 +14,7 @@ import { dibujarQr, linkDelNegocio, MODOS_QR, PLANTILLAS_QR, type ModoQr, type P
  * Cada sección guarda en la hoja del negocio y la página lo muestra en la próxima carga.
  */
 
-export type Id = 'plan' | 'equipo' | 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'qr' | 'pagina' | 'lugar' | 'pagos' | 'mensaje' | 'ticket'
+export type Id = 'plan' | 'equipo' | 'servicios' | 'horario' | 'bloqueos' | 'cupones' | 'promociones' | 'qr' | 'pagina' | 'lugar' | 'pagos' | 'mensaje' | 'ticket'
 
 const SECCIONES: { id: Id; titulo: string; detalle: string; icono: string }[] = [
   { id: 'plan', titulo: 'Mi plan y pagos', detalle: 'Tu fecha de corte y pagar por Pago Móvil', icono: '💳' },
@@ -22,6 +22,7 @@ const SECCIONES: { id: Id; titulo: string; detalle: string; icono: string }[] = 
   { id: 'equipo', titulo: 'Equipo', detalle: 'Una agenda por persona (bookeaa team)', icono: '👥' },
   { id: 'horario', titulo: 'Horario', detalle: 'Días y horas de atención', icono: '🕘' },
   { id: 'bloqueos', titulo: 'Días libres', detalle: 'Vacaciones, feriados, permisos', icono: '🌴' },
+  { id: 'promociones', titulo: 'Promociones', detalle: 'Combos de servicios a un precio especial', icono: '🔥' },
   { id: 'cupones', titulo: 'Cupones', detalle: 'Códigos de descuento', icono: '🏷️' },
   { id: 'qr', titulo: 'Código QR', detalle: 'Cartel, historia o tarjeta con tu QR', icono: '🔳' },
   { id: 'pagina', titulo: 'Mi página', detalle: 'Nombre, logo, textos y colores', icono: '🎨' },
@@ -115,6 +116,7 @@ export function Configurar({ sesion, slug, alSalir, inicial = null }: Props) {
         {abierta === 'mensaje' && <MensajeSec {...props} />}
         {abierta === 'ticket' && <Ticket {...props} />}
         {abierta === 'cupones' && <Cupones {...props} />}
+        {abierta === 'promociones' && <Promociones {...props} />}
         {abierta === 'qr' && <CodigoQr datos={datos} slug={slug} />}
       </div>
     )
@@ -825,6 +827,57 @@ function Cupones({ datos, guardar }: SecProps) {
         + Crear cupón
       </button>
       <Guardar cambios={cambios} alGuardar={() => guardar('cupones', { cupones: lista })} />
+    </>
+  )
+}
+
+// ---------- Promociones ----------
+
+function Promociones({ datos, guardar }: SecProps) {
+  const [lista, setLista, cambios] = useBorrador(datos.promociones ?? [])
+  const moneda = (datos.config.moneda || 'EUR').toUpperCase() === 'USD' ? '$' : /^bs/i.test(datos.config.moneda) ? 'Bs.' : '€'
+  const servicios = datos.servicios.filter((s) => s.id)
+  const editar = (i: number, p: Partial<api.Promocion>) => setLista(lista.map((x, j) => (j === i ? { ...x, ...p } : x)))
+  const normal = (p: api.Promocion) => p.servicios.reduce((a, id) => a + (servicios.find((s) => s.id === id)?.precio ?? 0), 0)
+  return (
+    <>
+      <p className="mt-2 text-[14px] text-muted">Junta servicios y ponles un precio especial. Salen de primero en tu página, con lo que se ahorra tu cliente.</p>
+      {servicios.length === 0 && <p className="mt-4 rounded-3xl bg-sand px-4 py-6 text-center text-[15px] text-muted">Primero guarda tus servicios.</p>}
+      <div className="mt-4 space-y-3">
+        {servicios.length > 0 && lista.length === 0 && <p className="rounded-3xl bg-sand px-4 py-6 text-center text-[15px] text-muted">Todavía no tienes promociones.</p>}
+        {lista.map((p, i) => {
+          const suma = normal(p)
+          return (
+            <Tarjeta key={i}>
+              <div className="flex items-start gap-2">
+                <Texto aria-label="Nombre de la promoción" placeholder="Ej.: Cornrows + lavado" value={p.nombre} maxLength={80} onChange={(e) => editar(i, { nombre: e.target.value })} className="font-semibold" />
+                <button type="button" aria-label={`Quitar ${p.nombre || 'promoción'}`} onClick={() => setLista(lista.filter((_, j) => j !== i))} className="grid size-12 shrink-0 place-items-center rounded-2xl text-muted ring-1 ring-line">×</button>
+              </div>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Servicios incluidos">
+                {servicios.map((s) => {
+                  const dentro = p.servicios.includes(s.id)
+                  return (
+                    <button key={s.id} type="button" aria-pressed={dentro}
+                      onClick={() => editar(i, { servicios: dentro ? p.servicios.filter((x) => x !== s.id) : [...p.servicios, s.id] })}
+                      className={'rounded-full px-3 py-1.5 text-[14px] ring-1 ' + (dentro ? 'bg-ink text-bg ring-ink' : 'ring-line')}>
+                      {s.nombre}
+                    </button>
+                  )
+                })}
+              </div>
+              <Campo etiqueta={`Precio de la promoción (${moneda})`} ayuda={suma > 0 ? `Por separado: ${moneda} ${suma}${p.precio > 0 && p.precio < suma ? ` · ahorra ${moneda} ${Math.round((suma - p.precio) * 100) / 100}` : ''}` : undefined}>
+                <Texto inputMode="decimal" value={p.precio ? String(p.precio) : ''} onChange={(e) => editar(i, { precio: Number(e.target.value.replace(',', '.')) || 0 })} />
+              </Campo>
+            </Tarjeta>
+          )
+        })}
+      </div>
+      {servicios.length > 0 && (
+        <button type="button" onClick={() => setLista([...lista, { id: '', nombre: '', servicios: [], precio: 0 }])} className="mt-3 w-full rounded-full px-5 py-3 text-[15px] font-semibold ring-1 ring-line">
+          + Crear promoción
+        </button>
+      )}
+      <Guardar cambios={cambios} alGuardar={() => guardar('promociones', { promociones: lista.map((p, i) => ({ ...p, id: p.id || `P${i + 1}` })) })} />
     </>
   )
 }

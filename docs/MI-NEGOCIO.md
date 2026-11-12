@@ -73,6 +73,9 @@ La pestaña **Panel** muestra cuánto dinero dejaron las reservas en un período
 
 Son las cifras que marcó cada reserva en la página, en la moneda del negocio. No es lo que se cobró de verdad: un descuento hecho en persona no aparece. Las personas del equipo no ven el Panel.
 
+## Promociones
+En **Configurar → Promociones** el dueño arma combos: un nombre, los servicios que incluye y un precio especial. Salen de primero en la página, con lo que se ahorra el cliente. Se guardan en la pestaña **Promociones** de la hoja (los servicios por su ID). El conector las guarda con la sección `promociones`.
+
 Arriba del Panel hay tres vistas: **Números** (lo de arriba), **Clientes** e **Historial**. La app recuerda la última que abriste.
 
 ### Clientes (CRM)
