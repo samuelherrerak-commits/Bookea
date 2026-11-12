@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { DEMO_MODE } from '../config'
+import { CONECTOR_URL, DEMO_MODE } from '../config'
 import * as central from '../central/api'
 import { Entrar, Logo } from '../negocio/NegocioApp'
 import type { Sesion } from '../negocio/api'
@@ -59,18 +59,18 @@ export default function ConectarApp() {
     ;(async () => {
       try {
         const yo = await central.yo(sesion.sesion)
-        if (!yo.conector) {
-          // Solo la demo funciona sin Worker; en producción sería un "listo" falso que nunca vuelve a Claude.
-          if (!vivo) return
-          if (DEMO_MODE) setPaso({ tipo: 'pedir', cliente: 'Claude', destino: 'claude.ai', conector: '', email: yo.email })
-          else setPaso({ tipo: 'error', mensaje: 'Falta la dirección del Worker: pon bot_bandeja_url en las propiedades del Apps Script y vuelve a conectar desde Claude.' })
+        // La demo no tiene Worker. En producción, si al Apps Script le falta bot_bandeja_url, se
+        // usa la dirección fija del conector (antes salía un "listo" falso que nunca volvía a Claude).
+        const conector = DEMO_MODE ? yo.conector : yo.conector || CONECTOR_URL
+        if (!conector) {
+          if (vivo) setPaso({ tipo: 'pedir', cliente: 'Claude', destino: 'claude.ai', conector: '', email: yo.email })
           return
         }
-        const r = await fetch(`${yo.conector}/oauth/pedido?id=${encodeURIComponent(pedido)}`)
+        const r = await fetch(`${conector}/oauth/pedido?id=${encodeURIComponent(pedido)}`)
         const info = (await r.json()) as { cliente?: string; destino?: string; error?: string }
         if (!vivo) return
         if (!r.ok) setPaso({ tipo: 'error', mensaje: info.error || 'El pedido venció. Vuelve a conectar desde Claude.' })
-        else setPaso({ tipo: 'pedir', cliente: info.cliente || 'Claude', destino: info.destino || '', conector: yo.conector, email: yo.email })
+        else setPaso({ tipo: 'pedir', cliente: info.cliente || 'Claude', destino: info.destino || '', conector, email: yo.email })
       } catch (e) {
         if (!vivo) return
         if (e instanceof central.ErrorCentral && e.codigo === 'sesion') {

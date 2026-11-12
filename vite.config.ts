@@ -10,13 +10,21 @@ import tailwindcss from '@tailwindcss/vite'
  * toca las páginas estáticas de /campana/, que tienen sus propios scripts.
  * Lo que no se puede poner en un <meta> (frame-ancestors) va como cabecera en render.yaml.
  */
-function csp(apiUrl: string): Plugin {
-  let origenApi = ''
+/** Igual que CONECTOR_URL en src/config.ts: el Worker del conector de Claude. */
+const CONECTOR_POR_DEFECTO = 'https://bookeaa-bot.samuelherrera-k.workers.dev'
+
+const origen = (url: string) => {
   try {
-    origenApi = apiUrl ? new URL(apiUrl).origin : ''
+    return url ? new URL(url).origin : ''
   } catch {
-    /* URL mal escrita: la app queda en demo igual */
+    return '' // URL mal escrita: no se agrega
   }
+}
+
+function csp(apiUrl: string, conectorUrl: string): Plugin {
+  const origenApi = origen(apiUrl)
+  // /conectar habla con el Worker (/oauth/pedido y /oauth/aprobar) para darle permiso a Claude.
+  const origenConector = origen(conectorUrl || CONECTOR_POR_DEFECTO)
   return {
     name: 'bookeaa-csp',
     apply: 'build',
@@ -41,7 +49,7 @@ function csp(apiUrl: string): Plugin {
           "manifest-src 'self' data:",
           "worker-src 'self'",
           // Apps Script responde con una redirección a googleusercontent.
-          `connect-src ${[...new Set(["'self'", origenApi, 'https://script.google.com', 'https://script.googleusercontent.com', 'https://accounts.google.com/gsi/'])].filter(Boolean).join(' ')}`,
+          `connect-src ${[...new Set(["'self'", origenApi, origenConector, 'https://script.google.com', 'https://script.googleusercontent.com', 'https://accounts.google.com/gsi/'])].filter(Boolean).join(' ')}`,
           "object-src 'none'",
           "base-uri 'self'",
           "form-action 'self'",
@@ -55,7 +63,7 @@ function csp(apiUrl: string): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
   return {
-    plugins: [react(), tailwindcss(), csp(env.VITE_API_URL ?? '')],
+    plugins: [react(), tailwindcss(), csp(env.VITE_API_URL ?? '', env.VITE_CONECTOR_URL ?? '')],
     test: {
       environment: 'node',
       include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'bot/src/**/*.test.ts'],
